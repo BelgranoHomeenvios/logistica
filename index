@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Logística · Belgrano Home (DEMO v3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2316324f'/><text x='50' y='66' text-anchor='middle' font-size='44' font-weight='700' fill='white' font-family='sans-serif'>BH</text></svg>" />
+<style>
+:root{--navy:#16324f;--ink:#0f1a2a;--blue:#1e5fce;--blue-d:#1a51b0;--muted:#8a94a3;--sec:#5b6675;--line:#d9e0e8;--line2:#eef1f5;--bg:#f4f6f8;--card:#fff;--green:#15803d;--red:#b42318;--amber:#b45309;--shadow:0 1px 2px rgba(15,26,42,.06),0 1px 3px rgba(15,26,42,.04)}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.demobar{background:#fff;color:#5b6675;font-size:12.5px;font-weight:600;padding:7px 28px;text-align:left;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.demobar select{font:inherit;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--navy)}
+.app-header{background:var(--navy);color:#fff;height:56px;padding:0 28px;display:flex;align-items:center;justify-content:space-between}
+.app-header .brand{display:flex;align-items:center;gap:12px}
+.app-header .logo{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.app-header .title{font-weight:700;font-size:15px;letter-spacing:-.01em}
+.app-header .user{display:flex;align-items:center;gap:12px}
+.app-header .user span{font-size:13px;color:rgba(255,255,255,.75)}
+.app-header .avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.tabs{background:#fff;border-bottom:1px solid var(--line);padding:0 28px;display:flex;gap:2px;overflow-x:auto}
+.tabs a{padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--sec);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
+.tabs a.active{color:var(--navy);font-weight:700;border-bottom-color:var(--blue)}
+.container{max-width:1120px;margin:0 auto;padding:22px 28px 64px}
+.card{background:var(--card);border:1px solid #e6eaef;border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{margin:0 0 6px;font-size:18px;font-weight:800;color:var(--navy)}.card h3{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--navy)}
+.grid-stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.stat{border:1px solid #e6eaef;border-radius:10px;padding:12px 14px}
+.stat .value{font-size:24px;font-weight:800;color:var(--navy)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label.field{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:#2a3648;justify-content:flex-end}
+label.field .lbl{min-height:17px;display:flex;align-items:center;gap:5px}
+label.field .hint{font-weight:400;color:var(--muted);font-size:11px}
+input,select{font:inherit;height:42px;padding:0 12px;border:1px solid #d0d7e2;border-radius:8px;background:#fff;color:var(--ink);width:100%}
+input:focus,select:focus{outline:2px solid rgba(30,95,206,.15);border-color:var(--blue)}
+input[readonly]{background:#f7f9fb;color:#5b6675}
+input.inval,select.inval{border-color:var(--red);background:#fef3f2}
+.inline2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dom3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}
+@media(max-width:600px){.dom3{grid-template-columns:1fr}}
+.sub-h{font-size:11.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+.btn{font:inherit;font-weight:700;cursor:pointer;border-radius:6px;padding:9px 15px;border:1px solid transparent;font-size:13.5px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-d)}
+.btn-ghost{background:#fff;border-color:#d0d7e2;color:#2a3648}.btn-ghost:hover{background:#f7f9fb}
+.btn-ok{background:var(--green);color:#fff}.btn-danger{background:#fff;border-color:#f3c0bb;color:var(--red)}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+.row-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.wiz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px;border-top:1px solid var(--line2);padding-top:14px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 18px}
+.step-pill{display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.step-pill .num{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--line);color:#fff;align-items:center;justify-content:center;font-size:12px}
+.step-pill.done{color:var(--navy);border-color:#cfe0d6}.step-pill.done .num{background:var(--green)}
+.step-pill.active{color:#fff;background:var(--blue);border-color:var(--blue)}.step-pill.active .num{background:rgba(255,255,255,.3)}
+.mueble-row{display:grid;grid-template-columns:70px 1fr 150px 40px;gap:8px;align-items:end;margin-bottom:8px}
+.pago-row{display:grid;grid-template-columns:120px 1fr 40px;gap:8px;align-items:end;margin-bottom:8px}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:top}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.05em;white-space:nowrap}
+td{color:#2a3648}
+tbody tr:hover{background:#f7f9fb}
+.badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.e-completar{background:#eef1f5;color:#5b6675}.e-pend{background:#fff7e6;color:#b45309}.e-viaje{background:#e7effc;color:#1e5fce}
+.e-entreg{background:#e7f5ec;color:#15803d}.e-reclamo{background:#fdecea;color:#b42318}.e-repro{background:#f2ecfb;color:#6b34c9}.e-canc{background:#eef1f5;color:#8a94a3}
+.muted{color:var(--muted);font-size:13px}.empty{text-align:center;color:var(--muted);padding:36px}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.flete-card{border:1px solid #e6eaef;border-radius:12px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.flete-card h3{margin:0 0 5px;font-size:15px;color:var(--navy)}
+.saldo-box,.saldo-big{background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:800;color:var(--navy);margin-top:8px}
+.saldo-big{font-size:22px;padding:14px 18px;margin-top:14px}
+.zona-auto{background:#e7effc;color:var(--blue);border-radius:8px;padding:0 12px;height:42px;display:flex;align-items:center;font-weight:700}
+.cuadra{border-radius:8px;padding:7px 12px;font-weight:700;font-size:13px;display:inline-block;margin:6px 0}
+.cuadra.ok{background:#e7f5ec;color:#15803d}.cuadra.no{background:#fdecea;color:#b42318}
+.missing{background:#fdecea;border:1px solid #f3c0bb;color:#b42318;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:12px}
+.notinc{background:#fff7e6;border:1px solid #f2d9a8;color:#b45309;border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:8px}
+.dom2{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+@media(max-width:600px){.dom2{grid-template-columns:1fr}}
+.frow{display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:center;margin-bottom:10px}
+.frl{font-size:13px;font-weight:600;color:#2a3648}
+.frl .hint{font-weight:400;color:var(--muted);font-size:11px}
+.pgin{display:grid;grid-template-columns:1fr auto;gap:8px}
+@media(max-width:600px){.frow{grid-template-columns:1fr;gap:5px}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#f4f6f8;border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 13px;font-size:13px;font-weight:600;color:#2a3648}
+.chip button{border:none;background:#e2e8f0;color:#5b6675;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:700;line-height:1}
+.addrow{display:flex;gap:8px;max-width:380px}
+.ordfilters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.ordfilters input,.ordfilters select{max-width:230px;height:40px}.fletesel{height:36px;padding:0 8px;min-width:135px;border:1px solid #d0d7e2;border-radius:8px;background:#fff}.e-asignar{background:#fdecea;color:#b42318}
+.pagorow{margin-bottom:8px}.pagorow.del{display:grid;grid-template-columns:1fr auto;gap:8px}
+.daytabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.daypill{display:flex;flex-direction:column;gap:2px;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;min-width:100px}
+.daypill .dn{font-size:12.5px;font-weight:700;color:var(--sec)}
+.daypill .dc{font-size:11.5px;color:var(--muted)}
+.daypill.sel{border-color:var(--blue);background:#e7effc}.daypill.sel .dn{color:var(--navy)}
+.daypill.cerr{background:#f7f9fb;opacity:.8}.daypill.cerr .dn{color:#b42318}
+.daybar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:13.5px;border-top:1px solid var(--line2);padding-top:12px}
+.tgt{background:#eef1f5;color:#5b6675;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:4px}.tgt.ok{background:#e7f5ec;color:#15803d}
+.sinred{color:#b42318;font-weight:700}
+.daylock{background:#fdecea;border:1px solid #f3c0bb;color:#b42318;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;margin-top:10px}
+.chstrip{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chchip{background:#f4f6f8;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;color:#2a3648;display:inline-flex;align-items:center;gap:8px}
+.chchip.sin{background:#fdecea;border-color:#f3c0bb;color:#b42318}
+.minibtn{border:none;background:var(--blue);color:#fff;border-radius:5px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer}
+.macrotog{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.macrotog button{border:none;background:#fff;padding:9px 16px;font-size:13.5px;font-weight:600;color:var(--sec);cursor:pointer}
+.macrotog button.on{background:var(--navy);color:#fff}
+tr.sinasignar{background:#fef4f4}
+.e-cerrado{background:#e7f5ec;color:#0f5132}
+.cdtot{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px}
+.sepcell{display:flex;gap:6px;align-items:center}
+.sepbtn{border:1px solid #d0d7e2;background:#fff;color:#5b6675;border-radius:6px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+.sepbtn.ok{background:#e7f5ec;border-color:#bfe3cc;color:#15803d}
+.sepbtn.prob{background:#fdecea;border-color:#f3c0bb;color:#b42318}
+.pbtn{width:30px;height:30px;border:1px solid #f3c0bb;background:#fff;color:#b42318;border-radius:6px;font-weight:800;cursor:pointer}
+.probnote{margin-top:5px;font-size:12px;color:#b42318;background:#fdecea;border-radius:6px;padding:5px 9px;display:inline-block}
+tr.rprob{background:#fef4f4}
+.sincard{border-color:#f3c0bb}
+.e-prob{background:#fdecea;color:#b42318}
+.signbtns{display:flex;gap:7px;flex-wrap:wrap}
+.rendfirma{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line2);padding-top:12px}
+.r-ok{background:#e7f5ec;color:#15803d}.r-falta{background:#fdecea;color:#b42318}.r-sobra{background:#fff7e6;color:#b45309}.r-no{background:#eef1f5;color:#5b6675}
+.cdhead{cursor:pointer;user-select:none}
+.rendhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.cobrototal{font-size:28px;font-weight:800;color:var(--navy)}
+.rendhead-r{text-align:right}
+.menos{color:#b42318;font-size:12px}
+.netos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;border-top:1px solid var(--line2);padding-top:12px}
+.netos>div{background:#f7f9fb;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.netos .nl{font-size:12px;color:var(--sec);font-weight:600}
+.netos .nv{font-size:18px;font-weight:800;color:var(--navy)}
+.netos .neto-big{background:#16324f}.netos .neto-big .nl{color:rgba(255,255,255,.75)}.netos .neto-big .nv{color:#fff;font-size:22px}
+.e-cond{background:#fff7e6;color:#b45309}
+.cond{color:#b45309;font-weight:700}
+.weekbars{display:flex;flex-direction:column;gap:8px}
+.wbar{display:grid;grid-template-columns:96px 1fr 118px;gap:10px;align-items:center;cursor:pointer}
+.wbar-t{font-size:13px;font-weight:700;color:var(--sec)}
+.wbar-track{background:#eef1f5;border-radius:6px;height:14px;overflow:hidden}
+.wbar-fill{background:var(--blue);height:100%}
+.wbar-n{font-size:13px;font-weight:700;color:var(--navy);text-align:right}
+.probrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line2);font-size:13px}
+.condtag{margin-top:5px;font-size:11.5px;color:#b45309;background:#fff7e6;border-radius:6px;padding:3px 8px;display:inline-block}
+.clik{cursor:pointer}
+.clik:hover{border-color:var(--blue)}
+.stat.clik:hover,.chchip.clik:hover{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.actfil{margin:10px 0 4px;font-size:13px;color:var(--sec);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.afchip{background:#e7effc;color:#1e5fce;border-radius:999px;padding:4px 6px 4px 12px;font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.afchip button{border:none;background:#c9ddf7;color:#1e5fce;width:18px;height:18px;border-radius:50%;cursor:pointer;font-weight:700;line-height:1}
+.horario{display:flex;align-items:center;gap:8px}.horario input{width:64px;height:42px;text-align:center;border:1px solid #d0d7e2;border-radius:8px;padding:0 6px}.horario span{color:var(--muted);font-size:13px}.horario.inval input{border-color:var(--red);background:#fef3f2}
+@media(max-width:640px){
+  .container{padding:16px 12px 54px}
+  .app-header{padding:0 14px}
+  .tabs{padding:0 8px}.tabs a{padding:12px 12px;font-size:13px}
+  .btn{padding:11px 15px}.btn-sm{padding:9px 13px;font-size:13px}
+  .card{padding:15px 14px}
+  .cdtot{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr;gap:5px}
+  .sepbtn{padding:10px 16px;font-size:13.5px}.pbtn{width:40px;height:40px}
+  .flete-card .row-actions .btn{flex:1;justify-content:center;min-height:46px}
+  .wbar{grid-template-columns:66px 1fr 66px}
+  .daytabs{gap:5px}.daypill{min-width:0;flex:1 1 44%}
+  .rendhead{flex-direction:column;gap:4px}.cobrototal{font-size:24px}
+  h2{font-size:17px}
+}
+@media(min-width:641px) and (max-width:1024px){
+  .sepbtn{padding:10px 18px}.pbtn{width:40px;height:40px}
+  .cdtot{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .mueble-row{grid-template-columns:60px 1fr 130px 40px}
+}
+.reclform{margin-top:10px;background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:12px}.reclform textarea{width:100%;min-height:72px;border:1px solid #d0d7e2;border-radius:8px;padding:9px 11px;font:inherit;resize:vertical;margin-bottom:8px}
+.zdist{display:flex;flex-direction:column;gap:7px}
+.zrow{display:grid;grid-template-columns:128px 1fr 92px;gap:12px;align-items:center;cursor:pointer;padding:5px 7px;border-radius:8px}
+.zrow:hover{background:#f4f6f8}
+.zname{font-size:13.5px;font-weight:700;color:var(--navy)}
+.zbar{background:#eef1f5;border-radius:6px;height:16px;overflow:hidden}
+.zfill{background:linear-gradient(90deg,#1e5fce,#5590e6);height:100%;border-radius:6px}
+.zn{font-size:13px;font-weight:700;color:var(--navy);text-align:right}
+@media(max-width:640px){.zrow{grid-template-columns:96px 1fr 76px;gap:8px}.zname{font-size:12.5px}}
+.zsep{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a94a3;margin:14px 0 8px}.zrow.zother .zfill{background:linear-gradient(90deg,#8a94a3,#b3bcc8)}.zrow.zother .zname{color:#5b6675}
+.impov{position:fixed;inset:0;background:rgba(15,26,42,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}.impbox{background:#fff;border-radius:12px;padding:20px 22px;max-width:780px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.tipotag{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px}
+.t-env{background:#eef1f5;color:#5b6675}.t-ret{background:#e7effc;color:#1e5fce}.t-exp{background:#fff7e6;color:#b45309}.t-mov{background:#f4f6f8;color:#8a94a3}
+.sepbtn.emb{background:#fff7e6;border-color:#f3d19b;color:#b45309}
+</style>
+</head>
+<body>
+<div class="demobar">Vista de trabajo (datos de ejemplo) · ver como:
+<select id="roleSel" onchange="setRole(this.value)"><option value="logistica">Logística (Lucas)</option><option value="admin">Administrador (vos)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian)</option></select></div>
+<div id="root"></div>
+
+<script>
+"use strict";
+let id=1; const nid=()=>id++;
+let LOCALES=['2020','2299','Zavaleta','2160','Fábrica'];
+const PROVINCIAS=['CABA','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba','Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán'];
+let FLETES=['Fabian','Ivan','Marcos','Juan','Gonzalo'];
+let TIPOS=['Envío','Retiro','Movimiento Interno','Expreso'];
+const HORARIO_DEF={'Envío':['12','19'],'Expreso':['9','16'],'Retiro':['11','17'],'Movimiento Interno':['11','18']};
+function horaDef(tp){return HORARIO_DEF[tp]||['12','19']}
+function retLoc(o){return o.retiroLocal||(o.lineas&&o.lineas[0]?o.lineas[0].local:'local')}
+
+
+const CABA=['CABA','AGRONOMIA','ALMAGRO','BALVANERA','BARRACAS','BELGRANO','BOEDO','CABALLITO','CHACARITA','COGHLAN','COLEGIALES','CONSTITUCION','FLORES','FLORESTA','LA BOCA','LA PATERNAL','LINIERS','MATADEROS','MONTE CASTRO','MONTSERRAT','NUEVA POMPEYA','NUÑEZ','PALERMO','PARQUE AVELLANEDA','PARQUE CHACABUCO','PARQUE CHAS','PARQUE PATRICIOS','PATERNAL','PUERTO MADERO','RECOLETA','RETIRO','SAAVEDRA','SAN CRISTOBAL','SAN NICOLAS','SAN TELMO','VELEZ SARSFIELD','VERSALLES','VILLA CRESPO','VILLA DEL PARQUE','VILLA DEVOTO','VILLA GRAL. MITRE','VILLA LUGANO','VILLA LURO','VILLA ORTUZAR','VILLA PUEYRREDON','VILLA REAL','VILLA RIACHUELO','VILLA SANTA RITA','VILLA SOLDATI','VILLA URQUIZA'];
+const NE=['ACASSUSO','BECCAR','BENAVÍDEZ','BOULOGNE SUR MER','CAMPANA','CARAPACHAY','DON TORCUATO','EL TALAR','ESCOBAR','EXALTACION DE LA CRUZ','FLORIDA','GARIN','GRAL. PACHECO','ING. MASCHWITZ','LA LUCILA','LOS CARDALES','MARTELLI','MARTINEZ','MUNRO','NORDELTA','OLIVOS','SAN FERNANDO','SAN ISIDRO','TIGRE','VICENTE LOPEZ','VICTORIA','VILLA ADELINA','ZARATE'];
+const NO=['ALDO BONZI','BELLA VISTA','CASEROS','CASTELAR','CIUDAD JARDÍN','CIUDADELA','DEL VISO','EL PALOMAR','GRAL. RODRIGUEZ','GRAND BOURG','HAEDO','HURLINGHAM','ITUZAINGO','JOSE C.PAZ','JOSE LEON SUAREZ','LA REJA','LOMA HERMOSA','LOMAS DEL MIRADOR','LOS POLVORINES','LUJAN','MARCOS PAZ','MARTIN CORONADO','MERCEDES','MERLO','MORENO','MORON','MUNIZ','PILAR','RAMOS MEJIA','SAENZ PEÑA','SAN ANTONIO DE PADUA','SAN JUSTO','SAN MARTIN','SAN MIGUEL','SANTOS LUGARES','TABLADA','TAPIALES','TORTUGUITAS','VILLA BALLESTER'];
+const SE=['ADROGUE','AVELLANEDA','BANFIELD','BERAZATEGUI','BERISSO','BERNAL','BRANDSEN','BURZACO','CITY BELL','DON BOSCO','ENSENADA','ESPELETA','ETCHEVERRY','FLORENCIO VARELA','GERLI','GLEW','GONNET','HUDSON','LA PLATA','LANUS','LOMAS DE ZAMORA','LONGCHAMPS','LOS HORNOS','MARMOL','PLATANOS','QUILMES','RANELAGH','REMEDIOS DE ESCALADA','RINGUELÉT','SARANDI','TEMPERLEY','TOLOSA','TURDERA','VILLA DOMINICO','VILLA ELISA','WILDE'];
+const SO=['ALEJANDRO KORN','CANNING','CAÑUELAS','CIUDAD EVITA','EZEIZA','GONZALEZ CATAN','GUERNICA','GUILLÓN','ING. BUDGE','LA UNION','LAFERRERE','MONTE GRANDE','SAN VICENTE','TRISTAN SUAREZ','VILLA CELINA','VILLA MADERO','VIRREY DEL PINO'];
+const PEAJE={'LA PLATA':4000,'EZEIZA':3500,'PILAR':5000,'CANNING':3000,'BERAZATEGUI':2500,'SAN VICENTE':3000,'ESCOBAR':4000,'LUJAN':6000};
+const LOCALIDADES=[];
+CABA.forEach(n=>LOCALIDADES.push({n,zona:'1 CABA',prov:false,peaje:0}));
+NE.forEach(n=>LOCALIDADES.push({n,zona:'2 NORESTE',prov:true,peaje:PEAJE[n]||0}));
+NO.forEach(n=>LOCALIDADES.push({n,zona:'3 NOROESTE',prov:true,peaje:PEAJE[n]||0}));
+SE.forEach(n=>LOCALIDADES.push({n,zona:'4 SURESTE',prov:true,peaje:PEAJE[n]||0}));
+SO.forEach(n=>LOCALIDADES.push({n,zona:'5 SUROESTE',prov:true,peaje:PEAJE[n]||0}));
+LOCALIDADES.sort((a,b)=>a.n.localeCompare(b.n,'es'));
+
+function estClass(e){return {'Por completar':'e-completar','Pendiente de asignar chofer':'e-asignar','Pendiente de entrega':'e-pend','En viaje':'e-viaje','Entregado':'e-entreg','Cerrado':'e-cerrado','En reclamo':'e-reclamo','Reprogramado':'e-repro','Cancelado':'e-canc'}[e]||'e-pend'}
+function hoyISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+const HOY=(function(){const d=new Date();if(d.getDay()===0)d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')})();
+function locData(n){return LOCALIDADES.find(l=>l.n===n)||{prov:false,peaje:0,zona:''}}
+function peajeDe(o){const l=locData(o.localidad);return l.prov?l.peaje:0}
+function sum(a){return a.reduce((x,y)=>x+(+y||0),0)}
+function moneyFmt(v){const n=String(v).replace(/\D/g,'');return n?'$'+Number(n).toLocaleString('es-AR'):''}
+function moneyParse(s){return +String(s).replace(/\D/g,'')||0}
+function moneyIn(el){el.value=moneyFmt(el.value)}
+
+let ordenes=[]; /* DATOS DEMO VACIADOS — se cargan desde Supabase */
+
+let role='logistica', tab='tablero', fleteActual='Fabian', editId=null;
+const TABS_LOG=[['tablero','Tablero'],['mapa','Zonas'],['cargar','Cargar'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rendicion','Rendición'],['stats','Estadísticas'],['config','Configuración']];
+const TABS={logistica:TABS_LOG,admin:TABS_LOG,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']]};
+const root=document.getElementById('root');const $=id=>document.getElementById(id);
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function money(n){return '$'+Number(n||0).toLocaleString('es-AR')}
+function fmt(iso){if(!iso)return'—';const a=iso.split('-');return a[2]+'/'+a[1]+'/'+a[0]}
+function opts(arr,sel){return arr.map(v=>`<option ${sel===v?'selected':''}>${esc(v)}</option>`).join('')}
+
+function setRole(r){role=r;tab=TABS[r][0][0];editId=null;draft=null;render()}
+function setTab(t){tab=t;if(t!=='cargar')editId=null;render()}
+
+/* ============ RENDER / NAV ============ */
+function render(){
+  const who={logistica:'Lucas',admin:'Vos (admin)',deposito:'Depósito',flete:fleteActual}[role]||'Lucas';
+  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${who}${role==='flete'?' · flete':''}</span><div class="avatar">${who[0]}</div></div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>`;
+  ({tablero:vTablero,mapa:vMapa,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats}[tab])();
+}
+
+
+function vMapa(){$('view').innerHTML=`<div class="card"><div class="section-title"><h2>Entregas por zona</h2><div class="row-actions"><div class="macrotog"><button class="${zdView==='dia'?'on':''}" onclick="zdView='dia';vMapa()">Día</button><button class="${zdView==='semana'?'on':''}" onclick="zdView='semana';vMapa()">Semana</button></div><input type="date" id="mFecha" value="${HOY}" onchange="$('mapCont').innerHTML=zonaDist(this.value)" style="width:auto;height:36px"></div></div><p class="muted">Cantidad de entregas por zona ese día. Tocá una zona para ver esas órdenes.</p><div id="mapCont">${zonaDist(HOY)}</div></div>`}
+
+/* TABLERO */
+
+/* ============ ZONAS ============ */
+let zdView='dia';
+function zonaDist(iso){
+  const scope=zdView==='semana'?semanaDe(iso):[iso];
+  const day=ordenes.filter(o=>scope.includes(o.fecha)&&o.estado!=='Cancelado');
+  const geo=day.filter(o=>o.zona&&o.zona!=='Retiro'&&o.zona!=='Expreso'&&o.zona!=='Mov. interno');
+  const byZ={};geo.forEach(o=>byZ[o.zona]=(byZ[o.zona]||0)+1);
+  const arr=Object.entries(byZ).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(1,...arr.map(x=>x[1]));const tot=Math.max(1,arr.reduce((a,z)=>a+z[1],0));
+  const zrow=(z,n,click,extra)=>`<div class="zrow${extra||''}" onclick="${click}"><div class="zname">${esc(z)}</div><div class="zbar"><div class="zfill" style="width:${Math.max(6,Math.round(n/max*100))}%"></div></div><div class="zn">${n} <span class="muted">· ${Math.round(n/tot*100)}%</span></div></div>`;
+  let html=arr.length?('<div class="zdist">'+arr.map(([z,n])=>zrow(z,n,`irOrdenes({day:'${iso}',zona:'${esc(z)}'})`)).join('')+'</div>'):'<div class="empty">Sin entregas a domicilio ese día.</div>';
+  // No-geográficos: retiros por local + movimientos internos
+  const ret={};day.filter(o=>o.tipo==='Retiro').forEach(o=>{const l=retLoc(o);ret[l]=(ret[l]||0)+1});
+  const movs=day.filter(o=>o.tipo==='Movimiento Interno').length;
+  const extras=[];
+  Object.entries(ret).sort((a,b)=>b[1]-a[1]).forEach(([l,n])=>extras.push(zrow('Retiro · '+l,n,`irOrdenes({day:'${iso}',ret:'${esc(l)}'})`,' zother')));
+  if(movs)extras.push(zrow('Mov. interno',movs,`irOrdenes({day:'${iso}',tipo:'Movimiento Interno'})`,' zother'));
+  if(extras.length)html+='<div class="zsep">Retiros y movimientos</div><div class="zdist">'+extras.join('')+'</div>';
+  return html;
+}
+
+
+/* ============ CSV (solo admin) ============ */
+let _ordList=[];let _importRows=null;
+const COLS_ORD=[['boleta','N° orden'],['fecha','Fecha'],['tipo','Tipo'],['horario','Horario'],['cliente','Cliente'],['tel1','Telefono 1'],['tel2','Telefono 2'],['localidad','Localidad'],['zona','Zona'],['direccion','Domicilio'],['pisodepto','Piso/Depto'],['flete','Flete'],['estado','Estado'],['total','Total'],['pagos','Pagos'],['costo_flete','Costo envio'],['instalacion','Instalacion'],['muebles','Muebles (cant|desc|local; ...)'],['retiroLocal','Retira de'],['localDestino','Local destino'],['provincia','Provincia'],['dniCuit','DNI/CUIT'],['bultos','Bultos'],['valorDeclarado','Valor declarado']];
+function csvCell(v){v=(v==null?'':String(v));return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function mueblesToStr(ls){return (ls||[]).map(l=>l.cant+'|'+(l.desc||'')+'|'+(l.local||'')).join('; ')}
+function strToMuebles(s){return String(s||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{const q=x.split('|');return {cant:+q[0]||1,desc:(q[1]||'').trim(),local:(q[2]||'2020').trim()}})}
+function ordenToRow(o){return COLS_ORD.map(c=>{const k=c[0];if(k==='muebles')return mueblesToStr(o.lineas);if(k==='pagos')return o.pagos!=null?o.pagos:sum(o.pagosList||[]);return o[k]!=null?o[k]:''})}
+function toCSV(labels,rows){return [labels.map(csvCell).join(';')].concat(rows.map(r=>r.map(csvCell).join(';'))).join('\r\n')}
+function descargarCSV(nombre,contenido){const blob=new Blob(['\ufeff'+contenido],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nombre;a.click();URL.revokeObjectURL(url)}
+function exportarOrdenes(){const src=(_ordList&&_ordList.length)?_ordList:ordenes;descargarCSV('ordenes_'+HOY+'.csv',toCSV(COLS_ORD.map(c=>c[1]),src.map(ordenToRow)))}
+function plantillaCSV(){descargarCSV('plantilla_ordenes.csv',toCSV(COLS_ORD.map(c=>c[1]),[]))}
+function exportarRendicion(){const arr=ordenes.filter(o=>o.estado==='Cerrado'&&(rendTab==='pend'?!o.rendido:o.rendido));const cols=['Boleta','Cliente','Chofer','Cobro','Se lleva','BH pago','Neto','Resultado'];const rows=arr.map(o=>[o.boleta,o.cliente||'',grupoRend(o),o.cobrado||0,slOf(o),o.bhPago||0,(o.cobrado||0)-slOf(o)-(o.bhPago||0),o.rendResult||'']);if(!rows.length){alert('No hay rendiciones en esta vista para exportar.');return}descargarCSV('rendicion_'+HOY+'.csv',toCSV(cols,rows))}
+function parseCSV(text){const rows=[];let i=0,field='',row=[],inq=false;text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  while(i<text.length){const c=text[i];
+    if(inq){if(c==='"'){if(text[i+1]==='"'){field+='"';i++}else inq=false}else field+=c}
+    else{if(c==='"')inq=true;else if(c===';'){row.push(field);field=''}else if(c==='\n'){row.push(field);rows.push(row);row=[];field=''}else field+=c}
+    i++}
+  if(field.length||row.length){row.push(field);rows.push(row)}
+  return rows}
+function importarArchivo(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{previsualizarImport(r.result);el.value=''};r.readAsText(f)}
+function previsualizarImport(text){const rows=parseCSV(text);if(!rows.length){alert('El archivo esta vacio.');return}
+  const header=rows[0].map(h=>h.trim());const idx={};COLS_ORD.forEach(c=>{const k=c[0],lbl=c[1];idx[k]=header.findIndex(h=>h.toLowerCase()===lbl.toLowerCase()||h.toLowerCase()===k.toLowerCase())});
+  const data=rows.slice(1).filter(r=>r.some(c=>String(c).trim()));
+  const parsed=data.map(r=>{const g=k=>idx[k]>=0?String(r[idx[k]]||'').trim():'';
+    const o={boleta:g('boleta'),fecha:g('fecha'),tipo:g('tipo')||'Envío',horario:g('horario')||'12 a 19hs',cliente:g('cliente'),tel1:g('tel1'),tel2:g('tel2'),localidad:g('localidad'),zona:g('zona'),direccion:g('direccion'),pisodepto:g('pisodepto'),flete:g('flete'),estado:g('estado')||'Pendiente de asignar chofer',total:moneyParse(g('total')),pagos:moneyParse(g('pagos')),costo_flete:moneyParse(g('costo_flete')),instalacion:moneyParse(g('instalacion')),lineas:strToMuebles(g('muebles')),retiroLocal:g('retiroLocal'),localDestino:g('localDestino'),provincia:g('provincia'),dniCuit:g('dniCuit'),bultos:+g('bultos')||0,valorDeclarado:moneyParse(g('valorDeclarado')),escalera:0};
+    o.pagosList=[o.pagos];const errs=[];
+    if(!o.boleta)errs.push('sin N°');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(o.fecha))errs.push('fecha inválida');
+    if(o.tipo!=='Movimiento Interno'&&!o.cliente)errs.push('sin cliente');
+    return {o,errs}});
+  _importRows=parsed;
+  const ok=parsed.filter(x=>!x.errs.length).length,bad=parsed.length-ok;
+  const rowsH=parsed.map(x=>`<tr style="${x.errs.length?'background:#fdecea':''}"><td>${esc(x.o.boleta||'—')}</td><td>${esc(x.o.fecha||'—')}</td><td>${esc(x.o.tipo)}</td><td>${esc(x.o.cliente||'—')}</td><td style="text-align:right">${money(x.o.total)}</td><td style="color:#b42318">${esc(x.errs.join(', '))}</td></tr>`).join('');
+  document.body.insertAdjacentHTML('beforeend',`<div id="impOv" class="impov"><div class="impbox"><h3 style="margin:0 0 4px;color:#16324f">Previsualización de importación</h3><p class="muted" style="margin:0 0 12px">${parsed.length} filas · <b style="color:#15803d">${ok} listas</b>${bad?` · <b style="color:#b42318">${bad} con error (no se importan)</b>`:''}</p><div class="table-wrap" style="max-height:44vh;overflow:auto"><table><thead><tr><th>N°</th><th>Fecha</th><th>Tipo</th><th>Cliente</th><th>Total</th><th>Problema</th></tr></thead><tbody>${rowsH}</tbody></table></div><div class="row-actions" style="margin-top:14px;justify-content:flex-end"><button class="btn btn-ghost" onclick="cerrarImport()">Cancelar</button><button class="btn btn-ok" onclick="confirmarImport()" ${ok?'':'disabled'}>Importar ${ok} órdenes</button></div></div></div>`)}
+function cerrarImport(){const e=document.getElementById('impOv');if(e)e.remove();_importRows=null}
+function confirmarImport(){if(!_importRows){cerrarImport();return}let n=0;_importRows.filter(x=>!x.errs.length).forEach(x=>{const o=x.o;if(!o.flete)o.flete='';ordenes.push(Object.assign({id:nid(),verificado:false},o));n++});cerrarImport();alert(n+' órdenes importadas.');render()}
+/* ============ ESTADISTICAS ============ */
+let statMonth=HOY.slice(0,7);
+function statPrevMonth(ym){const p=ym.split('-').map(Number);const d=new Date(p[0],p[1]-2,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function enMes(o,ym){return String(o.fecha).slice(0,7)===ym}
+function esEntregada(o){return o.estado==='Entregado'||o.estado==='Cerrado'}
+function vStats(){
+  const ym=statMonth,ymPrev=statPrevMonth(ym);
+  const mn=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const pp=ym.split('-');const mesNom=mn[+pp[1]]+' '+pp[0];
+  const entregadas=ordenes.filter(o=>esEntregada(o)&&enMes(o,ym));
+  const entMes=entregadas.length;
+  const entPrev=ordenes.filter(o=>esEntregada(o)&&enMes(o,ymPrev)).length;
+  const semana=semanaDe(HOY);const entSem=ordenes.filter(o=>esEntregada(o)&&semana.includes(o.fecha)).length;
+  const dset=new Set(entregadas.map(o=>o.fecha));const prom=dset.size?Math.round(entMes/dset.size*10)/10:0;
+  const reclamos=ordenes.filter(o=>o.reclamoNota&&enMes(o,ym)).length;
+  const recPrev=ordenes.filter(o=>o.reclamoNota&&enMes(o,ymPrev)).length;
+  const tasaRec=entMes?Math.round(reclamos/entMes*100):0;
+  const probs=ordenes.filter(o=>enMes(o,ym)&&o.lineas.some(l=>l.sep==='problema')).length;
+  const byF={};entregadas.filter(o=>o.flete).forEach(o=>byF[o.flete]=(byF[o.flete]||0)+1);
+  const byZ={};entregadas.filter(o=>o.zona&&o.zona!=='Retiro'&&o.zona!=='Expreso'&&o.zona!=='Mov. interno').forEach(o=>byZ[o.zona]=(byZ[o.zona]||0)+1);
+  const byT={};ordenes.filter(o=>enMes(o,ym)&&o.estado!=='Cancelado').forEach(o=>byT[o.tipo]=(byT[o.tipo]||0)+1);
+  const bars=(obj,color)=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]);if(!arr.length)return '<div class="empty">Sin datos en el período.</div>';const max=Math.max(...arr.map(x=>x[1]));return '<div class="zdist">'+arr.map(([k,n])=>`<div class="zrow" style="cursor:default"><div class="zname">${esc(k)}</div><div class="zbar"><div class="zfill" style="width:${Math.max(6,Math.round(n/max*100))}%${color?';background:'+color:''}"></div></div><div class="zn">${n}</div></div>`).join('')+'</div>'};
+  const delta=(c,pv)=>{if(!pv)return c?'<span style="color:#15803d">nuevo</span>':'<span class="muted">—</span>';const d=Math.round((c-pv)/pv*100);return `<span style="color:${d>=0?'#15803d':'#b42318'};font-weight:700">${d>=0?'▲':'▼'} ${Math.abs(d)}%</span>`};
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Estadísticas</h2><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="statMonth=statPrevMonth(statMonth);vStats()">‹ Mes anterior</button><button class="btn btn-ghost btn-sm" onclick="statMonth=HOY.slice(0,7);vStats()">Mes actual</button></div></div><div class="muted" style="margin:-2px 0 12px">${mesNom}</div>
+  <div class="cdtot">
+    <div class="stat"><div class="muted">Entregas del mes</div><div class="value">${entMes}</div><div style="font-size:12px">vs anterior: ${delta(entMes,entPrev)}</div></div>
+    <div class="stat"><div class="muted">Entregas de la semana</div><div class="value">${entSem}</div></div>
+    <div class="stat"><div class="muted">Promedio por día</div><div class="value">${prom}</div></div>
+    <div class="stat" style="${reclamos?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${reclamos?'#b42318':'#8a94a3'}">Reclamos</div><div class="value" style="color:${reclamos?'#b42318':'#0f1a2a'}">${reclamos}</div><div style="font-size:12px" class="muted">${tasaRec}% de entregas</div></div>
+    <div class="stat"><div class="muted">Problemas depósito</div><div class="value">${probs}</div></div>
+  </div></div>
+  <div class="card"><h3>Entregas por flete</h3>${bars(byF)}</div>
+  <div class="card"><h3>Entregas por zona</h3>${bars(byZ)}</div>
+  <div class="card"><h3>Por tipo de envío</h3>${bars(byT,'#8a94a3')}</div>
+  <div class="card"><h3>Comparación mensual</h3><div class="table-wrap"><table><thead><tr><th>Métrica</th><th>${mesNom}</th><th>Mes anterior</th><th>Variación</th></tr></thead><tbody>
+    <tr><td>Entregas</td><td><b>${entMes}</b></td><td>${entPrev}</td><td>${delta(entMes,entPrev)}</td></tr>
+    <tr><td>Reclamos</td><td><b>${reclamos}</b></td><td>${recPrev}</td><td>${delta(reclamos,recPrev)}</td></tr>
+    <tr><td>Promedio diario</td><td><b>${prom}</b></td><td>—</td><td></td></tr>
+  </tbody></table></div><p class="muted" style="margin-top:8px">Con historial cargado en Supabase vas a poder comparar mes a mes y año a año.</p></div>`;
+}
+/* ============ TABLERO ============ */
+let tbWeek=HOY;
+function vTablero(){
+  const dias=semanaDe(HOY);const diasNav=proxDias(tbWeek,6);
+  const dayO=ordenes.filter(o=>o.fecha===HOY&&o.estado!=='Cancelado');
+  const c=e=>dayO.filter(o=>o.estado===e).length;
+  const sinAsig=dayO.filter(o=>!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const condicSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado!=='Cancelado'&&o.habilitada===false).length;
+  const enViaje=c('En viaje');const entreg=c('Entregado')+c('Cerrado');const faltan=dayO.length-enViaje-entreg;const reclamos=c('En reclamo');const retirosT=dayO.filter(o=>o.tipo==='Retiro').length;const expresosT=dayO.filter(o=>o.tipo==='Expreso').length;
+  const probs=ordenes.filter(o=>o.estado!=='Cancelado'&&o.lineas.some(l=>l.sep==='problema'));
+  const maxW=Math.max(1,...diasNav.map(iso=>ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado').length));
+  const weekBars=diasNav.map((iso,i)=>{const arr=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado');const n=arr.length;const asg=arr.filter(o=>o.flete).length;const pp=iso.split('-');return `<div class="wbar" onclick="irOrdenes({day:'${iso}'})"><div class="wbar-t">${DOW[new Date(iso+'T00:00').getDay()]} ${+pp[2]}/${+pp[1]}</div><div class="wbar-track"><div class="wbar-fill" style="width:${Math.round(n/maxW*100)}%"></div></div><div class="wbar-n">${n} <span class="muted" style="font-weight:400">(${asg} asig.)</span></div></div>`}).join('');
+  const _p0=diasNav[0].split('-'),_p5=diasNav[5].split('-');const semLabel='Del '+(+_p0[2])+'/'+(+_p0[1])+' al '+(+_p5[2])+'/'+(+_p5[1])+(diasNav[0]===HOY?' · desde hoy':'');const porF={};dayO.filter(o=>o.flete).forEach(o=>porF[o.flete]=(porF[o.flete]||0)+1);
+  const retByLoc={};dayO.filter(o=>o.tipo==='Retiro').forEach(o=>{const lc=retLoc(o);retByLoc[lc]=(retByLoc[lc]||0)+1});const retChips=Object.entries(retByLoc).map(([lc,n])=>`<span class="chchip clik" onclick="irOrdenes({ret:'${esc(lc)}'})">Retiro · ${esc(lc)} · <b>${n}</b></span>`).join('');
+  const chChips=Object.entries(porF).sort((a,b)=>b[1]-a[1]).map(([f,n])=>`<span class="chchip clik" onclick="irOrdenes({flete:'${esc(f)}'})">${esc(f)} · <b>${n}</b></span>`).join('')+retChips+(sinAsig?` <span class="chchip sin clik" onclick="irOrdenes({flete:'__sin'})">Sin asignar · <b>${sinAsig}</b></span>`:'');
+  const semEntreg=ordenes.filter(o=>dias.includes(o.fecha)&&(o.estado==='Entregado'||o.estado==='Cerrado')).length;
+  const hoyD=new Date(HOY+'T00:00');const mesEntreg=ordenes.filter(o=>{const d=new Date(o.fecha+'T00:00');return d.getMonth()===hoyD.getMonth()&&d.getFullYear()===hoyD.getFullYear()&&(o.estado==='Entregado'||o.estado==='Cerrado')}).length;
+  const cobrSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado==='Cerrado').reduce((a,o)=>a+(o.cobrado||0),0);
+  const probBox=probs.length?`<div class="card" style="border-color:#f3c0bb"><h3 style="color:#b42318">Problemas de depósito a resolver (${probs.length})</h3>${probs.map(o=>`<div class="probrow"><div>Orden <b>${esc(o.boleta)}</b> · ${esc(o.cliente||'')} — ${o.lineas.filter(l=>l.sep==='problema').map(l=>esc(l.desc)+(l.probNota?' <span class="muted">('+esc(l.probNota)+')</span>':'')).join('; ')}</div><button class="btn btn-danger btn-sm" onclick="resolverProblema(${o.id})">Resolver</button></div>`).join('')}</div>`:'';
+  $('view').innerHTML=`
+  <div class="card"><div class="section-title"><h2>Tablero · ${fmt(HOY)}</h2></div>
+    <div class="cdtot">
+      <div class="stat clik" onclick="irOrdenes({day:HOY})"><div class="muted">Coordinados hoy</div><div class="value">${dayO.length}</div>${condic?`<div class="cond" style="font-size:12px">${condic} condicional${condic===1?'':'es'}</div>`:''}</div>
+      <div class="stat clik" onclick="irOrdenes({tipo:'Retiro'})"><div style="font-size:13px;font-weight:700;color:#8a94a3">Retiro cliente</div><div class="value">${retirosT}</div></div>
+      <div class="stat clik" onclick="irOrdenes({day:HOY})"><div style="font-size:13px;font-weight:700;color:#b45309">Faltan entregar</div><div class="value" style="color:#b45309">${faltan}</div></div>
+      <div class="stat clik" onclick="irOrdenes({estado:'En viaje'})" style="background:#e7effc"><div style="color:#1e5fce;font-size:13px;font-weight:700">En viaje</div><div class="value" style="color:#1e5fce">${enViaje}</div></div>
+      <div class="stat clik" onclick="irOrdenes({macro:'entregados'})" style="background:#e7f5ec"><div style="color:#15803d;font-size:13px;font-weight:700">Entregados</div><div class="value" style="color:#15803d">${entreg}</div></div>
+    </div></div>
+  <div class="card"><div class="cdtot">
+      <div class="stat clik" onclick="irOrdenes({cond:true})" style="${condicSem?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${condicSem?'#b45309':'#8a94a3'}">Condicionadas · semana</div><div class="value" style="color:${condicSem?'#b45309':'#0f1a2a'}">${condicSem}</div></div>
+      <div class="stat clik" onclick="irOrdenes({flete:'__sin'})" style="${sinAsig?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${sinAsig?'#b42318':'#8a94a3'}">Sin asignar</div><div class="value" style="color:${sinAsig?'#b42318':'#0f1a2a'}">${sinAsig}</div></div>
+      <div class="stat clik" onclick="irOrdenes({estado:'En reclamo'})" style="${reclamos?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${reclamos?'#b42318':'#8a94a3'}">Reclamos</div><div class="value" style="color:${reclamos?'#b42318':'#0f1a2a'}">${reclamos}</div></div>
+      <div class="stat clik" onclick="irOrdenes({tipo:'Expreso'})"><div style="font-size:13px;font-weight:700;color:#8a94a3">Expresos</div><div class="value">${expresosT}</div></div>
+      <div class="stat clik" onclick="irOrdenes({prob:true})" style="${probs.length?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${probs.length?'#b42318':'#8a94a3'}">Problemas depósito</div><div class="value" style="color:${probs.length?'#b42318':'#0f1a2a'}">${probs.length}</div></div>
+    </div></div>
+  ${probBox}
+  <div class="card"><div class="section-title"><h3>Viajes por día</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div><div class="muted" style="margin:-2px 0 10px">${semLabel}</div><div class="weekbars">${weekBars}</div></div>
+  <div class="card"><h3>Viajes por chofer · hoy</h3><div class="chstrip">${chChips||'<span class="muted">Sin viajes asignados aún.</span>'}</div></div>
+  <div class="card"><div class="section-title"><h3>Entregas por zona</h3><div class="row-actions"><div class="macrotog"><button class="${zdView==='dia'?'on':''}" onclick="zdView='dia';vTablero()">Día</button><button class="${zdView==='semana'?'on':''}" onclick="zdView='semana';vTablero()">Semana</button></div><input type="date" value="${HOY}" onchange="$('tbzonas').innerHTML=zonaDist(this.value)" style="width:auto;height:36px"></div></div><div id="tbzonas">${zonaDist(HOY)}</div></div>
+  <div class="card"><h3>Resumen</h3><div class="cdtot"><div class="stat"><div class="muted">Entregados esta semana</div><div class="value">${semEntreg}</div></div><div class="stat"><div class="muted">Entregados este mes</div><div class="value">${mesEntreg}</div></div></div></div>`}
+
+/* CARGAR wizard */
+let draft=null;
+function nuevoDraft(){return {paso:1,boleta:'',fecha:HOY,tipo:'Envío',horaDesde:'12',horaHasta:'19',cliente:'',tel1:'',tel2:'',localidad:'',domicilio:'',pisodepto:'',retiroLocal:'2020',localDestino:'2299',expresoModo:'flete',transNombre:'',transTel:'',transDom:'',provincia:'',dniCuit:'',bultos:1,valorDeclarado:0,embalaje:0,cantMuebles:1,lineas:[{cant:1,desc:'',local:'2020'}],total:0,pagosList:[''],costo_flete:0,instalacion:0,escalera:0}}
+function draftFromOrden(o){const hd=horaDef(o.tipo);let hD=hd[0],hH=hd[1];if(o.horario){const mm=String(o.horario).match(/(\d+)\D+(\d+)/);if(mm){hD=mm[1];hH=mm[2]}}return {paso:1,boleta:o.boleta,fecha:o.fecha,tipo:o.tipo,horaDesde:hD,horaHasta:hH,cliente:o.cliente,tel1:o.tel1||'',tel2:o.tel2||'',localidad:o.localidad,domicilio:o.direccion,pisodepto:o.pisodepto||'',retiroLocal:retLoc(o),localDestino:o.localDestino||'2299',expresoModo:o.expresoModo||'flete',transNombre:o.transNombre||'',transTel:o.transTel||'',transDom:o.transDom||'',provincia:o.provincia||'',dniCuit:o.dniCuit||'',bultos:o.bultos||1,valorDeclarado:o.valorDeclarado||0,embalaje:o.embalaje||0,cantMuebles:sum(o.lineas.map(l=>l.cant)),lineas:o.lineas.map(l=>({...l})),total:o.tipo==='Expreso'?(o.compra!=null?o.compra:((o.total||0)-(o.embalaje||0)-(o.costo_flete||0))):o.total,pagosList:o.pagosList||[o.pagos],costo_flete:o.costo_flete,instalacion:o.instalacion,escalera:o.escalera}}
+function zonaDraft(){return locData(draft.localidad).zona||'—'}
+function readStep(){const p=draft.paso;
+  if(p===1){if($('w_bol'))draft.boleta=$('w_bol').value.trim();if($('w_fec'))draft.fecha=$('w_fec').value;if($('w_tipo'))draft.tipo=$('w_tipo').value;if($('w_hd'))draft.horaDesde=$('w_hd').value.trim();if($('w_hh'))draft.horaHasta=$('w_hh').value.trim()}
+  if(p===2){if($('w_cli'))draft.cliente=$('w_cli').value.trim();if($('w_t1'))draft.tel1=$('w_t1').value.trim();if($('w_t2'))draft.tel2=$('w_t2').value.trim();if($('w_loc'))draft.localidad=$('w_loc').value.trim();if($('w_dom'))draft.domicilio=$('w_dom').value.trim();if($('w_pisodepto'))draft.pisodepto=$('w_pisodepto').value.trim();if($('w_ret'))draft.retiroLocal=$('w_ret').value;if($('w_dest'))draft.localDestino=$('w_dest').value;if($('w_emodo'))draft.expresoModo=$('w_emodo').value;if($('w_tn'))draft.transNombre=$('w_tn').value.trim();if($('w_tt'))draft.transTel=$('w_tt').value.trim();if($('w_tdom'))draft.transDom=$('w_tdom').value.trim();if($('w_prov'))draft.provincia=$('w_prov').value.trim();if($('w_dni'))draft.dniCuit=$('w_dni').value.trim()}
+  if(p===3){if($('w_cant'))draft.cantMuebles=+$('w_cant').value||0;if($('w_bultos'))draft.bultos=+$('w_bultos').value||0;const rows=document.querySelectorAll('#w_muebles .mueble-row');if(rows.length)draft.lineas=[...rows].map(r=>({cant:+r.querySelector('.m_cant').value||1,desc:r.querySelector('.m_desc').value.trim(),local:r.querySelector('.m_loc').value}))}
+  if(p===4){if($('w_total'))draft.total=moneyParse($('w_total').value);const pv=document.querySelectorAll('#w_pagos .p_val');if(pv.length)draft.pagosList=[...pv].map(x=>moneyParse(x.value));if($('w_cflete'))draft.costo_flete=moneyParse($('w_cflete').value);if($('w_emb'))draft.embalaje=moneyParse($('w_emb').value);if($('w_inst'))draft.instalacion=moneyParse($('w_inst').value);if($('w_vdec'))draft.valorDeclarado=moneyParse($('w_vdec').value)}
+}
+function faltan(){const p=draft.paso;const m=[];const k=[];const t=draft.tipo;
+  if(p===1){if(!draft.boleta){m.push('N° de orden');k.push('boleta')}if(!draft.fecha){m.push('Día de entrega');k.push('fecha')}if(!draft.tipo){m.push('Tipo de envío');k.push('tipo')}if(!draft.horaDesde||!draft.horaHasta){m.push('Horario');k.push('hora')}}
+  if(p===2){if(t==='Movimiento Interno'){if(!draft.localDestino){m.push('Local de destino');k.push('dest')}}else if(t==='Retiro'){if(!draft.cliente){m.push('Nombre del cliente');k.push('cliente')}if(!draft.tel1){m.push('Teléfono 1');k.push('tel1')}}else{if(!draft.cliente){m.push('Nombre del cliente');k.push('cliente')}if(!draft.tel1){m.push('Teléfono 1');k.push('tel1')}if(t==='Expreso'){if(!draft.transNombre){m.push('Nombre del transporte');k.push('tn')}if(!draft.provincia){m.push('Provincia');k.push('prov')}if(!draft.dniCuit){m.push('DNI / CUIT');k.push('dni')}if(!draft.localidad){m.push('Localidad');k.push('localidad')}}else if(!draft.domicilio){m.push('Domicilio');k.push('domicilio')}if(!draft.localidad){m.push('Localidad');k.push('localidad')}}}
+  if(p===3){const s=sum(draft.lineas.map(l=>l.cant));if(!draft.cantMuebles){m.push('Cantidad de muebles');k.push('cantMuebles')}if(draft.lineas.some(l=>!l.desc)){m.push('Descripción de cada mueble');k.push('desc')}if(draft.cantMuebles&&s!==+draft.cantMuebles){m.push('Las cantidades suman '+s+' y tienen que dar '+draft.cantMuebles);k.push('cuadra')}}
+  return {m,k}}
+function invc(key){return draft._inval&&draft._inval.includes(key)?' inval':''}
+function goStep(p){readStep();if(p>draft.paso){const f=faltan();if(f.k.length){draft._inval=f.k;vCargar();return}}draft._inval=[];draft.paso=p;vCargar()}
+function setTipo(v){readStep();draft.tipo=v;const hd=horaDef(v);draft.horaDesde=hd[0];draft.horaHasta=hd[1];vCargar()}
+
+/* ============ CARGAR (wizard) ============ */
+function vCargar(){
+  if(!draft)draft=editId?draftFromOrden(ordenes.find(x=>x.id===editId)):nuevoDraft();
+  const P=draft.paso;const t=draft.tipo;
+  const pill=(n,txt)=>`<div class="step-pill ${P===n?'active':(P>n?'done':'')}" onclick="goStep(${n})"><span class="num">${P>n?'✓':n}</span>${txt}</div>`;
+  let body='';
+  if(P===1)body=`<div class="sub-h">Datos de la orden</div><div class="form-grid">
+    <label class="field"><span class="lbl">N° de orden</span><input id="w_bol" class="${invc('boleta').trim()}" value="${esc(draft.boleta)}"></label>
+    <label class="field"><span class="lbl">Día de entrega</span><input type="date" id="w_fec" value="${draft.fecha}"></label>
+    <label class="field"><span class="lbl">Tipo de envío</span><select id="w_tipo" onchange="setTipo(this.value)">${opts(TIPOS,draft.tipo)}</select></label>
+    <label class="field"><span class="lbl">Horario</span><div class="horario ${invc('hora').trim()}"><input id="w_hd" value="${esc(draft.horaDesde)}"><span>a</span><input id="w_hh" value="${esc(draft.horaHasta)}"><span>hs</span></div></label></div>`;
+  if(P===2){
+    if(t==='Movimiento Interno')body=`<div class="sub-h">Movimiento interno</div><div class="form-grid"><label class="field"><span class="lbl">Local de destino</span><select id="w_dest" class="${invc('dest').trim()}">${opts(LOCALES,draft.localDestino)}</select></label><label class="field" style="grid-column:1/-1"><span class="lbl">Referencia / motivo</span><input id="w_cli" value="${esc(draft.cliente)}" placeholder="Ej: reposición de vidriera"></label></div><p class="muted">El local de origen de cada mueble se define en el paso Muebles.</p>`;
+    else if(t==='Retiro')body=`<div class="sub-h">Datos del cliente · retiro</div><div class="form-grid"><label class="field"><span class="lbl">Nombre del cliente</span><input id="w_cli" class="${invc('cliente').trim()}" value="${esc(draft.cliente)}"></label><label class="field"><span class="lbl">Teléfono(s)</span><div class="inline2"><input id="w_t1" class="${invc('tel1').trim()}" placeholder="Teléfono 1" value="${esc(draft.tel1)}"><input id="w_t2" placeholder="Teléfono 2 (opcional)" value="${esc(draft.tel2)}"></div></label><label class="field"><span class="lbl">Retira de</span><select id="w_ret">${opts(LOCALES,draft.retiroLocal)}</select></label></div><p class="muted">El cliente retira en el local: no hace falta domicilio ni localidad.</p>`;
+    else if(t==='Expreso')body=`<div class="sub-h">Transporte</div><div class="form-grid"><label class="field"><span class="lbl">¿Quién lo lleva al transporte?</span><select id="w_emodo" onchange="readStep();vCargar()"><option value="flete" ${draft.expresoModo==='flete'?'selected':''}>Lo lleva mi flete</option><option value="retira" ${draft.expresoModo==='retira'?'selected':''}>Lo retira el transporte</option></select></label><label class="field"><span class="lbl">Nombre del transporte</span><input id="w_tn" class="${invc('tn').trim()}" value="${esc(draft.transNombre)}"></label><label class="field"><span class="lbl">Teléfono del transporte</span><input id="w_tt" value="${esc(draft.transTel)}"></label>${draft.expresoModo==='retira'?`<label class="field"><span class="lbl">Retira de</span><select id="w_ret">${opts(LOCALES,draft.retiroLocal)}</select></label>`:`<label class="field"><span class="lbl">Domicilio del transporte</span><input id="w_tdom" value="${esc(draft.transDom)}"></label>`}</div><div class="sub-h">Cliente destinatario</div><div class="form-grid"><label class="field"><span class="lbl">Nombre del cliente</span><input id="w_cli" class="${invc('cliente').trim()}" value="${esc(draft.cliente)}"></label><label class="field"><span class="lbl">Teléfono</span><input id="w_t1" value="${esc(draft.tel1)}"></label><label class="field"><span class="lbl">CUIT / DNI</span><input id="w_dni" class="${invc('dni').trim()}" value="${esc(draft.dniCuit)}"></label><label class="field"><span class="lbl">Provincia</span><select id="w_prov" class="${invc('prov').trim()}"><option value="">Elegí provincia</option>${PROVINCIAS.map(pv=>`<option ${draft.provincia===pv?'selected':''}>${pv}</option>`).join('')}</select></label><label class="field"><span class="lbl">Localidad</span><input id="w_loc" class="${invc('localidad').trim()}" value="${esc(draft.localidad)}" placeholder="Escribí la localidad"></label></div><div class="dom2"><label class="field"><span class="lbl">Domicilio</span><input id="w_dom" value="${esc(draft.domicilio)}" placeholder="Calle y número"></label><label class="field"><span class="lbl">Piso / Depto</span><input id="w_pisodepto" value="${esc(draft.pisodepto)}" placeholder="Ej: 5° B"></label></div>`;
+    else body=`<div class="sub-h">Datos del cliente</div><div class="form-grid"><label class="field"><span class="lbl">Nombre del cliente</span><input id="w_cli" class="${invc('cliente').trim()}" value="${esc(draft.cliente)}"></label><label class="field"><span class="lbl">Teléfono(s)</span><div class="inline2"><input id="w_t1" class="${invc('tel1').trim()}" placeholder="Teléfono 1" value="${esc(draft.tel1)}"><input id="w_t2" placeholder="Teléfono 2 (opcional)" value="${esc(draft.tel2)}"></div></label></div>
+    <div class="sub-h">Dirección</div><div class="dom2"><label class="field"><span class="lbl">Domicilio</span><input id="w_dom" class="${invc('domicilio').trim()}" value="${esc(draft.domicilio)}" placeholder="Calle y número"></label><label class="field"><span class="lbl">Piso / Depto</span><input id="w_pisodepto" value="${esc(draft.pisodepto)}" placeholder="Ej: 5° B"></label></div>
+    <div class="form-grid" style="margin-top:12px"><label class="field"><span class="lbl">Localidad <span class="hint">(escribí y elegí)</span></span><input id="w_loc" list="dl_loc" class="${invc('localidad').trim()}" value="${esc(draft.localidad)}" placeholder="Empezá a escribir…" oninput="onLocInput()"><datalist id="dl_loc">${LOCALIDADES.map(l=>`<option value="${esc(l.n)}">`).join('')}</datalist></label><label class="field"><span class="lbl">Zona <span class="hint">(automática)</span></span><div class="zona-auto" id="w_zona">${esc(zonaDraft())}</div></label></div>`;
+  }
+  if(P===3){const s=sum(draft.lineas.map(l=>l.cant));const cuadra=+draft.cantMuebles===s;
+    body=`<div class="sub-h">Muebles</div><div class="form-grid"><label class="field"><span class="lbl">¿Cuántos muebles en total?</span><input type="number" min="1" id="w_cant" class="${invc('cantMuebles').trim()}" value="${draft.cantMuebles}" oninput="readStep();updCuadra()"></label>${t==='Expreso'?`<label class="field"><span class="lbl">Cantidad de bultos</span><input type="number" min="1" id="w_bultos" value="${draft.bultos}"></label>`:''}</div>
+    <div id="cuadraInd" class="cuadra ${cuadra?'ok':'no'}">${cuadra?'✓ Las cantidades cuadran ('+s+' de '+draft.cantMuebles+')':'Cargá hasta sumar '+draft.cantMuebles+' — vas '+s}</div>
+    <div id="w_muebles">${draft.lineas.map(mrow).join('')}</div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="readStep();draft.lineas.push({cant:1,desc:'',local:'2020'});vCargar()">+ Agregar mueble</button>`}
+  if(P===4){
+    if(t==='Movimiento Interno')body=`<div class="notinc">Movimiento interno — sin cobros. No se cobra nada al cliente.</div>`;
+    else if(t==='Expreso')body=`<div class="notinc" style="background:#e7f5ec;border-color:#bfe3cc;color:#0f5132">Expreso prepago — todo tiene que estar pago. El saldo debe cerrar en $0 para sacar la orden; si no, se condiciona con motivo.</div><label class="field" style="margin-top:12px"><span class="lbl">Total de la compra</span><input type="text" inputmode="numeric" id="w_total" value="${draft.total?moneyFmt(draft.total):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshExp()"></label><label class="field"><span class="lbl">Total del embalaje</span><input type="text" inputmode="numeric" id="w_emb" value="${draft.embalaje?moneyFmt(draft.embalaje):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshExp()"></label><label class="field"><span class="lbl">Total del flete</span><input type="text" inputmode="numeric" id="w_cflete" value="${draft.costo_flete?moneyFmt(draft.costo_flete):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshExp()"></label><div class="sub-h">Pagos</div><div id="w_pagos">${draft.pagosList.map((pp,i)=>pagoRow(pp,i)).join('')}</div><button type="button" class="btn btn-ghost btn-sm" onclick="readStep();draft.pagosList.push('');vCargar()">+ Agregar pago</button><div class="saldo-big" id="w_expsaldo">${expSaldoHTML()}</div><label class="field" style="margin-top:16px"><span class="lbl">Valor declarado de la mercadería</span><input type="text" inputmode="numeric" id="w_vdec" value="${draft.valorDeclarado?moneyFmt(draft.valorDeclarado):''}" placeholder="$0" oninput="moneyIn(this);readStep()"></label>`;
+    else{const saldo=draft.total-sum(draft.pagosList);const costos=(+draft.costo_flete||0)+(+draft.instalacion||0);
+      body=`<label class="field" style="margin-bottom:14px"><span class="lbl">Total de la compra</span><input type="text" inputmode="numeric" id="w_total" value="${draft.total?moneyFmt(draft.total):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshSaldo()"></label>
+      <div class="sub-h">Pagos</div><div id="w_pagos">${draft.pagosList.map((pp,i)=>pagoRow(pp,i)).join('')}</div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="readStep();draft.pagosList.push('');vCargar()">+ Agregar pago</button>
+      <div class="saldo-big"><span>Saldo pendiente del pedido</span><span id="w_saldo">${money(saldo)}</span></div>`;
+      if(t!=='Retiro')body+=`<label class="field" style="margin-top:16px"><span class="lbl">Costo de envío</span><input type="text" inputmode="numeric" id="w_cflete" value="${draft.costo_flete?moneyFmt(draft.costo_flete):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshCostos()"></label><label class="field"><span class="lbl">Costo de instalación <span class="hint">(si lo hay)</span></span><input type="text" inputmode="numeric" id="w_inst" value="${draft.instalacion?moneyFmt(draft.instalacion):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshCostos()"></label><div class="saldo-box"><span>Total costos de envío</span><span id="w_costos">${money(costos)}</span></div>`;
+      else body+=`<p class="muted" style="margin-top:12px">Retiro en el local — sin costo de envío ni instalación.</p>`;
+    }
+  }
+  const nav=`${draft._inval&&draft._inval.length?`<div class="missing">Completá lo que quedó en rojo para poder avanzar.</div>`:''}<div class="wiz-nav"><button class="btn btn-ghost" ${P===1?'disabled':''} onclick="goStep(${P-1})">← Atrás</button>${P<4?`<button class="btn btn-primary" onclick="goStep(${P+1})">Siguiente →</button>`:`<button class="btn btn-ok" onclick="guardarDraft()">✓ Guardar orden</button>`}</div>`;
+  $('view').innerHTML=`<div class="card"><h2>${editId?'Editar orden':'Cargar orden'}</h2><div class="steps">${pill(1,'Orden')}${pill(2,'Cliente')}${pill(3,'Muebles')}${pill(4,'Saldos')}</div>${body}${nav}</div>`;
+}
+function mrow(l){const dinv=(draft._inval&&draft._inval.includes('desc')&&!l.desc)?' inval':'';return `<div class="mueble-row"><label class="field"><span class="lbl">Cant.</span><input type="number" min="1" class="m_cant" value="${l.cant||1}" oninput="readStep();updCuadra()"></label><label class="field"><span class="lbl">Mueble</span><input class="m_desc${dinv}" value="${esc(l.desc||'')}" placeholder="Cómoda Detroit 120 blanca"></label><label class="field"><span class="lbl">Sale de</span><select class="m_loc">${opts(LOCALES,l.local||'2020')}</select></label><button type="button" class="btn btn-danger btn-sm" style="height:42px" onclick="delMueble(this)">×</button></div>`}
+function updCuadra(){const ind=$('cuadraInd');if(!ind)return;const s=sum([...document.querySelectorAll('#w_muebles .m_cant')].map(x=>x.value));const n=+$('w_cant').value||0;const ok=n===s;ind.className='cuadra '+(ok?'ok':'no');ind.textContent=ok?`Las cantidades cuadran (${s} de ${n})`:`Cargá hasta sumar ${n} — vas ${s}`}
+function delMueble(b){readStep();const i=[...document.querySelectorAll('#w_muebles .mueble-row')].indexOf(b.closest('.mueble-row'));draft.lineas.splice(i,1);if(!draft.lineas.length)draft.lineas.push({cant:1,desc:'',local:'2020'});vCargar()}
+function pagoRow(p,i){return `<div class="pagorow${i>0?' del':''}"><input type="text" inputmode="numeric" class="p_val" value="${p?moneyFmt(p):''}" placeholder="Monto del pago ${i+1}" oninput="moneyIn(this);refreshSaldo()">${i>0?`<button type="button" class="btn btn-danger btn-sm" onclick="delPago(${i})">×</button>`:''}</div>`}
+function delPago(i){readStep();draft.pagosList.splice(i,1);vCargar()}
+function refreshSaldo(){if($('w_saldo'))$('w_saldo').textContent=money(moneyParse($('w_total').value)-sum([...document.querySelectorAll('.p_val')].map(x=>moneyParse(x.value))))}
+function addTipo(){const t=prompt('Nuevo tipo de envío:');if(t&&!TIPOS.includes(t)){TIPOS.push(t);readStep();draft.tipo=t;vCargar()}}
+function expSaldo(){return (+draft.total||0)+(+draft.embalaje||0)+(+draft.costo_flete||0)-sum(draft.pagosList)}
+function expSaldoHTML(){const s=expSaldo();return `<span>Saldo pendiente (debe ser $0)</span><span style="color:${s===0?'#15803d':'#b42318'}">${money(s)}</span>`}
+function refreshExp(){const el=$('w_expsaldo');if(el)el.innerHTML=expSaldoHTML()}
+function guardarDraft(){readStep();const t=draft.tipo;
+  if(diasCerrados[draft.fecha]){alert('Ese día está cerrado para programar. Reabrilo en Órdenes o elegí otro día.');return}
+  const esRetiro=t==='Retiro';const esMI=t==='Movimiento Interno';const esExp=t==='Expreso';
+  const saldo=draft.total-sum(draft.pagosList);
+  if(!esMI&&!esExp&&(saldo<0||saldo>500000)){if(!confirm('AUTORIZACIÓN\n\nEl saldo es '+money(saldo)+(saldo<0?' (NEGATIVO)':' (mayor a $500.000)')+'.\nRequiere autorización.\n\n¿Confirmás que está correcto?'))return}
+  if(esExp&&!draft.valorDeclarado){if(!confirm('No cargaste el valor declarado del expreso. ¿Guardar igual?'))return}
+  let habil=true,condMotivo='';if(esExp){const se=expSaldo();if(se!==0){condMotivo=prompt('El saldo del expreso no cierra en $0 (queda '+money(se)+'). Todo tiene que estar pago para sacarlo.\n\n¿Por qué lo autorizás igual? (queda registrado y la orden entra CONDICIONADA)');if(condMotivo===null)return;habil=false}}
+  const horario=draft.horaDesde+' a '+draft.horaHasta+'hs';
+  const direccion=esRetiro?('Retira en '+draft.retiroLocal):(esMI?('Destino: '+draft.localDestino):draft.domicilio);
+  const zona=esRetiro?'Retiro':(esMI?'Mov. interno':(esExp?'Expreso':zonaDraft()));
+  const reg={boleta:draft.boleta,fecha:draft.fecha,tipo:t,horario,cliente:draft.cliente,tel1:draft.tel1,tel2:draft.tel2,localidad:(esRetiro||esMI)?'':draft.localidad,provincia:esExp?draft.provincia:'',zona,direccion,pisodepto:draft.pisodepto,retiroLocal:(esRetiro||(esExp&&draft.expresoModo==='retira'))?draft.retiroLocal:'',localDestino:esMI?draft.localDestino:'',expresoModo:esExp?draft.expresoModo:'',transNombre:esExp?draft.transNombre:'',transTel:esExp?draft.transTel:'',transDom:esExp?draft.transDom:'',dniCuit:esExp?draft.dniCuit:'',bultos:esExp?draft.bultos:0,valorDeclarado:esExp?draft.valorDeclarado:0,lineas:draft.lineas.filter(m=>m.desc),total:esMI?0:draft.total,pagosList:draft.pagosList,pagos:esMI?0:sum(draft.pagosList),costo_flete:(esRetiro||esMI)?0:draft.costo_flete,embalaje:esExp?draft.embalaje:0,instalacion:(esRetiro||esMI||esExp)?0:draft.instalacion,escalera:draft.escalera};
+  if(esExp){reg.habilitada=habil;reg.condMotivo=condMotivo;reg.compra=draft.total;reg.total=(+draft.total||0)+(+draft.embalaje||0)+(+draft.costo_flete||0)}
+  const necesitaChofer=!(esRetiro||esMI||(esExp&&draft.expresoModo==='retira'));
+  if(editId){const o=ordenes.find(x=>x.id===editId);Object.assign(o,reg);if(o.estado==='Por completar')o.estado=(o.flete?'Pendiente de entrega':'Pendiente de asignar chofer')}
+  else ordenes.push(Object.assign({id:nid(),estado:necesitaChofer?'Pendiente de asignar chofer':'Pendiente de entrega',verificado:false,flete:''},reg));
+  draft=null;editId=null;alert('Orden guardada. Mirá el Mapa y las Órdenes.');setTab('ordenes')}
+
+/* ÓRDENES */
+let ordFil={q:'',estado:'',flete:''};
+let ordCond=false;let ordZona='';let ordProb=false;let ordRet='';let ordTipo='';
+function irOrdenes(o){o=o||{};selDay=o.day||HOY;weekRef=o.day||HOY;ordMacro=o.macro||'proceso';ordFil={q:'',estado:o.estado||'',flete:o.flete||''};ordCond=!!o.cond;ordZona=o.zona||'';ordProb=!!o.prob;ordRet=o.ret||'';ordTipo=o.tipo||'';setTab('ordenes')}
+let ordMacro='proceso';
+let weekRef=HOY;
+let selDay=HOY;
+let diasCerrados={};
+const ESTADOS=['Por completar','Pendiente de asignar chofer','Pendiente de entrega','En viaje','Entregado','Cerrado','En reclamo','Reprogramado','Cancelado'];
+const DIASSEM=['Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DOW=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+function proxDias(desde,n){const a=[];let d=new Date(desde+'T00:00');while(a.length<n){if(d.getDay()!==0)a.push(isoOf(d));d.setDate(d.getDate()+1)}return a}
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDays(iso,n){const d=new Date(iso+'T00:00');d.setDate(d.getDate()+n);return isoOf(d)}
+function semanaDe(ref){const d=new Date(ref+'T00:00');const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);const a=[];for(let i=0;i<6;i++){const x=new Date(d);x.setDate(d.getDate()+i);a.push(isoOf(x))}return a}
+function esProceso(o){return o.estado!=='Cerrado'&&o.estado!=='Cancelado'}
+function reOrd(k){vOrdenes();if(k){const el=$('of_q');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}}
+function asignarFlete(id,v){const o=ordenes.find(x=>x.id===id);o.flete=v;if(v){if(o.estado==='Pendiente de asignar chofer')o.estado='Pendiente de entrega'}else{if(o.estado==='Pendiente de entrega')o.estado='Pendiente de asignar chofer'}vOrdenes()}
+let MOTIVOS_BH=['Envío bonificado','Ayudante extra','Peaje','Espera del chofer','Otros motivos'];
+function elegirMotivoBH(){const op=MOTIVOS_BH.map((m,i)=>(i+1)+') '+m).join('\n');const r=prompt('¿Motivo del pago de Belgrano Home?\n\n'+op+'\n\nEscribí el número:','1');const i=parseInt(r)-1;return MOTIVOS_BH[i]||MOTIVOS_BH[MOTIVOS_BH.length-1]}
+function cerrarOrden(id){const o=ordenes.find(x=>x.id===id);const saldo=(o.total||0)-(o.pagos||0);
+  const cob=prompt('¿Cuánto cobró el chofer por esta orden?\n(Tenía que cobrar '+money(saldo)+')',saldo);if(cob===null)return;const cobN=moneyParse(cob);
+  let cmot='';if(cobN<saldo){cmot=prompt('Cobró '+money(saldo-cobN)+' menos de lo que decía la orden. ¿Por qué?','')||''}
+  const bh=prompt('¿Belgrano Home le pagó algo adicional al chofer por su trabajo?\n(0 si no hay)',0);if(bh===null)return;const bhN=moneyParse(bh);
+  let bmot='';if(bhN>0)bmot=elegirMotivoBH();
+  o.cobrado=cobN;o.cobradoMenosMotivo=cmot;o.seLleva=(o.costo_flete||0)+(o.instalacion||0);o.bhPago=bhN;o.bhPagoMotivo=bmot;o.rendido=false;o.estadoPrev=o.estado;o.estado='Cerrado';vOrdenes()}
+function reabrirOrden(id){const o=ordenes.find(x=>x.id===id);o.estado=o.estadoPrev||(o.flete?'En viaje':'Pendiente de asignar chofer');o.rendido=false;vOrdenes()}
+function cerrarFlete(f){const n=ordenes.filter(o=>o.fecha===selDay&&o.flete===f&&(o.estado==='En viaje'||o.estado==='Entregado'));if(!n.length){alert('Ese flete no tiene viajes para cerrar (en viaje o entregados) en el día.');return}n.forEach(o=>{o.estadoPrev=o.estado;o.estado='Cerrado'});vOrdenes()}
+function toggleDiaCerrado(){if(diasCerrados[selDay])delete diasCerrados[selDay];else diasCerrados[selDay]=true;vOrdenes()}
+function marcarHabil(id,val){const o=ordenes.find(x=>x.id===id);if(val){const pg=prompt('El cliente vino a pagar. ¿Cuánto pagó ahora? (0 = solo habilitar)',0);if(pg===null)return;const pn=moneyParse(pg);if(pn>0){o.pagosList=(o.pagosList||[]).concat(pn);o.pagos=(o.pagos||0)+pn}o.habilitada=true}else{o.habilitada=false}vOrdenes()}
+
+/* ============ ORDENES ============ */
+function vOrdenes(){
+  const dias=semanaDe(weekRef);
+  if(!dias.includes(selDay))selDay=dias.includes(HOY)?HOY:dias[0];
+  const tabsH=dias.map((iso,i)=>{const n=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado').length;const cerr=diasCerrados[iso];const p=iso.split('-');
+    return `<button class="daypill${iso===selDay?' sel':''}${cerr?' cerr':''}" onclick="selDay='${iso}';vOrdenes()"><span class="dn">${DIASSEM[i]} ${+p[2]}/${+p[1]}</span><span class="dc">${cerr?'cerrado · ':''}${n} viaje${n===1?'':'s'}</span></button>`}).join('');
+  const dayO=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado');
+  const total=dayO.length;const sinAsig=dayO.filter(o=>!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const firmes=total-condic;
+  const porF={};dayO.filter(o=>o.flete).forEach(o=>porF[o.flete]=(porF[o.flete]||0)+1);
+  const chips=Object.entries(porF).sort((a,b)=>b[1]-a[1]).map(([f,n])=>`<span class="chchip">${esc(f)} · <b>${n}</b> <button class="minibtn" onclick="cerrarFlete('${esc(f)}')">Cerrar</button></span>`).join('');
+  const cerrado=diasCerrados[selDay];
+  const meta=firmes>=15?'<span class="tgt ok">día completo</span>':`<span class="tgt">${firmes}/~15</span>`;
+  const scope=ordCond?semanaDe(weekRef):[selDay];let list=ordenes.filter(o=>scope.includes(o.fecha));if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
+  if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(o=>ordMacro==='proceso'?esProceso(o):o.estado==='Cerrado')}
+  if(ordFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(ordFil.q.toLowerCase()));
+  if(ordFil.estado)list=list.filter(o=>o.estado===ordFil.estado);
+  if(ordFil.flete)list=list.filter(o=>ordFil.flete==='__sin'?!o.flete:o.flete===ordFil.flete);
+  _ordList=list;const rows=list.map(o=>{const nm=sum(o.lineas.map(l=>l.cant));const prob=o.lineas.some(l=>l.sep==='problema');
+    const fopts=['<option value="">Sin asignar</option>'].concat(FLETES.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');
+    const hor=o.horario==='Estándar'?'<span class="muted">Estándar</span>':`<b>${esc(o.horario||'—')}</b>`;
+    const acc=[`<button class="btn btn-ghost btn-sm" onclick="verImprimir(${o.id})">Remito</button>`];
+    if(ordMacro==='proceso'){if(prob){acc.push(`<button class="btn btn-danger btn-sm" onclick="resolverProblema(${o.id})">Resolver depósito</button>`)}else if(o.habilitada===false){acc.push(`<button class="btn btn-ok btn-sm" onclick="marcarHabil(${o.id},true)">Habilitar</button>`)}else{if(o.estado==='Pendiente de entrega')acc.push(`<button class="btn btn-ok btn-sm" onclick="despachar(${o.id})">Despachar</button>`);if(o.estado==='En viaje'||o.estado==='Entregado')acc.push(`<button class="btn btn-primary btn-sm" onclick="cerrarOrden(${o.id})">Cerrar</button>`);if(o.estado==='Pendiente de asignar chofer'||o.estado==='Pendiente de entrega')acc.push(`<button class="btn btn-ghost btn-sm" onclick="marcarHabil(${o.id},false)">No habilitar</button>`)}}
+    else{acc.push(`<button class="btn btn-ghost btn-sm" onclick="reabrirOrden(${o.id})">Reabrir</button>`)}
+    if(o.estado==='En reclamo')acc.push(`<button class="btn btn-ghost btn-sm" onclick="verReclamo(${o.id})">Ver reclamo</button>`);if(ordMacro==='proceso')acc.push(`<button class="btn btn-danger btn-sm" onclick="cancelarOrden(${o.id})">Cancelar</button>`);acc.push(`<button class="btn btn-ghost btn-sm" onclick="editId=${o.id};draft=null;setTab('cargar')">Editar</button>`);
+    return `<tr class="${!o.flete?'sinasignar':''}"><td><strong>${esc(o.boleta)}</strong>${o.verificado?' ✓':''}<br><span class="muted">${esc(o.cliente||'')}</span></td><td>${esc(o.localidad||'—')}<br><span class="muted">${esc(o.zona||'')}</span></td><td style="text-align:center">${nm}</td><td><select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select></td><td>${hor}</td><td><b>${money((o.total||0)-(o.pagos||0))}</b><br><span class="muted">Env ${money(o.costo_flete||0)}</span></td><td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span>${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">No habilitada</span>':''}</td><td><div class="row-actions" style="justify-content:flex-end">${acc.join('')}</div></td></tr>`}).join('');
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">← Semana</button><button class="btn btn-ghost btn-sm" onclick="weekRef=addDays(weekRef,7);vOrdenes()">Semana →</button>${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
+    <div class="daytabs">${tabsH}</div>
+    <div class="daybar"><div><b>${fmt(selDay)}</b> · ${total} coordinado${total===1?'':'s'} ${meta}${condic?` · <span class="cond">${condic} condicional${condic===1?'':'es'}</span>`:''}${sinAsig?` · <span class="sinred">${sinAsig} sin chofer</span>`:''}</div><button class="btn ${cerrado?'btn-danger':'btn-primary'} btn-sm" onclick="toggleDiaCerrado()">${cerrado?'Reabrir el día':'Cerrar el día'}</button></div>
+    ${cerrado?'<div class="daylock">Día cerrado — no se pueden programar más viajes.</div>':''}
+    <div class="chstrip">${chips||'<span class="muted">Sin choferes asignados aún.</span>'}${sinAsig?` <span class="chchip sin">Sin asignar · <b>${sinAsig}</b></span>`:''}</div></div>
+    <div class="card"><div class="macrotog"><button class="${ordMacro==='proceso'?'on':''}" onclick="ordMacro='proceso';vOrdenes()">En proceso de entrega</button><button class="${ordMacro==='entregados'?'on':''}" onclick="ordMacro='entregados';vOrdenes()">Ya entregados</button></div>
+    <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)"><select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${ESTADOS.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select><select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${FLETES.map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>${(ordCond||ordZona||ordProb||ordRet||ordTipo)?`<div class="actfil">Filtros activos: ${ordCond?'<span class="afchip">Condicionadas · semana <button onclick="ordCond=false;vOrdenes()">×</button></span>':''}${ordZona?`<span class="afchip">Zona: ${esc(ordZona)} <button onclick="ordZona='';vOrdenes()">×</button></span>`:''}${ordProb?'<span class="afchip">Con problema <button onclick="ordProb=false;vOrdenes()">×</button></span>':''}${ordRet?`<span class="afchip">Retiro: ${esc(ordRet==='ALL'?'todos':ordRet)} <button onclick="ordRet='';vOrdenes()">×</button></span>`:''}${ordTipo?`<span class="afchip">Tipo: ${esc(ordTipo)} <button onclick="ordTipo='';vOrdenes()">×</button></span>`:''} <button class="btn btn-ghost btn-sm" onclick="ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';vOrdenes()">Limpiar</button></div>`:''}
+    ${list.length?`<div class="table-wrap"><table><thead><tr><th>N° orden</th><th>Localidad</th><th>Muebles</th><th>Flete</th><th>Horario</th><th>Cobranza</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
+function despachar(oid){const o=ordenes.find(x=>x.id===oid);if(o.habilitada===false){alert('Esta orden está condicionada a pago. Habilitala antes de despachar.');return}o.estado='En viaje';render()}
+let reclamoOpen=null;let reclamoFotoTmp='';
+function fleteProblema(id){reclamoOpen=id;reclamoFotoTmp='';render()}
+function onReclamoFoto(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{reclamoFotoTmp=r.result;const pv=$('fotoPrev');if(pv)pv.innerHTML='<img src="'+reclamoFotoTmp+'" style="max-width:120px;border-radius:6px;margin-left:8px;vertical-align:middle">'};r.readAsDataURL(f)}
+function enviarReclamo(id){const o=ordenes.find(x=>x.id===id);o.reclamoNota=$('t_reclamo')?$('t_reclamo').value.trim():'';if(reclamoFotoTmp)o.reclamoFoto=reclamoFotoTmp;o.estadoPrev=o.estado;o.estado='En reclamo';reclamoOpen=null;reclamoFotoTmp='';render()}
+function verReclamo(id){const o=ordenes.find(x=>x.id===id);const w=window.open('','_blank');w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reclamo '+esc(o.boleta)+'</title><style>body{font-family:Arial;max-width:520px;margin:24px auto;padding:0 18px;color:#0f1a2a;line-height:1.5}h2{color:#16324f;margin:0 0 4px}.muted{color:#8a94a3}img{max-width:100%;border-radius:8px;border:1px solid #d9e0e8;margin-top:6px}</style></head><body><h2>Reclamo · Orden '+esc(o.boleta)+'</h2><p class="muted">Cliente: '+esc(o.cliente||'—')+' · Flete: '+esc(o.flete||'—')+'</p><p><b>Qué pasó:</b><br>'+esc(o.reclamoNota||'(sin nota)')+'</p>'+(o.reclamoFoto?'<p><b>Foto adjunta:</b><br><img src="'+o.reclamoFoto+'"></p>':'<p class="muted">Sin foto adjunta.</p>')+'</body></html>');w.document.close()}
+function cancelarOrden(id){if(!confirm('¿Cancelar este viaje? Sale del circuito activo. (Podés verlo después filtrando por estado Cancelado.)'))return;const o=ordenes.find(x=>x.id===id);o.estadoPrev=o.estado;o.estado='Cancelado';vOrdenes()}
+function verImprimir(oid){const o=ordenes.find(x=>x.id===oid);if(!confirm('¿Chequeaste TODO antes de imprimir?'))return;o.verificado=true;imprimir(o)}
+function fechaLarga(iso){try{const d=new Date(iso+'T00:00');const s=d.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});return s}catch(e){return fmt(iso)}}
+function imprimirExpreso(o){
+  const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');
+  const rows=(o.lineas||[]).map((l,i)=>`<div style="display:grid;grid-template-columns:34px 56px 1fr;grid-column:1/-1"><div style="padding:8px;border-bottom:1px solid #eef0f2">${i+1}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${l.cant}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</div></div>`).join('');
+  const muebTable=`<div style="margin-top:18px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:6px">DETALLE DE MERCADERÍA</div><div style="display:grid;grid-template-columns:34px 56px 1fr;font-size:12.5px"><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">#</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">CANT</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">MUEBLE</div>${rows}</div></div>`;
+  const bultosVal=`<div style="margin-top:16px;display:flex;gap:28px;font-size:13.5px"><div><span style="color:#5b6472">Bultos:</span> <b>${o.bultos||1}</b></div><div><span style="color:#5b6472">Valor declarado:</span> <b>${m2(o.valorDeclarado)}</b></div></div>`;
+  const head=(titulo,sub)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px"><div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:10px;color:#5b6472;margin-top:3px">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div></div><div style="text-align:right"><div style="font-size:11px;font-weight:600;color:#5b6472;letter-spacing:1px">${titulo}</div><div style="font-size:24px;font-weight:800;color:#0f766e">Nº ${esc(o.boleta)}</div><div style="font-size:12px;color:#5b6472">${fechaLarga(o.fecha)}${sub?' · '+sub:''}</div></div></div>`;
+  const firma=(a,b)=>`<div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:56px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${a}</div></div><div style="text-align:center"><div style="height:56px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${b}</div></div></div>`;
+  const half=(inner)=>`<div class="sheet" style="width:190mm;min-height:128mm;background:#fff;padding:9mm 11mm;box-shadow:0 4px 16px rgba(0,0,0,.1);color:#14181f;border:1.5px solid #14181f">${inner}</div>`;const pg=(a,b)=>`<div style="page-break-after:always;display:flex;flex-direction:column;gap:6mm">${a}${b}</div>`;
+  const transDest=o.expresoModo==='retira'?('Retira de local '+(o.retiroLocal||'')):(o.transDom||'—');
+  const r1=half(head('REMITO DE DESPACHO A TRANSPORTE','')+`<div style="margin-top:20px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">TRANSPORTE</div><div style="font-size:14px;line-height:1.7"><div><span style="color:#5b6472">Transporte:</span> <b>${esc(o.transNombre||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.transTel||'—')}</b></div><div><span style="color:#5b6472">${o.expresoModo==='retira'?'Retira de:':'Domicilio:'}</span> <b>${esc(transDest)}</b></div></div></div>`+muebTable+bultosVal+firma('FIRMA DEL TRANSPORTE','ACLARACIÓN')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Comprobante de despacho — no válido como factura</div>`);
+  const clienteBlock=`<div style="margin-top:20px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">CLIENTE DESTINATARIO</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px"><div><span style="color:#5b6472">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.tel1||'—')}</b></div><div><span style="color:#5b6472">Provincia:</span> <b>${esc(o.provincia||'—')}</b></div><div><span style="color:#5b6472">Localidad:</span> <b>${esc(o.localidad||'—')}</b></div><div style="grid-column:1/-1"><span style="color:#5b6472">Domicilio:</span> <b>${esc(o.direccion||'—')}</b></div><div><span style="color:#5b6472">DNI / CUIT:</span> <b>${esc(o.dniCuit||'—')}</b></div></div></div>`;
+  const r2=(n)=>half(head('GUÍA AL CLIENTE','Copia '+n+'/3')+clienteBlock+muebTable+bultosVal+firma('FIRMA DEL CLIENTE','ACLARACIÓN / DNI')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Documento no válido como factura</div>`);
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remitos Expreso ${esc(o.boleta)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}}</style></head><body><div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="no-print" style="width:190mm;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Expreso — 2 remitos por hoja: despacho + copias del cliente</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>${pg(r1,r2(1))}${pg(r2(2),r2(3))}</div></body></html>`;
+  const w=window.open('','_blank');w.document.write(H);w.document.close();
+}
+
+/* ============ REMITOS ============ */
+function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
+  const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');
+  const saldo=(o.total||0)-(o.pagos||0);const envio=o.costo_flete||0;const inst=o.instalacion||0;const esca=o.escalera||0;const total=saldo+envio+inst+esca;
+  const dom=esc(o.direccion||'—')+(o.pisodepto?' · '+esc(o.pisodepto):'');
+  const tel=esc(o.tel1||'—')+(o.tel2?' / '+esc(o.tel2):'');
+  const loc=esc(o.localidad||'')+(o.zona?' ('+esc(o.zona)+')':'');
+  const rows=(o.lineas||[]).map((l,i)=>`<div style="display:grid; grid-template-columns:34px 56px 1fr; grid-column:1 / -1;"><div style="padding:8px; border-bottom:1px solid #eef0f2;">${i+1}</div><div style="padding:8px; border-bottom:1px solid #eef0f2;">${l.cant}</div><div style="padding:8px; border-bottom:1px solid #eef0f2;">${esc(l.desc)}</div></div>`).join('');
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito ${esc(o.boleta)}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:12mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important;margin:0!important}}</style></head><body>
+  <div style="min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+    <div class="no-print" style="width:190mm; display:flex; justify-content:space-between; align-items:center; gap:12px;"><div style="font-size:13px; color:#5b6472;">Vista previa del remito — se imprime en A4</div><button onclick="window.print()" style="border:none; background:#0f766e; color:#fff; font-family:'Archivo',sans-serif; font-weight:700; font-size:14px; padding:10px 20px; border-radius:8px; cursor:pointer;">Imprimir</button></div>
+    <div class="sheet" style="width:190mm; min-height:277mm; background:#fff; padding:11mm 11mm 9mm; box-shadow:0 8px 30px rgba(0,0,0,0.12); color:#14181f; display:flex; flex-direction:column; border:1.5px solid #14181f;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #14181f; padding-bottom:10px;">
+        <div><div style="font-size:24px; font-weight:800; letter-spacing:0.5px;">BELGRANO HOME</div><div style="font-size:10px; color:#5b6472; margin-top:3px; max-width:110mm; line-height:1.4;">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div></div>
+        <div style="text-align:right;"><div style="font-size:12px; font-weight:600; color:#5b6472; letter-spacing:1px;">REMITO DE ENTREGA</div><div style="font-size:26px; font-weight:800; color:#0f766e;">Nº ${esc(o.boleta)}</div><div style="font-size:14px; color:#5b6472; margin-top:2px;">${fechaLarga(o.fecha)}</div></div>
+      </div>
+      <div style="margin-top:22px;"><div style="font-size:12px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:10px;">DATOS DE ENTREGA</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; font-size:14.5px;"><div><span style="color:#5b6472;">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472;">Teléfono:</span> <b>${tel}</b></div><div><span style="color:#5b6472;">Domicilio:</span> <b>${dom}</b></div><div><span style="color:#5b6472;">Localidad:</span> <b>${loc}</b></div><div><span style="color:#5b6472;">Chofer:</span> <b>${esc(o.flete||'—')}</b></div><div><span style="color:#5b6472;">Horario:</span> <b>${esc(o.horario||'—')}</b></div></div>
+        <div style="margin-top:10px; font-size:14.5px;"><span style="color:#5b6472;">Comentarios:</span> <b>${esc(o.observaciones||'—')}</b></div></div>
+      <div style="margin-top:24px;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">DETALLE DE MERCADERÍA</div>
+        <div style="display:grid; grid-template-columns:34px 56px 1fr; font-size:12.5px;"><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">#</div><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">CANT</div><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">MUEBLE</div>${rows}</div></div>
+      <div style="margin-top:24px; display:flex; justify-content:flex-end;"><div style="width:82mm;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">COBROS A REALIZAR EN LA ENTREGA</div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">Saldo pendiente del mueble</span><b>${m2(saldo)}</b></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">Costo de envío (peaje no incluido)</span><b>${m2(envio)}</b></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">Costo de instalación</span><b>${m2(inst)}</b></div>
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">Subida por escalera (por piso x bulto)</span><b>${m2(esca)}</b></div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0 2px; font-size:14px;"><b>TOTAL A COBRAR</b><b style="color:#0f766e;">${m2(total)}</b></div></div></div>
+      <div style="margin-top:24px;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">OBSERVACIONES DE LA ENTREGA</div><div style="border:1px solid #d7dbe0; border-radius:4px; height:120px;"></div></div>
+      <div style="flex:1;"></div>
+      <div style="margin-top:20px; font-size:10.5pt; color:#5b6472; line-height:1.5; text-align:justify;">Revisá el mueble antes de firmar. Al firmar confirmás que los muebles que recibiste están completos, nivelados y con el correcto funcionamiento. Una vez firmado el remito, NO SE ADMITIRÁN reclamos por detalles visibles en la entrega, ni Belgrano Home se responsabilizará por costos adicionales de flete que un reclamo posterior pudiera implicar.</div>
+      <div style="margin-top:8px; font-size:10.5pt; font-weight:700;">Confirmo que leí las condiciones de recepción y controlé el o los productos y los recibo SIN detalle alguno.</div>
+      <div style="margin-top:28px; display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:24px; align-items:end;"><div style="text-align:center;"><div style="height:64px;"></div><div style="border-top:1px solid #14181f; padding-top:5px; font-size:10px; letter-spacing:0.5px; color:#5b6472;">FIRMA DEL CLIENTE</div></div><div style="text-align:center;"><div style="height:64px;"></div><div style="border-top:1px solid #14181f; padding-top:5px; font-size:10px; letter-spacing:0.5px; color:#5b6472;">ACLARACIÓN</div></div><div style="text-align:center;"><div style="height:64px;"></div><div style="border-top:1px solid #14181f; padding-top:5px; font-size:10px; letter-spacing:0.5px; color:#5b6472;">DOCUMENTO</div></div></div>
+      <div style="margin-top:16px; text-align:center; font-size:9px; color:#9aa2ad;">Documento no válido como factura</div>
+    </div></div></body></html>`;
+  const w=window.open('','_blank');w.document.write(H);w.document.close()}
+
+/* DESPACHO / RENDICIÓN */
+let cdistDay=HOY;
+let cdistView='dia';
+function sepStats(iso){let tot=0,sep=0,prob=0;ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado').forEach(o=>o.lineas.forEach(l=>{tot+=l.cant;if(l.sep==='separado')sep+=l.cant;if(l.sep==='problema')prob+=l.cant}));return{tot,sep,prob,falta:tot-sep}}
+function sepCycle(oid,li){const o=ordenes.find(x=>x.id===oid);const l=o.lineas[li];l.sep=(l.sep==='separado')?'falta':'separado';vCDist()}
+function sepEmbalar(oid,li){const o=ordenes.find(x=>x.id===oid);const l=o.lineas[li];l.embalado=!l.embalado;vCDist()}
+function sepProblema(oid,li){const o=ordenes.find(x=>x.id===oid);const l=o.lineas[li];if(l.sep==='problema'){l.sep='falta';l.probNota=''}else{const n=prompt('¿Qué problema tiene? (ej: el mueble no está, vino fallado)');if(n===null)return;l.sep='problema';l.probNota=n}vCDist()}
+function resolverProblema(oid){const o=ordenes.find(x=>x.id===oid);const probs=o.lineas.filter(l=>l.sep==='problema');if(!probs.length)return;if(!confirm('Problema(s) del depósito:\n\n'+probs.map(l=>'- '+l.desc+': '+(l.probNota||'')).join('\n')+'\n\n¿Lo resolviste y destrabás la orden?'))return;o.lineas.forEach(l=>{if(l.sep==='problema'){l.sep='falta';l.probNota=''}});render()}
+let cdGroup='flete';
+let cdFil='pend';
+let cdCol={};
+function cdMatch(o,l){const s=l.sep||'falta';const done=(s==='separado')&&(o.tipo!=='Expreso'||l.embalado);return cdFil==='todos'||(cdFil==='pend'&&!done)||(cdFil==='sep'&&done)||(cdFil==='prob'&&s==='problema')}
+
+/* ============ CENTRO DE DISTRIBUCION ============ */
+function vCDist(){
+  if(cdistView==='semana')return vCDistSemana();
+  const st=sepStats(cdistDay);
+  const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado');
+  let items=[];dayO.forEach(o=>o.lineas.forEach((l,li)=>{if(cdMatch(o,l))items.push({o,l,li})}));
+  const groups={};items.forEach(it=>{const k=cdGroup==='flete'?(it.o.flete||'__SIN'):(cdGroup==='boleta'?it.o.boleta:(cdGroup==='tipo'?(it.o.tipo==='Movimiento Interno'?'Mov. interno':it.o.tipo):it.l.desc));(groups[k]=groups[k]||[]).push(it)});
+  const keys=Object.keys(groups).sort((a,b)=>a==='__SIN'?1:(b==='__SIN'?-1:a.localeCompare(b)));
+  let bloques='';
+  if(!keys.length)bloques='<div class="card"><div class="empty">No hay muebles con ese filtro.</div></div>';
+  keys.forEach((k,gi)=>{const arr=groups[k];const sinA=(cdGroup==='flete'&&k==='__SIN');const nombre=cdGroup==='flete'?(sinA?'Sin asignar':k):(cdGroup==='boleta'?('Orden '+k+' · '+(arr[0].o.cliente||'')):k);const totM=sum(arr.map(it=>it.l.cant));const col=cdCol[gi];
+    let rows='';
+    arr.forEach(({o,l,li})=>{const s=l.sep||'falta';
+      const pill=s==='separado'?`<button class="sepbtn ok" onclick="sepCycle(${o.id},${li})">✓ Separado</button>`:(s==='problema'?`<button class="sepbtn prob" onclick="sepProblema(${o.id},${li})">Con problema</button>`:`<button class="sepbtn" onclick="sepCycle(${o.id},${li})">Separar</button>`);
+      const pb=s==='problema'?'':`<button class="pbtn" onclick="sepProblema(${o.id},${li})" title="Marcar problema">!</button>`;
+      const embBtn=o.tipo==='Expreso'?(l.embalado?`<button class="sepbtn ok" onclick="sepEmbalar(${o.id},${li})">✓ Embalado</button>`:`<button class="sepbtn emb" onclick="sepEmbalar(${o.id},${li})">Embalar</button>`):'';const ttag=`<span class="tipotag t-${o.tipo==='Expreso'?'exp':(o.tipo==='Retiro'?'ret':(o.tipo==='Movimiento Interno'?'mov':'env'))}">${o.tipo==='Movimiento Interno'?'Mov. interno':o.tipo}${o.tipo==='Expreso'?' · embalar con cartón':''}</span>`;const est=`<div class="sepcell">${pill}${embBtn}${pb}</div>${ttag}${s==='problema'&&l.probNota?`<div class="probnote">${esc(l.probNota)} — avisado a Logística</div>`:''}${o.habilitada===false?'<div class="condtag">Condicional · no despachar</div>':''}`;
+      rows+=cdGroup==='flete'?`<tr class="${s==='problema'?'rprob':''}"><td>${esc(o.boleta)}</td><td style="text-align:center">${l.cant}</td><td>${esc(l.desc)}</td><td><strong>${esc(l.local)}</strong></td><td>${est}</td></tr>`:(cdGroup==='boleta'?`<tr class="${s==='problema'?'rprob':''}"><td style="text-align:center">${l.cant}</td><td>${esc(l.desc)}</td><td><strong>${esc(l.local)}</strong></td><td>${esc(o.flete||'Sin asignar')}</td><td>${est}</td></tr>`:`<tr class="${s==='problema'?'rprob':''}"><td style="text-align:center">${l.cant}</td><td>${esc(o.boleta)} · ${esc(o.cliente||'')}</td><td>${esc(o.flete||'Sin asignar')}</td><td><strong>${esc(l.local)}</strong></td><td>${est}</td></tr>`)});
+    const head=cdGroup==='flete'?'<tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>':(cdGroup==='boleta'?'<tr><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Flete</th><th>Estado</th></tr>':'<tr><th>Cant</th><th>Orden / Cliente</th><th>Flete</th><th>Sale de</th><th>Estado</th></tr>');
+    bloques+=`<div class="card ${sinA?'sincard':''}"><div class="section-title cdhead" onclick="cdCol[${gi}]=!cdCol[${gi}];vCDist()"><h3>${col?'▸':'▾'} ${esc(nombre)}${sinA?' <span class="muted" style="font-weight:400">· asignar en Órdenes</span>':''}</h3><span class="muted">${arr.length} línea${arr.length===1?'':'s'} · ${totM} muebles</span></div>${col?'':`<div class="table-wrap"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div>`}</div>`});
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Centro de Distribución</h2><div class="row-actions"><div class="macrotog"><button class="on">Día</button><button onclick="cdistView='semana';vCDist()">Semana</button></div><input type="date" value="${cdistDay}" onchange="cdistDay=this.value;vCDist()" style="width:auto;height:36px"><button class="btn btn-ghost btn-sm" onclick="imprimirCDist()">Imprimir</button></div></div>
+    <div class="cdtot"><div class="stat"><div class="muted">Muebles del día</div><div class="value">${st.tot}</div></div><div class="stat" style="background:#e7f5ec"><div style="color:#15803d;font-size:13px;font-weight:700">Separados</div><div class="value" style="color:#15803d">${st.sep}</div></div><div class="stat"><div class="muted">Faltan separar</div><div class="value">${st.falta}</div></div>${st.prob?`<div class="stat" style="background:#fdecea"><div style="color:#b42318;font-size:13px;font-weight:700">Con problema</div><div class="value" style="color:#b42318">${st.prob}</div></div>`:''}</div>
+    <div class="ordfilters" style="margin-top:14px"><div class="macrotog"><button class="${cdGroup==='flete'?'on':''}" onclick="cdGroup='flete';cdCol={};vCDist()">Por flete</button><button class="${cdGroup==='mueble'?'on':''}" onclick="cdGroup='mueble';cdCol={};vCDist()">Por mueble</button><button class="${cdGroup==='boleta'?'on':''}" onclick="cdGroup='boleta';cdCol={};vCDist()">Por boleta</button><button class="${cdGroup==='tipo'?'on':''}" onclick="cdGroup='tipo';cdCol={};vCDist()">Por tipo</button></div><select onchange="cdFil=this.value;cdCol={};vCDist()"><option value="pend" ${cdFil==='pend'?'selected':''}>Pendientes</option><option value="sep" ${cdFil==='sep'?'selected':''}>Separados</option><option value="prob" ${cdFil==='prob'?'selected':''}>Con problema</option><option value="todos" ${cdFil==='todos'?'selected':''}>Todos</option></select></div>
+    <p class="muted" style="margin-top:10px">Agrupá por flete o por mueble; lo que ya separaste sale de "Pendientes". Tocá el título para desplegar o plegar.</p></div>${bloques}`}
+function vCDistSemana(){const dias=semanaDe(cdistDay);let tot=0,sep=0;
+  const rows=dias.map((iso,i)=>{const s=sepStats(iso);tot+=s.tot;sep+=s.sep;const pp=iso.split('-');return `<tr style="cursor:pointer" onclick="cdistDay='${iso}';cdistView='dia';vCDist()"><td>${DIASSEM[i]} ${+pp[2]}/${+pp[1]}</td><td style="text-align:center">${s.tot}</td><td style="text-align:center;color:#15803d">${s.sep}</td><td style="text-align:center">${s.falta}</td></tr>`}).join('');
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Centro de Distribución · semana</h2><div class="row-actions"><div class="macrotog"><button onclick="cdistView='dia';vCDist()">Día</button><button class="on">Semana</button></div><button class="btn btn-ghost btn-sm" onclick="imprimirCDist(true)">Imprimir</button></div></div><p class="muted">Muebles a separar por día. Tocá un día para ver el detalle.</p><div class="table-wrap"><table><thead><tr><th>Día</th><th>Muebles</th><th>Separados</th><th>Faltan</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Total semana</th><th style="text-align:center">${tot}</th><th style="text-align:center;color:#15803d">${sep}</th><th style="text-align:center">${tot-sep}</th></tr></tfoot></table></div></div>`}
+function imprimirCDist(semana){let body='';
+  if(semana){const dias=semanaDe(cdistDay);body='<h2>Semana</h2><table><tr><th>Día</th><th>Muebles</th><th>Separados</th><th>Faltan</th></tr>'+dias.map((iso,i)=>{const s=sepStats(iso);const pp=iso.split('-');return `<tr><td>${DIASSEM[i]} ${+pp[2]}/${+pp[1]}</td><td>${s.tot}</td><td>${s.sep}</td><td>${s.falta}</td></tr>`}).join('')+'</table>'}
+  else{const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado');const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});body=`<h2>Día ${fmt(cdistDay)}</h2>`+Object.keys(groups).map(k=>{const arr=groups[k];const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${esc(o.boleta)}</td><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');return `<h3>${esc(k)}</h3><table><tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`}).join('')}
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Centro de Distribución</title><style>body{font-family:Arial;max-width:820px;margin:20px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 4px}h3{margin:14px 0 4px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}td,th{border:1px solid #d9e0e8;padding:6px 8px;text-align:left}@media print{.np{display:none}}</style></head><body><h1>BELGRANO HOME · Centro de Distribución</h1>${body}<button class="np" onclick="window.print()" style="padding:8px 14px;background:#16324f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Imprimir</button></body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close()}
+let rendDay=HOY;
+let rendTab='pend';
+function esAdmin(){return role==='admin'}
+function grupoRend(o){return o.tipo==='Retiro'?('Retiro · '+retLoc(o)):(o.flete||'Sin asignar')}
+function slOf(o){return o.seLleva!=null?o.seLleva:((o.costo_flete||0)+(o.instalacion||0))}
+function proy(isos){return ordenes.filter(o=>isos.includes(o.fecha)&&o.estado!=='Cerrado'&&o.estado!=='Cancelado').reduce((a,o)=>a+((o.total||0)-(o.pagos||0)),0)}
+function rendResClass(r){return{'Recibí OK':'r-ok','Falta':'r-falta','Sobra':'r-sobra','No rindió':'r-no'}[r]||'r-ok'}
+function firmarChofer(f,res){if(!esAdmin()){alert('Solo el administrador puede firmar la rendición.');return}const pend=ordenes.filter(o=>o.estado==='Cerrado'&&!o.rendido&&grupoRend(o)===f);if(!pend.length)return;if(res!=='Recibí OK'&&!confirm('Marcar la rendición de '+f+' como: '+res+'. ¿Confirmás?'))return;pend.forEach(o=>{o.rendido=true;o.rendResult=res});vRendicion()}
+function reabrirRend(f){if(!esAdmin()){alert('Solo el administrador puede reabrir la rendición.');return}if(!confirm('¿Reabrir la rendición de '+f+'? Vuelve a quedar pendiente de firmar.'))return;ordenes.filter(o=>o.estado==='Cerrado'&&o.rendido&&grupoRend(o)===f).forEach(o=>{o.rendido=false;o.rendResult=''});vRendicion()}
+function imprimirRendicion(f){
+  const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');
+  const arr=ordenes.filter(o=>o.estado==='Cerrado'&&(rendTab==='pend'?!o.rendido:o.rendido)&&grupoRend(o)===f);
+  if(!arr.length){alert('No hay órdenes para imprimir en '+f);return}
+  let sc=0,sl=0,sbh=0;
+  const rows=arr.map(o=>{const cob=o.cobrado||0;const sll=slOf(o);const bh=o.bhPago||0;sc+=cob;sl+=sll;sbh+=bh;return `<tr><td>${esc(o.boleta)}</td><td>${esc(o.cliente||'')}</td><td style="text-align:right">${m2(cob)}</td><td style="text-align:right">${m2(sll)}</td><td style="text-align:right">${m2(bh)}</td><td style="text-align:right"><b>${m2(cob-sll-bh)}</b></td></tr>`}).join('');
+  const neto=sc-sl-sbh;const res=(rendTab==='rend'&&arr[0].rendResult)?arr[0].rendResult:'';
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rendición ${esc(f)}</title><style>body{font-family:Arial;max-width:760px;margin:22px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 2px;font-size:20px}.sub{color:#5b6675;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px}th,td{border-bottom:1px solid #d9e0e8;padding:7px 9px;text-align:left}th{background:#eef1f5;color:#16324f;font-size:11px;text-transform:uppercase}tfoot td{font-weight:700;border-top:2px solid #16324f}.netos{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px;margin:10px 0 18px}.netobig{grid-column:1/-1;background:#16324f;color:#fff;padding:12px 16px;border-radius:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:800}.firma{margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:44px}.firma div{border-top:1px solid #14181f;padding-top:6px;font-size:11px;color:#5b6675;text-align:center}@media print{.np{display:none}}</style></head><body>
+  <h1>BELGRANO HOME · Rendición</h1><div class="sub">Chofer: <b>${esc(f)}</b> · ${fechaLarga(rendDay)} · ${arr.length} viaje(s)${res?' · Resultado: '+esc(res):''}</div>
+  <table><thead><tr><th>Boleta</th><th>Cliente</th><th>Cobró</th><th>Se lleva</th><th>BH pagó</th><th>Neto</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="2">Totales</td><td style="text-align:right">${m2(sc)}</td><td style="text-align:right">${m2(sl)}</td><td style="text-align:right">${m2(sbh)}</td><td style="text-align:right">${m2(neto)}</td></tr></tfoot></table>
+  <div class="netos"><div>Cobró de saldos: <b>${m2(sc)}</b></div><div>Se llevó el chofer: <b>${m2(sl)}</b></div><div>Belgrano Home pagó: <b>${m2(sbh)}</b></div><div class="netobig"><span>NETO A RENDIR</span><span>${m2(neto)}</span></div></div>
+  <div class="firma"><div>FIRMA DEL CHOFER</div><div>RECIBÍ CONFORME · ADMINISTRACIÓN</div></div>
+  <button class="np" onclick="window.print()" style="margin-top:26px;padding:9px 16px;background:#16324f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Imprimir</button>
+  </body></html>`;
+  const w=window.open('','_blank');w.document.write(H);w.document.close();
+}
+function bloqueChofer(f,arr,modo){let sc=0,sl=0,sbh=0;
+  const rows=arr.map(o=>{const cob=o.cobrado||0;const sll=slOf(o);const bh=o.bhPago||0;const saldo=(o.total||0)-(o.pagos||0);sc+=cob;sl+=sll;sbh+=bh;
+    return `<tr><td>${esc(o.boleta)}<br><span class="muted">${esc(o.cliente||'')}</span></td><td>${money(cob)}${cob<saldo?`<br><span class="menos">de ${money(saldo)} · ${esc(o.cobradoMenosMotivo||'sin motivo')}</span>`:''}</td><td>${money(sll)}</td><td>${bh?money(bh):'—'}${bh&&o.bhPagoMotivo?`<br><span class="muted">${esc(o.bhPagoMotivo)}</span>`:''}</td><td><b>${money(cob-sll-bh)}</b></td></tr>`}).join('');
+  const neto=sc-sl-sbh;
+  const firma=modo==='rend'?`<div class="signbtns"><span class="badge ${rendResClass(arr[0].rendResult)}">${esc(arr[0].rendResult||'')}</span>${esAdmin()?`<button class="btn btn-ghost btn-sm" onclick="reabrirRend('${esc(f)}')">Reabrir</button>`:''}</div>`:(esAdmin()?`<div class="signbtns"><button class="btn btn-ok btn-sm" onclick="firmarChofer('${esc(f)}','Recibí OK')">Recibí OK</button><button class="btn btn-danger btn-sm" onclick="firmarChofer('${esc(f)}','Falta')">Falta</button><button class="btn btn-ghost btn-sm" onclick="firmarChofer('${esc(f)}','Sobra')">Sobra</button><button class="btn btn-ghost btn-sm" onclick="firmarChofer('${esc(f)}','No rindió')">No rindió</button></div>`:'<span class="muted">Solo el administrador firma.</span>');
+  return `<div class="card"><div class="rendhead"><div><div class="muted">Cobro total del chofer</div><div class="cobrototal">${money(sc)}</div></div><div class="rendhead-r"><div style="font-weight:700;color:var(--navy)">${esc(f)}</div><div class="muted">${arr.length} viaje${arr.length===1?'':'s'}</div><button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="imprimirRendicion('${esc(f)}')">Imprimir</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Boleta</th><th>Cobró</th><th>Se lleva (envío)</th><th>Belgrano Home pagó</th><th>Neto</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="netos"><div><span class="nl">Cobró de saldos</span><span class="nv">${money(sc)}</span></div><div><span class="nl">Se llevó el chofer</span><span class="nv">${money(sl)}</span></div><div><span class="nl">Belgrano Home pagó</span><span class="nv">${money(sbh)}</span></div><div class="neto-big"><span class="nl">NETO A RENDIR</span><span class="nv">${money(neto)}</span></div></div>
+    <div class="rendfirma">${f.indexOf('Retiro')===0?'<span class="muted">Retiro · sin pago a chofer</span>':'<span></span>'}${firma}</div></div>`}
+
+/* ============ RENDICION ============ */
+function vRendicion(){
+  const dias=semanaDe(rendDay);const proyDia=proy([rendDay]);const proySem=proy(dias);
+  const cobrDia=ordenes.filter(o=>o.fecha===rendDay&&o.estado==='Cerrado').reduce((a,o)=>a+(o.cobrado||0),0);
+  let bloques='';
+  if(rendTab==='proy'){const src=ordenes.filter(o=>o.estado!=='Cerrado'&&o.estado!=='Cancelado');const g={};src.forEach(o=>{const k=grupoRend(o);(g[k]=g[k]||[]).push(o)});
+    const keys=Object.keys(g).sort((a,b)=>a==='Sin asignar'?1:(b==='Sin asignar'?-1:a.localeCompare(b)));
+    if(!keys.length)bloques='<div class="card"><div class="empty">No hay entregas por cobrar.</div></div>';
+    keys.forEach(f=>{const arr=g[f];const tot=arr.reduce((a,o)=>a+((o.total||0)-(o.pagos||0)),0);
+      const rows=arr.map(o=>`<tr><td>${esc(o.boleta)}<br><span class="muted">${esc(o.cliente||'')}</span></td><td>${fmt(o.fecha)}</td><td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></td><td><b>${money((o.total||0)-(o.pagos||0))}</b></td></tr>`).join('');
+      bloques+=`<div class="card"><div class="rendhead"><div><div class="muted">Va a cobrar</div><div class="cobrototal">${money(tot)}</div></div><div class="rendhead-r"><div style="font-weight:700;color:var(--navy)">${esc(f)}</div><div class="muted">${arr.length} viaje${arr.length===1?'':'s'}</div></div></div><div class="table-wrap"><table><thead><tr><th>Boleta</th><th>Día</th><th>Estado</th><th>Saldo a cobrar</th></tr></thead><tbody>${rows}</tbody></table></div></div>`})}
+  else{const src=ordenes.filter(o=>o.estado==='Cerrado'&&(rendTab==='pend'?!o.rendido:o.rendido));const g={};src.forEach(o=>{const k=grupoRend(o);(g[k]=g[k]||[]).push(o)});
+    const keys=Object.keys(g).sort((a,b)=>a.indexOf('Retiro')===0?1:(b.indexOf('Retiro')===0?-1:a.localeCompare(b)));
+    if(!keys.length)bloques='<div class="card"><div class="empty">'+(rendTab==='pend'?'No hay rendiciones pendientes.':'Todavía no hay rendiciones firmadas.')+'</div></div>';
+    keys.forEach(f=>{bloques+=bloqueChofer(f,g[f],rendTab)})}
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Rendición</h2><input type="date" value="${rendDay}" onchange="rendDay=this.value;vRendicion()" style="width:auto;height:36px">${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarRendicion()">Descargar CSV</button>':''}</div>
+    <div class="cdtot"><div class="stat" style="background:#e7effc"><div style="color:#1e5fce;font-size:13px;font-weight:700">Va a entrar · ${fmt(rendDay)}</div><div class="value" style="color:#1e5fce">${money(proyDia)}</div></div><div class="stat" style="background:#e7effc"><div style="color:#1e5fce;font-size:13px;font-weight:700">Va a entrar · semana</div><div class="value" style="color:#1e5fce">${money(proySem)}</div></div><div class="stat" style="background:#e7f5ec"><div style="color:#15803d;font-size:13px;font-weight:700">Cobrado · ${fmt(rendDay)}</div><div class="value" style="color:#15803d">${money(cobrDia)}</div></div></div></div>
+    <div class="card"><div class="macrotog"><button class="${rendTab==='proy'?'on':''}" onclick="rendTab='proy';vRendicion()">Por cobrar</button><button class="${rendTab==='pend'?'on':''}" onclick="rendTab='pend';vRendicion()">Pendiente de rendir</button><button class="${rendTab==='rend'?'on':''}" onclick="rendTab='rend';vRendicion()">Rendido</button></div><div class="muted">${esAdmin()?'Administrador: firmás y reabrís la rendición de cada chofer.':'Logística: preparás y ves; la firma es del administrador.'}${rendTab==='proy'?' Esta vista muestra lo que cada chofer va a cobrar aunque no esté cerrado.':''}</div></div>
+    ${bloques}`}
+
+/* FLETE */
+
+/* ============ RUTA (flete) ============ */
+function vRuta(){const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===fleteActual&&o.estado!=='Cancelado');if(!list.length){$('view').innerHTML='<div class="card"><div class="empty">No tenés viajes hoy.</div></div>';return}
+  const cards=list.map(o=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=(o.total-o.pagos)+o.costo_flete+peajeDe(o)+o.instalacion+o.escalera;const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
+    return `<div class="flete-card"><div class="section-title"><h3>${esc(o.cliente)}</h3><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div><ul style="margin:8px 0 0;padding-left:18px">${m}</ul><div style="margin-top:6px"><b>A cobrar: ${money(cobro)}</b></div>${o.estado==='En reclamo'?`<div class="probnote" style="margin:8px 0">Problema: ${esc(o.reclamoNota||'(sin nota)')}${o.reclamoFoto?`<br><img src="${o.reclamoFoto}" style="max-width:150px;border-radius:6px;margin-top:6px">`:''}</div>`:''}${reclamoOpen===o.id?`<div class="reclform"><textarea id="t_reclamo" placeholder="Contá qué pasó: cliente no estaba, no entró el mueble, vino roto…">${esc(o.reclamoNota||'')}</textarea><div class="row-actions"><label class="btn btn-ghost btn-sm" style="cursor:pointer">Adjuntar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onReclamoFoto(this)"></label><span id="fotoPrev"></span></div><div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarReclamo(${o.id})">Enviar problema</button><button class="btn btn-ghost btn-sm" onclick="reclamoOpen=null;reclamoFotoTmp='';render()">Cancelar</button></div></div>`:`<div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a>${o.estado==='En viaje'?`<button class="btn btn-ok btn-sm" onclick="ordenes.find(x=>x.id===${o.id}).estado='Entregado';render()">Entregado</button><button class="btn btn-danger btn-sm" onclick="fleteProblema(${o.id})">Problema</button>`:''}</div>`}</div>`}).join('');
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Mi ruta · ${fmt(HOY)}</h2><span class="muted">${list.length} viajes</span></div></div>${cards}`}
+
+function onLocInput(){draft.localidad=$('w_loc').value.trim();const z=locData(draft.localidad).zona||'—';if($('w_zona'))$('w_zona').textContent=z}
+function refreshCostos(){if($('w_costos'))$('w_costos').textContent=money(moneyParse($('w_cflete').value)+moneyParse($('w_inst').value))}
+function vConfig(){const chips=(arr,fn)=>arr.length?arr.map((v,i)=>`<span class="chip">${esc(v)} <button onclick="${fn}(${i})">×</button></span>`).join(''):'<span class="muted">Sin valores.</span>';
+  $('view').innerHTML=`<div class="card"><h2>Configuración</h2><p class="muted">Agregá o sacá los valores que usa la app. Los cambios se ven al instante en los desplegables de Cargar.</p></div>
+  <div class="card"><h3>Tipos de envío</h3><div class="chips">${chips(TIPOS,'delTipo')}</div><div class="addrow"><input id="cfg_tipo" placeholder="Nuevo tipo de envío"><button class="btn btn-primary btn-sm" onclick="addCfg('tipo')">Agregar</button></div></div>
+  <div class="card"><h3>Fletes</h3><div class="chips">${chips(FLETES,'delFlete')}</div><div class="addrow"><input id="cfg_flete" placeholder="Nuevo flete"><button class="btn btn-primary btn-sm" onclick="addCfg('flete')">Agregar</button></div></div>
+  <div class="card"><h3>Locales de origen</h3><div class="chips">${chips(LOCALES,'delLocal')}</div><div class="addrow"><input id="cfg_local" placeholder="Nuevo local"><button class="btn btn-primary btn-sm" onclick="addCfg('local')">Agregar</button></div></div>
+  <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>`}
+function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);vConfig()}
+function delTipo(i){TIPOS.splice(i,1);vConfig()}
+function delFlete(i){FLETES.splice(i,1);vConfig()}
+function delLocal(i){LOCALES.splice(i,1);vConfig()}
+render();
+</script>
+</body>
+</html>
