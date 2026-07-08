@@ -629,6 +629,13 @@ function expSaldoHTML(){const s=expSaldo();return `<span>Saldo pendiente (debe s
 function refreshExp(){const el=$('w_expsaldo');if(el)el.innerHTML=expSaldoHTML()}
 function guardarDraft(parcial){readStep();const t=draft.tipo;
   if(!draft.boleta){draft._inval=['boleta'];vCargar();showToast('Necesitás cargar el N° de orden antes de guardar.','error');return}
+  if(!editId){
+    const dup=ordenes.find(x=>x.boleta===draft.boleta&&x.estado!=='Cancelado');
+    if(dup){
+      const info=(dup.cliente||'(sin cliente cargado)')+' · '+dup.estado+(dup.flete?' · '+dup.flete:'')+' · '+fmt(dup.fecha);
+      if(!confirm('Ya existe una orden activa con la boleta '+draft.boleta+':\n\n'+info+'\n\n¿Es realmente un envío nuevo?\n\nAceptar = seguir y guardar esta como una orden distinta.\nCancelar = no guardar — quizás esto es un reclamo de esa entrega y conviene marcarla así en vez de duplicarla.'))return;
+    }
+  }
   if(diasCerrados[draft.fecha]){showToast('Ese día está cerrado para programar. Reabrilo en Órdenes o elegí otro día.','error');return}
   const esRetiro=t==='Retiro';const esMI=t==='Movimiento Interno';const esExp=t==='Expreso';
   let habil=true,condMotivo='';
@@ -1429,4 +1436,3 @@ render();
 </script>
 </body>
 </html>
-
