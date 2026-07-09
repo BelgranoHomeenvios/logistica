@@ -16,6 +16,9 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .app-header .logo{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .app-header .title{font-weight:700;font-size:15px;letter-spacing:-.01em}
 .app-header .user{display:flex;align-items:center;gap:12px}
+.btn-cargar-viaje{display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff;border:none;font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn-cargar-viaje:hover{background:#1d4fc4}
+.btn-cargar-viaje:active{transform:scale(.97)}
 .app-header .user span{font-size:13px;color:rgba(255,255,255,.75)}
 .app-header .avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .tabs{background:#fff;border-bottom:1px solid var(--line);padding:0 28px;display:flex;gap:2px;overflow-x:auto}
@@ -71,6 +74,12 @@ input.inval,select.inval{border-color:var(--red);background:#fef3f2}
 .mapa-overlay{position:fixed;inset:0;background:rgba(15,26,42,.5);display:flex;align-items:center;justify-content:center;z-index:900;padding:16px}
 .mapa-card{background:#fff;border-radius:12px;padding:18px 20px;width:100%;max-width:900px;box-shadow:0 20px 60px rgba(15,26,42,.3)}
 .mapa-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.mapchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
+.mapchip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;padding:5px 11px;border-radius:20px;border:1px solid #d0d7e2;background:#fff;cursor:pointer;color:#2a3648}
+.mapchip:hover{background:#eef1f5}
+.mapchip.on{background:#16324f;color:#fff;border-color:#16324f}
+.mapchip b{font-weight:700}
+.mapchip-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .mapa-head h3{margin:0;color:var(--navy)}
 .modal-card{background:#fff;border-radius:16px;padding:24px 26px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(15,26,42,.35);max-height:90vh;overflow-y:auto}
 .modal-card h3{margin:0 0 4px;color:var(--navy);font-size:18px}
@@ -79,6 +88,10 @@ input.inval,select.inval{border-color:var(--red);background:#fef3f2}
 .modal-card select,.modal-card input[type=text],.modal-card input[type=date],.modal-card textarea{width:100%;border:1px solid #d0d7e2;border-radius:8px;padding:9px 11px;font:inherit;font-size:14px}
 .modal-card textarea{min-height:60px;resize:vertical}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.imprsem-row{display:flex;align-items:center;gap:9px;padding:7px 2px;font-size:14.5px;cursor:pointer}
+.imprsem-row input{width:17px;height:17px;cursor:pointer}
+.imprsem-todos{font-weight:700;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:4px}
+.imprsem-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}
 .modal-saldo{background:#f4f6f8;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:4px}
 .modal-saldo b{font-size:17px;color:var(--navy)}
 .modal-diff{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:700;text-align:center}
@@ -152,10 +165,12 @@ tbody tr:hover{background:#f7f9fb}
 .chip button{border:none;background:#e2e8f0;color:#5b6675;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:700;line-height:1}
 .addrow{display:flex;gap:8px;max-width:380px}
 .ordfilters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.ordfilters input,.ordfilters select{max-width:230px;height:40px}.fletesel{height:36px;padding:0 8px;min-width:135px;border:1px solid #d0d7e2;border-radius:8px;background:#fff}.e-asignar{background:#fdecea;color:#b42318}
-.daynav{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
-.daynav input[type=date]{height:38px;padding:0 10px;border:1px solid #d0d7e2;border-radius:8px}
+.daynav{display:inline-flex;align-items:center;gap:8px;margin:0 0 12px}
+.daynav input[type=date]{height:36px;width:170px;padding:0 10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit}
 .pagorow{margin-bottom:8px}.pagorow.del{display:grid;grid-template-columns:1fr auto;gap:8px}
-.daytabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.daytabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px;align-items:stretch}
+.weeknav{flex:0 0 auto;width:34px;border:1px solid var(--navy);background:#fff;color:var(--navy);border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.weeknav:hover{background:var(--navy);color:#fff}
 .daypill{display:flex;flex-direction:column;gap:2px;align-items:flex-start;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;min-width:100px}
 .daypill .dn{font-size:12.5px;font-weight:700;color:var(--sec)}
 .daypill .dc{font-size:11.5px;color:var(--muted)}
@@ -208,10 +223,23 @@ tbody tr:hover{background:#f7f9fb}
 .macrotog{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
 .macrotog button{border:none;background:#fff;padding:9px 16px;font-size:13.5px;font-weight:600;color:var(--sec);cursor:pointer}
 .macrotog button.on{background:var(--navy);color:#fff}
+.vistabar{display:inline-flex;gap:6px;flex-wrap:wrap;margin:4px 0 14px}
+.vistatog{border:1px solid var(--line);background:#fff;padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--sec);cursor:pointer;border-radius:8px}
+.vistatog:hover{border-color:var(--navy)}
+.vistatog.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.vistatog b{font-weight:700}
+.vistatog.on b{color:#fff}
 tr.sinasignar{background:#fef4f4}
 .e-cerrado{background:#e7f5ec;color:#0f5132}
 .e-porrendir{background:#eef2ff;color:#3730a3}
 .cdtot{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px}
+.flujo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
+.flujostat{background:#f6f8fa;border-radius:10px;padding:12px 10px;text-align:center;cursor:pointer;border:1px solid transparent;transition:transform .08s}
+.flujostat:hover{transform:translateY(-1px);border-color:#d0d7e2}
+.fs-lbl{font-size:12px;font-weight:700;line-height:1.25;min-height:30px;display:flex;align-items:center;justify-content:center}
+.fs-val{font-size:26px;font-weight:800;margin-top:2px}
+@media(max-width:760px){.flujo-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:440px){.flujo-grid{grid-template-columns:repeat(2,1fr)}}
 .sepcell{display:flex;gap:6px;align-items:center}
 .sepbtn{border:1px solid #d0d7e2;background:#fff;color:#5b6675;border-radius:6px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
 .cdflat{font-size:13px}
@@ -313,7 +341,7 @@ tr.rprob{background:#fef4f4}
 </head>
 <body>
 <div class="demobar">Vista de trabajo (datos de ejemplo) · ver como:
-<select id="roleSel" onchange="setRole(this.value)"><option value="logistica">Logística (Lucas)</option><option value="admin">Administrador (vos)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian)</option><option value="vendedor">Vendedor</option><option value="jony">Rendición (Jony)</option></select>
+<select id="roleSel" onchange="setRole(this.value)"><option value="logistica">Logística (Lucas)</option><option value="direccion">Dirección (Jony / Brian / Daniel)</option><option value="admin">Admin (pulir vistas)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian, Juan…)</option><option value="vendedor">Vendedor (Ale, Nati…)</option></select>
 <span style="margin-left:auto;color:#b3bcc8;font-weight:400">Build 2026-07-08j · C. Distribución: columna N° de orden visible (ya no solo tooltip), ordenable</span></div>
 <div id="root"></div>
 <div id="modalRoot"></div>
@@ -503,8 +531,9 @@ ordenes.forEach(o=>{if(o.costo_flete_estado===undefined)o.costo_flete_estado='co
 {const demo=ordenes.find(o=>o.boleta==='1003');if(demo)demo.costo_flete_estado='pagado'}
 
 let role='logistica', tab='tablero', fleteActual='Fabian', editId=null;
-const TABS_LOG=[['tablero','Tablero'],['cargar','Cargar'],['ordenes','Órdenes'],['cerradas','Órdenes cerradas'],['cdist','C. Distribución'],['rendicion','Rendición'],['stats','Estadísticas'],['config','Configuración']];
-const TABS={logistica:TABS_LOG,admin:TABS_LOG,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['tablero','Tablero'],['cargar','Cargar'],['ordenes','Órdenes']],jony:[['tablero','Tablero'],['ordenes','Órdenes'],['rendicion','Rendición']]};
+const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['stats','Estadísticas']];
+const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['config','Configuración']];
+const TABS={logistica:TABS_LOG,admin:TABS_DIR,direccion:TABS_DIR,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['vlog','Logística']],jony:TABS_DIR};
 const root=document.getElementById('root');const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function money(n){return '$'+Number(n||0).toLocaleString('es-AR')}
@@ -518,12 +547,13 @@ function setTab(t){tab=t;if(t!=='cargar')editId=null;render()}
 /* ============ RENDER / NAV ============ */
 let toastMsg=null,toastTipo='info';
 function showToast(msg,tipo,dur){toastMsg=msg;toastTipo=tipo||'info';render();clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>{toastMsg=null;render()},dur||4200)}
-function whoLabel(){return {logistica:'Lucas',admin:'Vos (admin)',deposito:'Depósito',flete:fleteActual,vendedor:'Vendedor',jony:'Jony'}[role]||'Lucas'}
+function whoLabel(){return {logistica:'Lucas',admin:'Admin',direccion:'Dirección',deposito:'Depósito',flete:fleteActual,vendedor:'Vendedor',jony:'Dirección'}[role]||'Lucas'}
+function esDireccion(){return role==='direccion'||role==='jony'||role==='admin'}
 function render(){
   _sbDetectarCambios();
   const who=whoLabel();
   root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${who}${role==='flete'?' · flete':''}</span><div class="avatar">${who[0]}</div></div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
-  ({tablero:vTablero,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats}[tab])();
+  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats}[tab])();
 }
 
 
@@ -539,7 +569,7 @@ function toCSV(labels,rows){return [labels.map(csvCell).join(';')].concat(rows.m
 function descargarCSV(nombre,contenido){const blob=new Blob(['\ufeff'+contenido],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nombre;a.click();URL.revokeObjectURL(url)}
 function exportarOrdenes(){const src=(_ordList&&_ordList.length)?_ordList:ordenes;descargarCSV('ordenes_'+HOY+'.csv',toCSV(COLS_ORD.map(c=>c[1]),src.map(ordenToRow)))}
 function plantillaCSV(){descargarCSV('plantilla_ordenes.csv',toCSV(COLS_ORD.map(c=>c[1]),[]))}
-function exportarRendicion(){const arr=ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));const cols=['Boleta','Cliente','Chofer','Estado','Cobró esperado','Cobró real','Le pagamos','Adicional','Neto','Motivo diferencia cobro','Motivo adicional','Resultado'];const rows=arr.map(o=>[o.boleta,o.cliente||'',grupoRend(o),o.estado,cobroBH(o),cobroRealOrden(o),lePagamosBase(o),adicionalPagado(o),netoOrdenBH(o),o.cobradoDiffMotivo||'',o.bhPagoMotivo||'',o.rendResult||'']);if(!rows.length){showToast('No hay rendiciones en esta vista para exportar.','info');return}descargarCSV('rendicion_'+rendDay+'.csv',toCSV(cols,rows))}
+function exportarRendicion(){const arr=ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));const cols=['Boleta','Cliente','Chofer','Estado','Cobró esperado','Cobró real','Le pagamos','Adicional','Neto','Motivo diferencia cobro','Motivo adicional','Resultado'];const rows=arr.map(o=>[o.boleta,o.cliente||'',grupoRend(o),o.estado,cobroBH(o),cobroRealOrden(o),lePagamosBase(o),adicionalPagado(o),netoOrdenBH(o),o.cobradoDiffMotivo||'',o.bhPagoMotivo||'',o.rendResult||'']);if(!rows.length){showToast('No hay rendiciones en esta vista para exportar.','info');return}descargarCSV('rendicion_'+rendDay+'.csv',toCSV(cols,rows))}
 function parseCSV(text){const rows=[];let i=0,field='',row=[],inq=false;text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   while(i<text.length){const c=text[i];
     if(inq){if(c==='"'){if(text[i+1]==='"'){field+='"';i++}else inq=false}else field+=c}
@@ -586,13 +616,13 @@ function enRango(o,desde,hasta){return o.fecha>=desde&&o.fecha<=hasta}
 function esReclamo(o){return !!o.reclamoNota||o.estado==='En reclamo'||/reclamo/i.test(o.comentario||'')}
 function esEntregada(o){return o.estado==='Entregada'||o.estado==='Por rendir'||o.estado==='Cerrado'}
 function metricasPeriodo(desde,hasta){
-  const ents=ordenes.filter(o=>esEntregada(o)&&enRango(o,desde,hasta));
+  const ents=ordenes.filter(o=>esEntregada(o)&&!o.archivada&&enRango(o,desde,hasta));
   const dias=diasEntre(desde,hasta);
   const porChofer={};ents.filter(o=>o.flete).forEach(o=>porChofer[o.flete]=(porChofer[o.flete]||0)+1);
   const porZona={};ents.filter(o=>o.zona&&!['Retiro','Expreso','Mov. interno'].includes(o.zona)).forEach(o=>porZona[zonaLimpia(o.zona)]=(porZona[zonaLimpia(o.zona)]||0)+1);
-  const porTipo={};ordenes.filter(o=>o.estado!=='Cancelado'&&enRango(o,desde,hasta)).forEach(o=>porTipo[o.tipo]=(porTipo[o.tipo]||0)+1);
-  const reclamos=ordenes.filter(o=>esReclamo(o)&&enRango(o,desde,hasta)).length;
-  const retiro=ordenes.filter(o=>o.tipo==='Retiro'&&o.estado!=='Cancelado'&&enRango(o,desde,hasta)).length;
+  const porTipo={};ordenes.filter(o=>o.estado!=='Cancelado'&&!o.archivada&&enRango(o,desde,hasta)).forEach(o=>porTipo[o.tipo]=(porTipo[o.tipo]||0)+1);
+  const reclamos=ordenes.filter(o=>esReclamo(o)&&!o.archivada&&enRango(o,desde,hasta)).length;
+  const retiro=ordenes.filter(o=>o.tipo==='Retiro'&&o.estado!=='Cancelado'&&!o.archivada&&enRango(o,desde,hasta)).length;
   return {total:ents.length,dias,promedio:dias?Math.round(ents.length/dias*10)/10:0,porChofer,porZona,porTipo,reclamos,retiro};
 }
 function topItems(obj,max){
@@ -650,17 +680,30 @@ function vStats(){
 }
 /* ============ TABLERO ============ */
 let tbWeek=HOY;
+function vVendedorLog(){
+  _vendLogRender=true;
+  vTablero();
+  const htmlTablero=$('view').innerHTML;
+  vOrdenes();
+  const htmlOrdenes=$('view').innerHTML;
+  _vendLogRender=false;
+  $('view').innerHTML=htmlTablero+htmlOrdenes;
+}
+let _vendLogRender=false;
 function vTablero(){
+  if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
   const dias=semanaDe(HOY);const diasNav=proxDias(tbWeek,6);
-  const dayO=ordenes.filter(o=>o.fecha===HOY&&o.estado!=='Cancelado');
+  const dayO=ordenes.filter(o=>o.fecha===HOY&&o.estado!=='Cancelado'&&!o.archivada);
   const c=e=>dayO.filter(o=>o.estado===e).length;
-  const sinAsig=dayO.filter(o=>necesitaFlete(o)&&!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const condicSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado!=='Cancelado'&&o.habilitada===false).length;
+  const sinAsig=dayO.filter(o=>necesitaFlete(o)&&!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const condicSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado!=='Cancelado'&&!o.archivada&&o.habilitada===false).length;
   const enViaje=c('En viaje');const entreg=c('Entregada')+c('Por rendir')+c('Cerrado');const faltan=dayO.length-enViaje-entreg;const reclamos=c('En reclamo');
-  const probs=ordenes.filter(o=>o.estado!=='Cancelado'&&o.lineas.some(l=>l.sep==='problema'));
+  const entregadaChofer=c('Entregada');const porRendir=c('Por rendir');const cerradasHoy=c('Cerrado');
+  const pendAcum=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
+  const probs=ordenes.filter(o=>o.estado!=='Cancelado'&&!o.archivada&&o.lineas.some(l=>l.sep==='problema'));
   const contarFlags=o=>{let ins=0;(o.lineas||[]).forEach(l=>{if(l.instala)ins++});return{ins}};
   const matFletes=new Set();
   const matDatos={};diasNav.forEach(iso=>{
-    const arr=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado');
+    const arr=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada);
     const porCh={};arr.filter(o=>o.flete&&necesitaFlete(o)).forEach(o=>{porCh[o.flete]=porCh[o.flete]||{n:0,zonas:new Set(),ins:0,reclamo:false};const f=contarFlags(o);porCh[o.flete].n++;if(o.zona)porCh[o.flete].zonas.add(o.zona);porCh[o.flete].ins+=f.ins;if(o.estado==='En reclamo')porCh[o.flete].reclamo=true;matFletes.add(o.flete)});
     const retiroArr=arr.filter(o=>o.tipo==='Retiro');
     const movArr=arr.filter(o=>o.tipo==='Movimiento Interno');
@@ -685,20 +728,23 @@ function vTablero(){
     const cupoRet=cupoTarget[cupoKey(iso,'R','TODOS')];
     if(!cf.length&&cupoRet==null)return '<td class="matcell"><span class="muted">—</span></td>';
     const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(iso,'F',f)],0)+(cupoRet||0);
-    const sumAct=cf.reduce((a,f)=>a+(matDatos[iso].porCh[f]?matDatos[iso].porCh[f].n:0),0)+ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&o.tipo==='Retiro').length;
+    const sumAct=cf.reduce((a,f)=>a+(matDatos[iso].porCh[f]?matDatos[iso].porCh[f].n:0),0)+ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&o.tipo==='Retiro').length;
     return `<td class="matcell clik" onclick="irOrdenes({day:'${iso}'})"><b class="cupototal" style="margin:0">${sumAct}/${sumCupo}</b></td>`;
   }).join('')}</tr>`;
-  const matriz=`<div class="card"><div class="section-title"><h3>Capacidad por chofer</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div><p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>
-    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${filaSin}${filaTotal}${filaCupoTotal}</tbody></table></div></div>`;
+  const matriz=`<div class="card"><div class="section-title"><h3>Capacidad por chofer</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${esVendedor()?'<p class="muted" style="margin:-2px 0 10px">Ocupación de cada chofer por día.</p>':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
+    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${esVendedor()?'':filaSin+filaTotal+filaCupoTotal}</tbody></table></div></div>`;
   const _p0=diasNav[0].split('-'),_p5=diasNav[5].split('-');const semLabel='Del '+(+_p0[2])+'/'+(+_p0[1])+' al '+(+_p5[2])+'/'+(+_p5[1])+(diasNav[0]===HOY?' · desde hoy':'');
   
   $('view').innerHTML=`
-  ${esVendedor()?'':`<div class="card"><div class="section-title"><h2>Tablero · ${fmt(HOY)}</h2></div>
-    <div class="cdtot">
-      <div class="stat clik" onclick="irOrdenes({day:HOY})"><div class="muted">Coordinados hoy</div><div class="value">${dayO.length}</div>${condic?`<div class="cond" style="font-size:12px">${condic} condicional${condic===1?'':'es'}</div>`:''}</div>
-      <div class="stat clik" onclick="irOrdenes({day:HOY})"><div style="font-size:13px;font-weight:700;color:#b45309">Faltan entregar</div><div class="value" style="color:#b45309">${faltan}</div></div>
-      <div class="stat clik" onclick="irOrdenes({estado:'En viaje'})" style="background:#e7effc"><div style="color:#1e5fce;font-size:13px;font-weight:700">En viaje</div><div class="value" style="color:#1e5fce">${enViaje}</div></div>
-      <div class="stat clik" onclick="irOrdenes({estado:'Entregada'})" style="background:#e7f5ec"><div style="color:#15803d;font-size:13px;font-weight:700">Entregados</div><div class="value" style="color:#15803d">${entreg}</div></div>
+  ${esVendedor()?'':`<div class="card"><div class="section-title"><h2>Tablero · ${fmt(HOY)}</h2>${puedeCargar()?'<div class="row-actions"><button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button></div>':''}</div>
+    <p class="muted" style="margin:-2px 0 12px">El recorrido de una orden, paso a paso. Tocá cualquiera para ver esas órdenes.</p>
+    <div class="flujo-grid">
+      <div class="flujostat clik" onclick="irOrdenes({estado:'Coordinada',day:HOY})"><div class="fs-lbl" style="color:#b45309">Falta entregar</div><div class="fs-val" style="color:#b45309">${faltan}</div></div>
+      <div class="flujostat clik" onclick="irOrdenes({estado:'En viaje',day:HOY})" style="background:#e7effc"><div class="fs-lbl" style="color:#1e5fce">En viaje</div><div class="fs-val" style="color:#1e5fce">${enViaje}</div></div>
+      <div class="flujostat clik" onclick="irOrdenes({estado:'Entregada',day:HOY})" style="background:#eef7f1"><div class="fs-lbl" style="color:#15803d">Entregada x chofer</div><div class="fs-val" style="color:#15803d">${entregadaChofer}</div></div>
+      <div class="flujostat clik" onclick="irOrdenes({estado:'Por rendir',day:HOY})" style="background:#eef2ff"><div class="fs-lbl" style="color:#3730a3">A rendir a Jony</div><div class="fs-val" style="color:#3730a3">${porRendir}</div></div>
+      <div class="flujostat clik" onclick="irOrdenes({estado:'Cerrado',day:HOY})" style="background:#e7f5ec"><div class="fs-lbl" style="color:#0f5132">Cerradas hoy</div><div class="fs-val" style="color:#0f5132">${cerradasHoy}</div></div>
+      <div class="flujostat clik" onclick="irOrdenes({vista:'pendientes'})" style="${pendAcum?'background:#fdecea':''}"><div class="fs-lbl" style="color:${pendAcum?'#b42318':'#8a94a3'}">⚠ Pendientes acumuladas</div><div class="fs-val" style="color:${pendAcum?'#b42318':'#0f1a2a'}">${pendAcum}</div></div>
     </div></div>
   <div class="card"><div class="cdtot">
       <div class="stat clik" onclick="irOrdenes({cond:true})" style="${condicSem?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${condicSem?'#b45309':'#8a94a3'}">Condicionadas · semana</div><div class="value" style="color:${condicSem?'#b45309':'#0f1a2a'}">${condicSem}</div></div>
@@ -706,7 +752,7 @@ function vTablero(){
       <div class="stat clik" onclick="irOrdenes({estado:'En reclamo'})" style="${reclamos?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${reclamos?'#b42318':'#8a94a3'}">Reclamos</div><div class="value" style="color:${reclamos?'#b42318':'#0f1a2a'}">${reclamos}</div></div>
       <div class="stat clik" onclick="irOrdenes({prob:true})" style="${probs.length?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${probs.length?'#b42318':'#8a94a3'}">Problemas depósito</div><div class="value" style="color:${probs.length?'#b42318':'#0f1a2a'}">${probs.length}</div></div>
     </div></div>`}
-  ${esVendedor()?`<div class="card"><h2 style="margin:0 0 4px">Tablero · ${fmt(HOY)}</h2></div>`:''}
+  ${esVendedor()?`<div class="card"><div class="section-title"><h2 style="margin:0">Tablero · ${fmt(HOY)}</h2><div class="row-actions"><button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button></div></div></div>`:''}
   ${matriz}`}
 
 /* CARGAR wizard */
@@ -825,6 +871,8 @@ function guardarDraft(parcial){readStep();const t=draft.tipo;
 
 /* ÓRDENES */
 let ordFil={q:'',estado:'',flete:''};
+let ordVista='activas';
+let ordPag=1;const ORD_PAG=50;
 let cupoCerrado={}; /* capacidad de camioneta/retiro por día — NO toca estado de órdenes, es independiente de Rendición */
 let cupoTarget={}; /* objetivo de viajes que Lucas fija POR ADELANTADO para un chofer/retiro en un día — así se completa solo, en vez de mirarlo para atrás */
 let cupoActivo={}; /* chofer cargado para el día, sin cupo numérico todavía (aparece igual en el panel, con botón "Poner cupo") */
@@ -832,7 +880,7 @@ let addChoferOpen=false;let addRetiroOpen=false;
 function cupoKey(dia,tipo,nombre){return dia+'|'+tipo+'|'+nombre}
 function toggleCupo(key){cupoCerrado[key]=!cupoCerrado[key];if(cupoCerrado[key])autoBloquearSiCorresponde(key.split('|')[0]);vOrdenes()}
 function todosCuposCerrados(dia){
-  const dayO=ordenes.filter(o=>o.fecha===dia&&o.estado!=='Cancelado');
+  const dayO=ordenes.filter(o=>o.fecha===dia&&o.estado!=='Cancelado'&&!o.archivada);
   const porF={};dayO.filter(o=>o.flete&&necesitaFlete(o)).forEach(o=>{porF[o.flete]=true});
   const hayRetiro=dayO.some(o=>o.tipo==='Retiro')||cupoTarget[cupoKey(dia,'R','TODOS')]!=null;
   const nF=new Set(Object.keys(porF));FLETES.forEach(f=>{if(cupoTarget[cupoKey(dia,'F',f)]!=null||cupoActivo[cupoKey(dia,'F',f)])nF.add(f)});
@@ -856,7 +904,7 @@ function ajustarCupo(key,delta){cupoTarget[key]=Math.max(1,(cupoTarget[key]||0)+
 let ordCond=false;let ordZona='';let ordProb=false;let ordRet='';let ordTipo='';
 let ordSortCol='';let ordSortDir=1;
 function ordSortBy(col){if(ordSortCol===col)ordSortDir*=-1;else{ordSortCol=col;ordSortDir=1}vOrdenes()}
-function irOrdenes(o){o=o||{};selDay=o.day||HOY;weekRef=o.day||HOY;ordFil={q:'',estado:o.estado||'',flete:o.flete||''};ordCond=!!o.cond;ordZona=o.zona||'';ordProb=!!o.prob;ordRet=o.ret||'';ordTipo=o.tipo||'';setTab('ordenes')}
+function irOrdenes(o){o=o||{};selDay=o.day||HOY;weekRef=o.day||HOY;ordVista=o.vista||'activas';ordPag=1;ordFil={q:'',estado:o.estado||'',flete:o.flete||''};ordCond=!!o.cond;ordZona=o.zona||'';ordProb=!!o.prob;ordRet=o.ret||'';ordTipo=o.tipo||'';setTab('ordenes')}
 function selDia(iso){selDay=iso;ordFil={q:'',estado:'',flete:''};ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';vOrdenes()}
 let weekRef=HOY;
 let selDay=HOY;
@@ -869,7 +917,7 @@ function proxDias(desde,n){const a=[];let d=new Date(desde+'T00:00');while(a.len
 function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function addDays(iso,n){const d=new Date(iso+'T00:00');d.setDate(d.getDate()+n);return isoOf(d)}
 function semanaDe(ref){const d=new Date(ref+'T00:00');const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);const a=[];for(let i=0;i<6;i++){const x=new Date(d);x.setDate(d.getDate()+i);a.push(isoOf(x))}return a}
-function esProceso(o){return o.estado!=='Cerrado'&&o.estado!=='Cancelado'}
+function esProceso(o){return o.estado!=='Cerrado'&&o.estado!=='Cancelado'&&!o.archivada}
 /* Alerta de estancamiento: 'Entregada' hace X días = Lucas todavía no recibió al chofer.
    'Por rendir' hace X días = Jony todavía no firmó la rendición. Devuelve {dias, fase} o null. */
 function diasSinCerrar(o){
@@ -883,7 +931,7 @@ function reOrd(k){
   clearTimeout(_ordTimer);
   _ordTimer=setTimeout(()=>{vOrdenes();const el=$('of_q');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},300)}
 function asignarFlete(id,v){const o=ordenes.find(x=>x.id===id);o.flete=v;vOrdenes()}
-function asignarSinAsignar(){const pend=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado'&&necesitaFlete(o)&&!o.flete);
+function asignarSinAsignar(){const pend=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado'&&!o.archivada&&necesitaFlete(o)&&!o.flete);
   if(!pend.length){showToast('No hay órdenes sin chofer ese día.','info');return}
   ordFil.flete='__sin';vOrdenes();
   const tabla=document.querySelector('.table-wrap');if(tabla){try{tabla.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}}
@@ -918,7 +966,7 @@ function abrirMapaOrden(id){const o=ordenes.find(x=>x.id===id);if(!o)return;cons
   window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(dir),'_blank')}
 const GMAPS_KEY='AIzaSyA4E9XWUV8dKalH_t4aMSZmnD2NKJwu0EU';
 let gmapsLoaded=false,gmapsLoading=false;
-let mapaDiaAbierto=false,mapaDiaFecha='',mapaDiaEstado='';
+let mapaDiaAbierto=false,mapaDiaFecha='',mapaDiaEstado='',mapaChoferSel=null,_mapaOrds=[];
 function cargarGoogleMaps(cb){
   if(gmapsLoaded){cb();return}
   if(gmapsLoading){window._gmapsCb=window._gmapsCb||[];window._gmapsCb.push(cb);return}
@@ -931,31 +979,40 @@ function cargarGoogleMaps(cb){
 function setMapaDiaEstado(txt){mapaDiaEstado=txt;const el=$('mapa-dia-estado');if(el){el.textContent=txt;el.style.display=txt?'':'none'}}
 function renderMapaDia(){const el=$('mapaRoot');if(!el)return;
   if(!mapaDiaAbierto){el.innerHTML='';return}
+  const choferes=[...new Set(_mapaOrds.map(x=>x.o.flete||'Sin asignar'))].sort();
+  const chips=['<button class="mapchip'+(mapaChoferSel===null?' on':'')+'" onclick="filtrarMapaChofer(null)">Todos <b>'+_mapaOrds.length+'</b></button>']
+    .concat(choferes.map(c=>{const n=_mapaOrds.filter(x=>(x.o.flete||'Sin asignar')===c).length;const col=colorChofer(c);return '<button class="mapchip'+(mapaChoferSel===c?' on':'')+'" onclick="filtrarMapaChofer(\''+esc(c).replace(/'/g,"\\'")+'\')"><span class="mapchip-dot" style="background:'+col+'"></span>'+esc(c)+' <b>'+n+'</b></button>'})).join('');
   el.innerHTML=`<div class="mapa-overlay" onclick="cerrarMapaDia()"><div class="mapa-card" onclick="event.stopPropagation()">
     <div class="mapa-head"><h3>Mapa del día · ${fmt(mapaDiaFecha)}</h3><button class="btn btn-ghost btn-sm" onclick="cerrarMapaDia()">✕ Cerrar</button></div>
-    <p class="muted" style="margin:0 0 8px;font-size:12.5px">Un pin por cada envío/expreso con dirección. Tocá un pin para ver la orden.</p>
+    <div class="mapchips">${chips}</div>
     <div id="mapa-dia-estado" style="${mapaDiaEstado?'':'display:none'}background:#eef2ff;color:#3730a3;border-radius:6px;padding:6px 10px;font-size:12.5px;margin-bottom:8px">${esc(mapaDiaEstado)}</div>
-    <div id="gmap-canvas" style="width:100%;height:65vh;border-radius:8px;background:#eef1f5"></div>
+    <div id="gmap-canvas" style="width:100%;height:62vh;border-radius:8px;background:#eef1f5"></div>
   </div></div>`}
+const PALETA_CHOFER=['#1e5fce','#15803d','#b45309','#b42318','#6b34c9','#0f766e','#a3416b','#4d5566'];
+function colorChofer(nombre){const i=FLETES.indexOf(nombre);if(i>=0)return PALETA_CHOFER[i%PALETA_CHOFER.length];if(nombre==='Sin asignar')return '#9aa2ad';let h=0;for(let k=0;k<nombre.length;k++)h=(h*31+nombre.charCodeAt(k))>>>0;return PALETA_CHOFER[h%PALETA_CHOFER.length]}
 function abrirMapaDelDia(iso){
-  const ords=ordenes.filter(o=>o.fecha===iso).map(o=>({o,dir:direccionParaMapa(o)})).filter(x=>x.dir);
+  const ords=ordenes.filter(o=>o.fecha===iso&&!o.archivada).map(o=>({o,dir:direccionParaMapa(o)})).filter(x=>x.dir);
   if(!ords.length){showToast('No hay envíos ni expresos con dirección cargada para ese día.','info');return}
-  mapaDiaFecha=iso;mapaDiaAbierto=true;mapaDiaEstado='Cargando el mapa…';renderMapaDia();
-  cargarGoogleMaps(()=>dibujarMapaDelDia(ords))}
+  mapaDiaFecha=iso;mapaDiaAbierto=true;mapaChoferSel=null;_mapaOrds=ords;mapaDiaEstado='Cargando el mapa…';renderMapaDia();
+  cargarGoogleMaps(()=>dibujarMapaDelDia())}
+function filtrarMapaChofer(c){mapaChoferSel=c;renderMapaDia();cargarGoogleMaps(()=>dibujarMapaDelDia())}
 function cerrarMapaDia(){mapaDiaAbierto=false;renderMapaDia()}
-function dibujarMapaDelDia(ords){
+function dibujarMapaDelDia(){
   const el=$('gmap-canvas');if(!el)return;
+  const ords=mapaChoferSel===null?_mapaOrds:_mapaOrds.filter(x=>(x.o.flete||'Sin asignar')===mapaChoferSel);
+  if(!ords.length){setMapaDiaEstado('Ese chofer no tiene entregas con dirección este día.');return}
   setMapaDiaEstado('Ubicando entregas…');
   const map=new google.maps.Map(el,{center:{lat:-34.6037,lng:-58.4416},zoom:11,mapTypeControl:false,streetViewControl:false});
   const geocoder=new google.maps.Geocoder();
   const bounds=new google.maps.LatLngBounds();
   let pendientes=ords.length,fallidos=[];
   ords.forEach(({o,dir})=>{
+    const col=colorChofer(o.flete||'Sin asignar');
     geocoder.geocode({address:dir},(res,status)=>{
       pendientes--;
       if(status==='OK'&&res[0]){
         const pos=res[0].geometry.location;
-        const marker=new google.maps.Marker({position:pos,map,label:{text:String(o.boleta).slice(-3),color:'#fff',fontSize:'11px',fontWeight:'700'},title:o.boleta+' · '+(o.cliente||'')});
+        const marker=new google.maps.Marker({position:pos,map,label:{text:String(o.boleta).slice(-3),color:'#fff',fontSize:'11px',fontWeight:'700'},title:o.boleta+' · '+(o.cliente||''),icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:col,fillOpacity:1,strokeColor:'#fff',strokeWeight:2,labelOrigin:new google.maps.Point(0,0)}});
         const iw=new google.maps.InfoWindow({content:'<div style="font:14px/1.4 sans-serif;padding:2px 4px"><b>Orden '+esc(o.boleta)+'</b><br>'+esc(o.cliente||'')+'<br><span style="color:#5b6675">'+esc(zonaLimpia(o.zona))+' · '+esc(o.flete||'Sin asignar')+'</span><br><span style="color:#8a94a3;font-size:12px">'+esc(dir)+'</span></div>'});
         marker.addListener('click',()=>iw.open(map,marker));
         bounds.extend(pos);map.fitBounds(bounds);
@@ -965,7 +1022,7 @@ function dibujarMapaDelDia(ords){
 function marcarHabil(id,val){const o=ordenes.find(x=>x.id===id);if(val){const pg=prompt('El cliente vino a pagar. ¿Cuánto pagó ahora? (0 = solo habilitar)',0);if(pg===null)return;const pn=moneyParse(pg);if(pn>0){o.pagosList=(o.pagosList||[]).concat(pn);o.pagos=(o.pagos||0)+pn}o.habilitada=true}else{o.habilitada=false}vOrdenes()}
 
 /* ============ ORDENES ============ */
-function fletesDelDia(fecha){const dayO=ordenes.filter(o=>o.fecha===fecha&&o.estado!=='Cancelado');
+function fletesDelDia(fecha){const dayO=ordenes.filter(o=>o.fecha===fecha&&o.estado!=='Cancelado'&&!o.archivada);
   const activos=new Set(dayO.filter(o=>o.flete&&necesitaFlete(o)).map(o=>o.flete));
   FLETES.forEach(f=>{if(cupoTarget[cupoKey(fecha,'F',f)]!=null||cupoActivo[cupoKey(fecha,'F',f)])activos.add(f)});
   return [...activos]}
@@ -995,24 +1052,31 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
         menu.push(menuItem('↩','Reabrir','reabrirOrden('+o.id+')'));
       }
       menu.push(menuItem('✎','Editar orden',`editId=${o.id};draft=null;setTab('cargar')`));
-      if(role==='logistica'||role==='jony'||esAdmin())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
+      if(role==='logistica'||esDireccion())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
       if(o.estadoHist&&o.estadoHist.length)menu.push(menuItem('🕑','Ver historial de estado','abrirModalEstadoHist('+o.id+')'));
       if(necesitaFlete(o)&&o.estado!=='Coordinada')menu.push(menuItem('🔁','Reasignar chofer (corrige el registro)','reasignarFlete('+o.id+')'));
       menu.push(menuItem('💬',o.comentario?'Editar comentario':'Agregar comentario','editarComentario('+o.id+')'));
       if(o.comentarioHist&&o.comentarioHist.length)menu.push(menuItem('🕑','Ver historial del comentario','verComentarioHist('+o.id+')'));
+      if(puedeEliminar()){
+        if(o.eliminSolicitada){menu.push(menuItem('✅','Aprobar eliminación pedida por '+esc(o.eliminSolicitada.por),'aprobarEliminar('+o.id+')',true));menu.push(menuItem('✕','Rechazar la solicitud de eliminación','rechazarEliminar('+o.id+')'));}
+        menu.push(menuItem('🗑','Eliminar viaje (lo saca de todo)','eliminarViaje('+o.id+')',true));
+      } else if(role==='logistica'){
+        if(!o.eliminSolicitada)menu.push(menuItem('🗑','Solicitar eliminación a Dirección','solicitarEliminar('+o.id+')',true));
+      }
     }
     if(o.estado==='En reclamo'&&!esVendedor())inline.push(iconBtn('btn-ghost','🚩','Ver reclamo','verReclamo('+o.id+',event)')+(reclamoVerOpen===o.id&&reclamoVerPos?`<div class="mueble-pop" style="position:fixed;top:${reclamoVerPos.top}px;left:${reclamoVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Reclamo · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal"><b>Chofer:</b> ${esc(o.flete||'—')}</div><div class="mp-row" style="white-space:normal;margin-top:4px">${esc(o.reclamoNota||'(sin nota)')}</div>${o.reclamoFoto?`<img src="${o.reclamoFoto}" style="max-width:100%;border-radius:6px;margin-top:8px">`:''}</div>`:''));
     const kebab=menu.length?`<button class="btn btn-ghost icon-btn" title="Más acciones" onclick="toggleOrdMenu(${o.id},event)">⋮</button>${ordMenuOpen===o.id&&ordMenuPos?`<div class="ord-menu" style="position:fixed;${ordMenuPos.bottom!=null?'bottom:'+ordMenuPos.bottom+'px':'top:'+ordMenuPos.top+'px'};left:${ordMenuPos.left}px" onclick="event.stopPropagation()">${menu.join('')}</div>`:''}`:'';
     const acc=[`<div class="ord-actions">${inline.join('')}${kebab}</div>`];
     const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);
     const dsc=diasSinCerrar(o);
-    return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(o.boleta)}</strong>${o.verificado?' ✓':''} <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td><b>${money(cobro)}</b></td>`}<td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span>${o.confirmacion==='A confirmar'?' <span class="badge e-cond">A confirmar</span>':''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:''}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
+    return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(o.boleta)}</strong>${o.verificado?' ✓':''} <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td><b>${money(cobro)}</b></td>`}<td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span>${o.confirmacion==='A confirmar'?' <span class="badge e-cond">A confirmar</span>':''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:''}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
 function vOrdenes(){
+  if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
   const dias=semanaDe(weekRef);
   if(!dias.includes(selDay))selDay=dias.includes(HOY)?HOY:dias[0];
-  const tabsH=dias.map((iso,i)=>{const n=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado').length;const cerr=diasCerrados[iso];const p=iso.split('-');
+  const tabsH=dias.map((iso,i)=>{const n=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada).length;const cerr=diasCerrados[iso];const p=iso.split('-');
     return `<button class="daypill${iso===selDay?' sel':''}${cerr?' cerr':''}" onclick="selDia('${iso}')"><span class="dn">${DIASSEM[i]} ${+p[2]}/${+p[1]}</span><span class="dc">${cerr?'cerrado · ':''}${n} viaje${n===1?'':'s'}</span></button>`}).join('');
-  const dayO=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado');
+  const dayO=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado'&&!o.archivada);
   const total=dayO.length;const sinAsig=dayO.filter(o=>necesitaFlete(o)&&!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const firmes=total-condic;
   const porF={};dayO.filter(o=>o.flete&&necesitaFlete(o)).forEach(o=>{const k=o.flete;porF[k]=(porF[k]||0)+1});
   const porRet={};dayO.filter(o=>o.tipo==='Retiro').forEach(o=>{const k=retLoc(o);porRet[k]=(porRet[k]||0)+1});
@@ -1058,20 +1122,41 @@ function vOrdenes(){
   const sinCupoHoy=choferesHoy.filter(f=>cupoTarget[cupoKey(selDay,'F',f)]==null).length;
   const meta=todosLlenos?'<span class="tgt ok">día completo</span>'
     :(metaHoy!=null?`<span class="tgt">${firmes}/~${metaHoy}</span>${sinCupoHoy?`<span class="muted" style="font-size:10px"> · falta poner cupo a ${sinCupoHoy} chofer${sinCupoHoy===1?'':'es'}</span>`:''}`:'');
-  const scope=ordCond?semanaDe(weekRef):[selDay];let list=ordenes.filter(o=>scope.includes(o.fecha));if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
-  if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(esProceso)}
+  let list, usaPag=false, totalSinPag=0;
+  if(ordVista==='activas'){
+    const scope=ordCond?semanaDe(weekRef):[selDay];list=ordenes.filter(o=>scope.includes(o.fecha)&&!o.archivada);
+    if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
+    if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(esProceso)}
+  } else if(ordVista==='pendientes'){
+    list=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    if(ordFil.estado)list=list.filter(o=>o.estado===ordFil.estado);
+  } else if(ordVista==='cerradas'){
+    list=ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);usaPag=true;
+  } else { /* todas */
+    list=ordenes.filter(o=>!o.archivada).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);usaPag=true;
+  }
   if(ordFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(ordFil.q.toLowerCase()));
   if(ordFil.flete)list=list.filter(o=>ordFil.flete==='__sin'?(necesitaFlete(o)&&!o.flete):(o.flete===ordFil.flete||(ordFil.flete==='Retiro'&&o.tipo==='Retiro')));
   if(ordSortCol){list=[...list].sort((a,b)=>{const va=ordSortCol==='zona'?(a.zona||''):(a.flete||'');const vb=ordSortCol==='zona'?(b.zona||''):(b.flete||'');return va.localeCompare(vb)*ordSortDir})}
-  _ordList=list;const rows=list.map(o=>filaOrden(o,true)).join('');
-  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">← Semana</button><button class="btn btn-ghost btn-sm" onclick="weekRef=addDays(weekRef,7);vOrdenes()">Semana →</button>${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
-    <div class="daytabs">${tabsH}</div></div>
-    <div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}${(()=>{const cf=[...nombresF].filter(f=>cupoTarget[cupoKey(selDay,'F',f)]!=null);const cr=cupoTarget[cupoKey(selDay,'R','TODOS')]!=null?1:0;if(!cf.length&&!cr)return'';const retTotal=Object.values(porRet).reduce((a,b)=>a+b,0);const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(selDay,'F',f)],0)+(cr?cupoTarget[cupoKey(selDay,'R','TODOS')]:0);const sumAct=cf.reduce((a,f)=>a+(porF[f]||0),0)+retTotal;return ` <span class="cupototal">${sumAct}/${sumCupo}</span>`;})()}</h3><div class="row-actions">${esVendedor()?'':`<button class="btn btn-ghost btn-sm" title="Abre Google Maps con un punto por cada envío/expreso del día, para repartir por zona" onclick="abrirMapaDelDia('${selDay}')">📍 Ver mapa del día</button><button class="btn btn-ghost btn-sm" title="Bloquea el día para que no se agenden más entregas." onclick="toggleDiaCerrado()">${cerrado?'🔓 Desbloquear el día':'🔒 Bloquear el día'}</button>`}</div></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy, su cupo, y las zonas sin cubrir. ${cerrado?'<b style="color:#b42318">Día bloqueado — no se aceptan más cargas.</b>':'Si cerrás el cupo de todos, el día se bloquea solo.'}</p>
-    <div class="cupo-grid">${cupoCards}</div></div>
-    <div class="card"><p class="muted" style="margin:0 0 10px">Solo lo que tenés para trabajar estos días. Lo cerrado y lo cancelado vive en <b>Órdenes cerradas</b>.</p>
-    <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)"><select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${ESTADOS_ACTIVOS.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select><select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes de hoy</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${hayRetiro?`<option value="Retiro" ${ordFil.flete==='Retiro'?'selected':''}>Retiro</option>`:''}${[...nombresF].sort().map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>
-    ${(ordCond||ordZona||ordProb||ordRet||ordTipo)?`<div class="actfil">Filtros activos: ${ordCond?'<span class="afchip">Condicionadas · semana <button onclick="ordCond=false;vOrdenes()">×</button></span>':''}${ordZona?`<span class="afchip">Zona: ${esc(ordZona)} <button onclick="ordZona='';vOrdenes()">×</button></span>`:''}${ordProb?'<span class="afchip">Con problema <button onclick="ordProb=false;vOrdenes()">×</button></span>':''}${ordRet?`<span class="afchip">Retiro: ${esc(ordRet==='ALL'?'todos':ordRet)} <button onclick="ordRet='';vOrdenes()">×</button></span>`:''}${ordTipo?`<span class="afchip">Tipo: ${esc(ordTipo)} <button onclick="ordTipo='';vOrdenes()">×</button></span>`:''} <button class="btn btn-ghost btn-sm" onclick="ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';vOrdenes()">Limpiar</button></div>`:''}
-    ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
+  totalSinPag=list.length;
+  if(usaPag)list=list.slice(0,ordPag*ORD_PAG);
+  _ordList=list;const rows=list.map(o=>filaOrden(o,ordVista==='activas'||ordVista==='pendientes'?(o.estado!=='Cerrado'&&o.estado!=='Cancelado'):false)).join('');
+  const quedanOrd=totalSinPag-list.length;
+  const vistaBtn=(k,txt,n)=>`<button class="vistatog${ordVista===k?' on':''}" onclick="ordVista='${k}';ordPag=1;ordFil.estado='';vOrdenes()">${txt}${n!=null?` <b>${n}</b>`:''}</button>`;
+  const nPend=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
+  const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
+  const esActivas=ordVista==='activas';
+  const estadoOpts=(ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS);
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
+    ${conmutador}
+    ${esActivas?`<div class="daytabs"><button class="weeknav" title="Semana anterior" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">‹</button>${tabsH}<button class="weeknav" title="Semana siguiente" onclick="weekRef=addDays(weekRef,7);vOrdenes()">›</button></div>`:''}</div>
+    ${(esActivas&&!esVendedor())?`<div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}${(()=>{const cf=[...nombresF].filter(f=>cupoTarget[cupoKey(selDay,'F',f)]!=null);const cr=cupoTarget[cupoKey(selDay,'R','TODOS')]!=null?1:0;if(!cf.length&&!cr)return'';const retTotal=Object.values(porRet).reduce((a,b)=>a+b,0);const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(selDay,'F',f)],0)+(cr?cupoTarget[cupoKey(selDay,'R','TODOS')]:0);const sumAct=cf.reduce((a,f)=>a+(porF[f]||0),0)+retTotal;return ` <span class="cupototal">${sumAct}/${sumCupo}</span>`;})()}</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" title="Abre Google Maps con un punto por cada envío/expreso del día, para repartir por zona" onclick="abrirMapaDelDia('${selDay}')">📍 Ver mapa del día</button><button class="btn btn-ghost btn-sm" title="Bloquea el día para que no se agenden más entregas." onclick="toggleDiaCerrado()">${cerrado?'🔓 Desbloquear el día':'🔒 Bloquear el día'}</button></div></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy, su cupo, y las zonas sin cubrir. ${cerrado?'<b style="color:#b42318">Día bloqueado — no se aceptan más cargas.</b>':'Si cerrás el cupo de todos, el día se bloquea solo.'}</p>
+    <div class="cupo-grid">${cupoCards}</div></div>`:''}
+    <div class="card">${ordVista==='pendientes'?'<p class="muted" style="margin:0 0 10px">Órdenes trabadas de días anteriores: entregadas que el chofer no rindió, o que esperan la firma de Jony. Ordenadas de la más vieja a la más nueva.</p>':(esActivas?'<p class="muted" style="margin:0 0 10px">Lo que tenés para trabajar del día seleccionado. Movete con las flechas de arriba, o mirá otras vistas con los botones.</p>':'')}
+    <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)"><select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${estadoOpts.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select><select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${hayRetiro?`<option value="Retiro" ${ordFil.flete==='Retiro'?'selected':''}>Retiro</option>`:''}${[...nombresF].sort().map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>
+    ${(esActivas&&(ordCond||ordZona||ordProb||ordRet||ordTipo))?`<div class="actfil">Filtros activos: ${ordCond?'<span class="afchip">Condicionadas · semana <button onclick="ordCond=false;vOrdenes()">×</button></span>':''}${ordZona?`<span class="afchip">Zona: ${esc(ordZona)} <button onclick="ordZona='';vOrdenes()">×</button></span>`:''}${ordProb?'<span class="afchip">Con problema <button onclick="ordProb=false;vOrdenes()">×</button></span>':''}${ordRet?`<span class="afchip">Retiro: ${esc(ordRet==='ALL'?'todos':ordRet)} <button onclick="ordRet='';vOrdenes()">×</button></span>`:''}${ordTipo?`<span class="afchip">Tipo: ${esc(ordTipo)} <button onclick="ordTipo='';vOrdenes()">×</button></span>`:''} <button class="btn btn-ghost btn-sm" onclick="ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';vOrdenes()">Limpiar</button></div>`:''}
+    ${(!esActivas)?`<p class="muted" style="margin:0 0 10px;font-size:12.5px">${totalSinPag} orden${totalSinPag===1?'':'es'}${usaPag&&quedanOrd>0?` · mostrando ${list.length}`:''}</p>`:''}
+    ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>${(usaPag&&quedanOrd>0)?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="ordPag++;vOrdenes()">Mostrar ${Math.min(quedanOrd,ORD_PAG)} más (quedan ${quedanOrd})</button></div>`:''}`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
 
 /* ============ ORDENES CERRADAS (archivo) ============ */
 let cerrFil={q:'',flete:'',tipo:'',estado:'Cerrado',fecha:''};
@@ -1081,7 +1166,7 @@ let _cerrTimer=null;
 function reCerr(){clearTimeout(_cerrTimer);_cerrTimer=setTimeout(()=>{cerrPag=1;vCerradas();const el=$('cf_q');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},300)}
 function cerrMasPag(){cerrPag++;vCerradas()}
 function cerrDiasConCierres(){
-  return [...new Set(ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&(!cerrFil.estado||o.estado===cerrFil.estado)).map(o=>o.fecha))].sort();
+  return [...new Set(ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada&&(!cerrFil.estado||o.estado===cerrFil.estado)).map(o=>o.fecha))].sort();
 }
 function cerrNavDia(dir){
   const dias=cerrDiasConCierres();if(!dias.length)return;
@@ -1092,7 +1177,7 @@ function cerrNavDia(dir){
 }
 function vCerradas(){
   const hayFiltro=!!(cerrFil.q||cerrFil.flete||cerrFil.tipo||cerrFil.fecha);
-  let list=ordenes.filter(o=>o.estado==='Cerrado'||o.estado==='Cancelado');
+  let list=ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada);
   if(cerrFil.estado)list=list.filter(o=>o.estado===cerrFil.estado);
   if(cerrFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(cerrFil.q.toLowerCase()));
   if(cerrFil.flete)list=list.filter(o=>o.flete===cerrFil.flete);
@@ -1147,6 +1232,16 @@ function verReclamo(id,ev){if(reclamoVerOpen===id){reclamoVerOpen=null;reclamoVe
 function cancelarOrden(id){abrirModalCancelar(id)}
 function reprogramarOrden(id){abrirModalReprogramar(id)}
 
+/* ===== Eliminar / archivar viajes (oculto pero recuperable) ===== */
+function puedeEliminar(){return esDireccion()}
+function eliminarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;modalActivo={tipo:'eliminar',id};renderModal()}
+function confirmarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString()};o.eliminSolicitada=null;cerrarModal();showToast('Viaje eliminado (queda recuperable desde Configuración).','success');render()}
+function solicitarEliminar(id){modalActivo={tipo:'solicitarElim',id};renderModal()}
+function confirmarSolicitarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;const mot=($('t_solelim')?$('t_solelim').value.trim():'');if(!mot){const em=$('t_solelim_err');if(em)em.style.display='';return}o.eliminSolicitada={por:whoLabel(),motivo:mot,fecha:new Date().toISOString()};cerrarModal();showToast('Solicitud de eliminación enviada a Dirección.','success');render()}
+function aprobarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString(),motivo:o.eliminSolicitada?o.eliminSolicitada.motivo:''};o.eliminSolicitada=null;showToast('Viaje eliminado.','success');render()}
+function rechazarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.eliminSolicitada=null;showToast('Solicitud de eliminación rechazada.','info');render()}
+function recuperarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=false;o.archivadaInfo=null;showToast('Viaje recuperado.','success');render()}
+
 /* ============ MODALES PROPIOS (reemplazan confirm/prompt del navegador) ============ */
 const MOTIVOS_CANCEL=['Error de tipeo','El cliente no puede recibirlo','El chofer no llegó a domicilio en horario','Otros'];
 const MOTIVOS_REPROG=['El cliente no podía recibirlo','El flete no llega ese día','El mueble no estaba en condiciones','Otros'];
@@ -1154,7 +1249,19 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);return''}
+function cuerpoEliminar(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';
+  return `<h3>Eliminar viaje</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472;line-height:1.5">El viaje se saca de todas las vistas, conteos y estadísticas. <b>Queda recuperable</b> desde Configuración por si te arrepentís.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar viaje</button></div>`}
+function cuerpoSolicitarElim(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';
+  return `<h3>Solicitar eliminación</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472">Contá por qué habría que eliminarla. Dirección la revisa y decide.</p><textarea id="t_solelim" placeholder="Ej: la cargué por error / está duplicada / me equivoqué de cliente" style="width:100%;min-height:80px;padding:10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit"></textarea><div id="t_solelim_err" class="field-error-msg" style="display:none">Escribí el motivo así Dirección entiende por qué.</div><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarSolicitarEliminar()">Enviar solicitud</button></div>`}
+function cuerpoImprimirSemana(m){
+  const todos=m.sel.size===m.choferes.length;
+  return `<h3>Imprimir separación de la semana</h3><p class="modal-sub">Elegí qué choferes querés imprimir. Se arma una hoja por día, con los muebles que Sebas tiene que separar para cada uno.</p>
+  <label class="imprsem-row imprsem-todos"><input type="checkbox" ${todos?'checked':''} onchange="toggleImprSemTodos()"> Todos</label>
+  <div class="imprsem-grid">
+    ${m.choferes.map(c=>`<label class="imprsem-row"><input type="checkbox" ${m.sel.has(c)?'checked':''} onchange="toggleImprSemChofer('${esc(c).replace(/'/g,"\\'")}')"> ${esc(c)}</label>`).join('')}
+  </div>
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" ${m.sel.size?'':'disabled'} onclick="confirmarImprimirSemana()">Imprimir ${m.sel.size} chofer${m.sel.size===1?'':'es'}</button></div>`}
 
 function abrirModalCancelar(oid){modalActivo={tipo:'cancelar',oid,motivo:MOTIVOS_CANCEL[0],otro:''};renderModal()}
 function cuerpoCancelar(m){const o=ordenes.find(x=>x.id===m.oid);
@@ -1265,7 +1372,15 @@ function imprimirExpreso(o){
 function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
   const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');
   const saldo=(o.total||0)-(o.pagos||0);const envio=o.costo_flete||0;const inst=o.instalacion||0;const esca=o.escalera||0;const total=cobroDestino(o);
-  const filaCosto=(label,val,campo)=>{const est=estadoCosto(o,campo);if(!val)return'';if(est==='pagado')return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px; color:#9aa2ad;"><span>${label} — ya pagado, NO cobrar</span><b>${m2(val)}</b></div>`;if(est==='sincosto')return'';return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">${label}</span><b>${m2(val)}</b></div>`};
+  const lineaRemito=(label,valTxt,muted)=>`<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;${muted?' color:#9aa2ad;':''}"><span style="${muted?'':'color:#5b6472;'}">${label}</span><b>${valTxt}</b></div>`;
+  const lineaEnvioRemito=(o,val)=>{const est=estadoCosto(o,'costo_flete');const lbl=locData(o.localidad).prov?'Costo de envío (peaje no incluido)':'Costo de envío';
+    if(est==='pagado')return lineaRemito(lbl,'Flete incluido',true);
+    if(est==='sincosto'||!val)return lineaRemito(lbl,'SIN COSTO',true);
+    return lineaRemito(lbl,m2(val),false);};
+  const lineaInstRemito=(o,val)=>{const est=estadoCosto(o,'instalacion');const lbl='Costo de instalación';
+    if(est==='pagado'&&val)return lineaRemito(lbl,'Incluida',true);
+    if(est==='sincosto'||!val)return lineaRemito(lbl,'NO REQUIERE',true);
+    return lineaRemito(lbl,m2(val),false);};
   const dom=esc(o.direccion||'—')+(o.pisodepto?' · '+esc(o.pisodepto):'');
   const tel=esc(o.tel1||'—')+(o.tel2?' / '+esc(o.tel2):'');
   const loc=esc(o.localidad||'')+(o.zona?' ('+esc(zonaLimpia(o.zona))+')':'');
@@ -1284,11 +1399,10 @@ function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
       <div style="margin-top:24px;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">DETALLE DE MERCADERÍA</div>
         <div style="display:grid; grid-template-columns:34px 56px 1fr; font-size:12.5px;"><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">#</div><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">CANT</div><div style="padding:6px 8px; border-bottom:1.5px solid #d7dbe0; color:#5b6472; font-size:10px; letter-spacing:0.5px; font-weight:700;">MUEBLE</div>${rows}</div></div>
       <div style="margin-top:24px; display:flex; justify-content:flex-end;"><div style="width:82mm;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">COBROS A REALIZAR EN LA ENTREGA</div>
-        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eef0f2; font-size:12.5px;"><span style="color:#5b6472;">Saldo pendiente del mueble</span><b>${m2(saldo)}</b></div>
-        ${filaCosto(locData(o.localidad).prov?'Costo de envío (peaje no incluido)':'Costo de envío',envio,'costo_flete')}
-        ${filaCosto('Costo de instalación',inst,'instalacion')}
-        <div style="display:flex; justify-content:space-between; padding:8px 0 2px; font-size:14px;"><b>TOTAL A COBRAR</b><b style="color:#0f766e;">${m2(total)}</b></div>
-        ${esca?`<div style="margin-top:8px; padding:8px; background:#fff7e6; border-radius:6px; font-size:11.5px; color:#7a5000;">Si el mueble no entra en ascensor — costo de escalera por piso × bulto: <b>${m2(esca)}</b> (no incluido en el total de arriba)</div>`:''}</div></div>
+        ${lineaRemito('Saldo pendiente', saldo>0?m2(saldo):'SIN SALDO', saldo<=0)}
+        ${lineaEnvioRemito(o, envio)}
+        ${lineaInstRemito(o, inst)}
+        ${esca?lineaRemito(locData(o.localidad).prov?'Escalera (no incluido · por piso × bulto)':'Escalera (no incluido · por piso × bulto)', m2(esca)+' — no suma al total', true):''}</div></div>
       <div style="margin-top:24px;"><div style="font-size:11px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:6px;">OBSERVACIONES DE LA ENTREGA</div><div style="border:1px solid #d7dbe0; border-radius:4px; height:120px;"></div></div>
       <div style="flex:1;"></div>
       <div style="margin-top:20px; font-size:10.5pt; color:#5b6472; line-height:1.5; text-align:justify;">Revisá el mueble antes de firmar. Al firmar confirmás que los muebles que recibiste están completos, nivelados y con el correcto funcionamiento. Una vez firmado el remito, NO SE ADMITIRÁN reclamos por detalles visibles en la entrega, ni Belgrano Home se responsabilizará por costos adicionales de flete que un reclamo posterior pudiera implicar.</div>
@@ -1301,7 +1415,7 @@ function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
 /* DESPACHO / RENDICIÓN */
 let cdistDay=HOY;
 let cdistView='semana';
-function sepStats(iso){let tot=0,sep=0,prob=0;ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado').forEach(o=>o.lineas.forEach(l=>{tot+=l.cant;if(l.sep==='separado')sep+=l.cant;if(l.sep==='problema')prob+=l.cant}));return{tot,sep,prob,falta:tot-sep}}
+function sepStats(iso){let tot=0,sep=0,prob=0;ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada).forEach(o=>o.lineas.forEach(l=>{tot+=l.cant;if(l.sep==='separado')sep+=l.cant;if(l.sep==='problema')prob+=l.cant}));return{tot,sep,prob,falta:tot-sep}}
 function sepCycle(oid,li){const o=ordenes.find(x=>x.id===oid);const l=o.lineas[li];l.sep=(l.sep==='separado')?'falta':'separado';vCDist()}
 function sepEmbalar(oid,li){const o=ordenes.find(x=>x.id===oid);const l=o.lineas[li];l.embalado=!l.embalado;vCDist()}
 function nombreRol(r){return {logistica:'Lucas',admin:'Administrador',jony:'Jony',deposito:'Sebas',flete:'Chofer',vendedor:'Vendedor'}[r]||r}
@@ -1328,7 +1442,7 @@ function cdMatch(o,l){const s=l.sep||'falta';const done=(s==='separado')&&(o.tip
 
 /* ============ CENTRO DE DISTRIBUCION ============ */
 function cdBloques(iso,prefix){
-  const dayO=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado');
+  const dayO=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada);
   let items=[];dayO.forEach(o=>o.lineas.forEach((l,li)=>{if(cdMatch(o,l))items.push({o,l,li})}));
   if(!items.length)return '<div class="empty" style="padding:6px 0 2px">No hay muebles con ese filtro.</div>';
   const claveOrden=it=>{
@@ -1365,7 +1479,7 @@ function vCDist(){
     ${cdDayTabs()}
     ${cdStatCards(st)}
     ${cdControles()}
-    <p class="muted" style="margin-top:10px">Agrupá por flete o por mueble; lo que ya separaste sale de "Pendientes". Tocá el título para desplegar o plegar.</p></div>${cdBloques(cdistDay,'d')}`}
+    <p class="muted" style="margin-top:10px">Agrupá por flete o por mueble; lo que ya separaste sale de "Pendientes". Tocá el título para desplegar o plegar.</p></div><div class="card">${cdBloques(cdistDay,'d')}</div>`}
 let cdDiaCol={};
 function toggleCdDia(iso){const actual=cdDiaCol[iso]!=null?cdDiaCol[iso]:(iso!==HOY);cdDiaCol[iso]=!actual;vCDist()}
 function vCDistSemana(){
@@ -1376,24 +1490,63 @@ function vCDistSemana(){
     if(!s.tot)return `<div class="card" style="opacity:.6"><div class="section-title"><h3 style="margin:0">${label} · ${+pp[2]}/${+pp[1]}</h3><span class="muted">Sin muebles programados</span></div></div>`;
     const colapsado=cdDiaCol[iso]!=null?cdDiaCol[iso]:(iso!==HOY);
     return `<div class="card" style="border-left:3px solid ${iso===HOY?'#b45309':'#d9e0e8'}"><div class="section-title cdhead" onclick="toggleCdDia('${iso}')"><h3 style="margin:0">${colapsado?'▸':'▾'} ${label} · ${+pp[2]}/${+pp[1]}</h3><span class="muted">${s.tot} muebles · <span style="color:#b45309">${s.falta} faltan</span> · <span style="color:#15803d">${s.sep} separados</span></span></div>${colapsado?'':cdBloques(iso,iso)}</div>`}).join('');
-  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Centro de Distribución · semana</h2><div class="row-actions"><div class="macrotog"><button onclick="cdistView='dia';vCDist()">Día</button><button class="on">Semana</button></div><button class="btn btn-ghost btn-sm" onclick="imprimirCDist(true)">Imprimir</button></div></div>
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Centro de Distribución · semana</h2><div class="row-actions"><div class="macrotog"><button onclick="cdistView='dia';vCDist()">Día</button><button class="on">Semana</button></div><button class="btn btn-ghost btn-sm" onclick="abrirImprimirSemana()">Imprimir</button></div></div>
     ${cdDayTabs()}
     ${cdStatCards(stSem)}
     ${cdControles()}
     <p class="muted" style="margin-top:10px">Vista pensada para preparar con anticipación: los muebles de hoy y mañana son los urgentes; el resto lo vas adelantando. Tocá el título de un día para plegarlo o desplegarlo.</p></div>${secciones}`}
 function imprimirCDist(semana){let body='';
-  if(semana){const dias=proxDias(HOY,6);body='<h2>Semana</h2><table><tr><th>Día</th><th>Muebles</th><th>Separados</th><th>Faltan</th></tr>'+dias.map((iso)=>{const s=sepStats(iso);const label=iso===HOY?'HOY':(iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()]);const pp=iso.split('-');return `<tr><td>${label} ${+pp[2]}/${+pp[1]}</td><td>${s.tot}</td><td>${s.sep}</td><td>${s.falta}</td></tr>`}).join('')+'</table>'}
-  else{const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado');const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});body=`<h2>Día ${fmt(cdistDay)}</h2>`+Object.keys(groups).map(k=>{const arr=groups[k];const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${esc(o.boleta)}</td><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');return `<h3>${esc(k)}</h3><table><tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`}).join('')}
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Centro de Distribución</title><style>body{font-family:Arial;max-width:820px;margin:20px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 4px}h3{margin:14px 0 4px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}td,th{border:1px solid #d9e0e8;padding:6px 8px;text-align:left}@media print{.np{display:none}}</style></head><body><h1>BELGRANO HOME · Centro de Distribución</h1>${body}<button class="np" onclick="window.print()" style="padding:8px 14px;background:#16324f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Imprimir</button></body></html>`;
+  if(semana){
+    const dias=proxDias(HOY,6);
+    const elegidos=_cdImprimirChoferes; // null = todos
+    body='';
+    dias.forEach(iso=>{
+      const dayO=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada);
+      if(!dayO.length)return;
+      const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});
+      let choferKeys=Object.keys(groups).sort();
+      if(elegidos&&elegidos.length)choferKeys=choferKeys.filter(k=>elegidos.includes(k));
+      if(!choferKeys.length)return;
+      const label=iso===HOY?'HOY':(iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()]);const pp=iso.split('-');
+      let diaBody=`<div class="diapage"><h2 style="color:#16324f;border-bottom:2px solid #16324f;padding-bottom:4px;margin-top:0">${label} ${+pp[2]}/${+pp[1]}</h2>`;
+      choferKeys.forEach(k=>{
+        const arr=groups[k];
+        const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(o.boleta)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');
+        const totMuebles=arr.reduce((s,o)=>s+sum(o.lineas.map(l=>l.cant)),0);
+        diaBody+=`<h3 style="margin:14px 0 4px">${esc(k)} <span style="font-weight:400;color:#5b6472;font-size:13px">· ${totMuebles} mueble${totMuebles===1?'':'s'}</span></h3><table><tr><th>Cant</th><th>Mueble</th><th>N° orden</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`;
+      });
+      diaBody+='</div>';
+      body+=diaBody;
+    });
+    if(!body)body='<p style="color:#5b6472">No hay muebles para separar en la semana con esa selección.</p>';
+  }
+  else{const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado'&&!o.archivada);const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});body=`<h2>Día ${fmt(cdistDay)}</h2>`+Object.keys(groups).map(k=>{const arr=groups[k];const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${esc(o.boleta)}</td><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');return `<h3>${esc(k)}</h3><table><tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`}).join('')}
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Centro de Distribución</title><style>body{font-family:Arial;max-width:820px;margin:20px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 4px}h3{margin:14px 0 4px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}td,th{border:1px solid #d9e0e8;padding:6px 8px;text-align:left}@media print{.np{display:none}.diapage{page-break-after:always}.diapage:last-child{page-break-after:auto}}</style></head><body><h1>BELGRANO HOME · Centro de Distribución</h1>${body}<button class="np" onclick="window.print()" style="padding:8px 14px;background:#16324f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Imprimir</button></body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close()}
+
+/* Pop-up para elegir qué choferes imprimir en la vista semanal */
+let _cdImprimirChoferes=null;
+function abrirImprimirSemana(){
+  const dias=proxDias(HOY,6);
+  const set=new Set();
+  dias.forEach(iso=>ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada).forEach(o=>set.add(o.flete||'Sin asignar')));
+  const choferes=[...set].sort();
+  if(!choferes.length){showToast('No hay muebles para separar en la semana.','info');return}
+  modalActivo={tipo:'imprimirSemana',choferes,sel:new Set(choferes)};renderModal();
+}
+function toggleImprSemChofer(nombre){const m=modalActivo;if(m.sel.has(nombre))m.sel.delete(nombre);else m.sel.add(nombre);renderModal()}
+function toggleImprSemTodos(){const m=modalActivo;if(m.sel.size===m.choferes.length)m.sel.clear();else m.sel=new Set(m.choferes);renderModal()}
+function confirmarImprimirSemana(){const m=modalActivo;_cdImprimirChoferes=[...m.sel];modalActivo=null;render();imprimirCDist(true)}
 let rendDay=HOY;
 let rendFil='todos'; // 'cerrar' | 'sinrendir' | 'rendidas' | 'prob' | 'todos'
 let rendChoferFil='';
 function esAdmin(){return role==='admin'}
 function esVendedor(){return role==='vendedor'}
-function puedeCerrar(){return role==='jony'||esAdmin()}
-/* Recibir del chofer (cargar cobrado/BH pagó) es tarea de Lucas en el día a día — la firma final de Rendición sigue siendo exclusiva de Jony/admin */
-function puedeLiquidar(){return role==='logistica'||role==='jony'||esAdmin()}
+function puedeCargar(){return role==='logistica'||role==='vendedor'||esDireccion()}
+function nuevaOrden(){editId=null;draft=null;tab='cargar';render()}
+function puedeCerrar(){return esDireccion()}
+/* Recibir del chofer (cargar cobrado/BH pagó) es tarea de Lucas en el día a día — la firma final de Rendición sigue siendo exclusiva de Dirección */
+function puedeLiquidar(){return role==='logistica'||esDireccion()}
 function iconBtn(cls,icon,title,onclick){return `<button class="btn ${cls} icon-btn" title="${esc(title)}" aria-label="${esc(title)}" onclick="${onclick}">${icon}</button>`}
 function textBtn(cls,label,title,onclick){return `<button class="btn ${cls} btn-sm" title="${esc(title)}" onclick="${onclick}">${esc(label)}</button>`}
 /* Retiro en el local: el cliente paga y se lleva el mueble en el mismo instante — no existe un "en viaje" real, así que es un solo paso, no dos */
@@ -1441,7 +1594,7 @@ function confirmarReabrirLote(){const arr=ordenes.filter(o=>o.fecha===rendDay&&o
 function slOf(o){return o.seLleva!=null?o.seLleva:((o.costo_flete||0)+(o.instalacion||0))}
 function rendResClass(r){return{'Recibí OK':'r-ok','Falta':'r-falta','Sobra':'r-sobra','No rindió':'r-no'}[r]||'r-ok'}
 /* Estadísticas de un día para los daypills y las tarjetas-filtro, mismo patrón que Centro de Distribución */
-function rendStats(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&(o.flete||o.tipo==='Retiro'));
+function rendStats(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro'));
   const faltanRecibir=src.filter(o=>o.estado!=='Por rendir'&&o.estado!=='Cerrado').length;
   const porRendirSinFirmar=src.filter(o=>(o.estado==='Por rendir'||o.estado==='Cerrado')&&!o.rendido).length;
   const rendidas=src.filter(o=>o.rendido).length;
@@ -1458,7 +1611,7 @@ function rendStatCards(st){const sel=(f,c)=>rendFil===f?`box-shadow:inset 0 0 0 
   <div class="stat clik" style="${sel('todos','#16324f')}" onclick="rendFil='todos';vRendicion()"><div class="muted">Total viajes</div><div class="value">${st.tot}</div></div>
   ${st.conProblema?`<div class="stat clik" style="background:#fdecea;${sel('prob','#b42318')}" onclick="rendFil='prob';vRendicion()"><div style="color:#b42318;font-size:13px;font-weight:700">Con problema</div><div class="value" style="color:#b42318">${st.conProblema}</div></div>`:''}
   </div><p class="muted" style="margin:8px 2px 0;font-size:12.5px">Tocá una tarjeta para filtrar por eso. Filtro activo: <b>${{recibir:'Faltan recibir',sinrendir:'Por rendir sin firmar',rendidas:'Rendidas',prob:'Con problema',todos:'Todos'}[rendFil]}</b></p>`}
-function rendChoferChips(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&(o.flete||o.tipo==='Retiro'));
+function rendChoferChips(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro'));
   const choferes=[...new Set(src.map(grupoRend))].sort((a,b)=>a.indexOf('Retiro')===0?1:(b.indexOf('Retiro')===0?-1:a.localeCompare(b)));
   if(!choferes.length)return'';
   return `<div class="chips" style="margin-top:12px">
@@ -1489,14 +1642,14 @@ function filaRend(o){const yaRecibido=recibido(o);
   else if(o.estado==='En reclamo')accion='<span class="muted">⚠ Resolver en Órdenes</span>';
   else accion='<span class="muted">Todavía en ruta</span>';
   return `<tr class="${o.estado==='En reclamo'?'rprob':''}"><td>${esc(o.boleta)} <span class="muted" style="font-size:11.5px">${fmtDiaSem(o.fecha)}</span><br><span class="muted">${esc(o.cliente||'')}</span></td><td>${esc(grupoRend(o))}</td><td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></td><td>${cobTxt}</td><td>${pag?money(pag):'—'}</td><td>${adicTxt}</td><td><b>${money(neto)}</b></td><td style="text-align:right;position:relative">${accion}</td></tr>`}
-function rendTabla(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));
+function rendTabla(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));
   if(!src.length)return {html:'<div class="empty" style="padding:6px 0 2px">No hay viajes con ese filtro.</div>',sesp:0,sreal:0,spag:0,sadic:0};
   src.sort((a,b)=>grupoRend(a).localeCompare(grupoRend(b)));
   let sesp=0,sreal=0,spag=0,sadic=0;
   src.forEach(o=>{sesp+=cobroBH(o);sreal+=cobroRealOrden(o);spag+=lePagamosBase(o);sadic+=adicionalPagado(o)});
   const filas=src.map(filaRend).join('');
   return {html:`<div class="table-wrap"><table class="cdflat"><thead><tr><th>Boleta</th><th>Chofer</th><th>Estado</th><th>Cobró</th><th>Le pagamos</th><th>Adicional</th><th>Neto</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>`,sesp,sreal,spag,sadic}}
-function imprimirRendicionDia(){const src=ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));
+function imprimirRendicionDia(){const src=ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));
   if(!src.length){showToast('No hay viajes para imprimir con este filtro.','info');return}
   const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');let sesp=0,sreal=0,spag=0,sadic=0;
   const rows=src.map(o=>{const esperado=cobroBH(o);const real=cobroRealOrden(o);const pag=lePagamosBase(o);const adic=adicionalPagado(o);const diff=recibido(o)?real-esperado:0;sesp+=esperado;sreal+=real;spag+=pag;sadic+=adic;
@@ -1532,11 +1685,11 @@ function vRendicion(){
 /* FLETE */
 
 /* ============ RUTA (flete) ============ */
-function vRuta(){const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===fleteActual&&o.estado!=='Cancelado');
+function vRuta(){const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);
   const cardsHoy=!list.length?'<div class="card"><div class="empty">No tenés viajes hoy.</div></div>':list.map(o=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
     return `<div class="flete-card"><div class="section-title"><h3>${esc(o.cliente)}</h3><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div><ul style="margin:8px 0 0;padding-left:18px">${m}</ul>${o.comentario?`<div class="probnote" style="margin:8px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</div>`:''}<div style="margin-top:6px"><b>A cobrar: ${money(cobro)}</b></div>${o.estado==='Entregada'?(o.reaperturaSolicitada?`<div class="probnote" style="margin:8px 0;background:#eef2ff;border-color:#c7d2fe;color:#3730a3">Le avisaste a Lucas: "${esc(o.reaperturaSolicitada.motivo)}" — esperando que la reabra.</div>`:(reaperturaOpen===o.id?`<div class="reclform"><textarea id="t_reapertura" class="${reaperturaErrorId===o.id?'field-error':''}" oninput="this.classList.remove('field-error');const em=document.getElementById('t_reapertura_err');if(em)em.style.display='none'" placeholder="Contá qué pasó: la marqué por error, todavía no la entregué, etc."></textarea>${reaperturaErrorId===o.id?`<div id="t_reapertura_err" class="field-error-msg">Contá brevemente qué pasó, así Lucas entiende por qué pedís reabrirla.</div>`:''}<div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarSolicitudReapertura(${o.id})">Confirmar solicitud a Lucas</button><button class="btn btn-ghost btn-sm" onclick="cancelarSolicitudReapertura()">Cancelar</button></div></div>`:`<div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="solicitarReapertura(${o.id})">¿La marcaste por error? Avisarle a Lucas</button></div>`)):''}${o.estado==='En reclamo'?`<div class="probnote" style="margin:8px 0">Problema: ${esc(o.reclamoNota||'(sin nota)')}${o.reclamoFoto?`<br><img src="${o.reclamoFoto}" style="max-width:150px;border-radius:6px;margin-top:6px">`:''}</div>`:''}${reclamoOpen===o.id?`<div class="reclform"><textarea id="t_reclamo" placeholder="Contá qué pasó: cliente no estaba, no entró el mueble, vino roto…">${esc(o.reclamoNota||'')}</textarea><div class="row-actions"><label class="btn btn-ghost btn-sm" style="cursor:pointer">Adjuntar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onReclamoFoto(this)"></label><span id="fotoPrev"></span></div><div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarReclamo(${o.id})">Enviar problema</button><button class="btn btn-ghost btn-sm" onclick="reclamoOpen=null;reclamoFotoTmp='';render()">Cancelar</button></div></div>`:`<div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a>${o.estado==='En viaje'?`<button class="btn btn-ok btn-sm" onclick="marcarEntregada(${o.id})">Entregada</button><button class="btn btn-danger btn-sm" onclick="fleteProblema(${o.id})">Problema</button>`:''}</div>`}</div>`}).join('');
   const restoDias=proxDias(HOY,6).slice(1);
-  const semana=restoDias.map(iso=>{const listDia=ordenes.filter(o=>o.fecha===iso&&o.flete===fleteActual&&o.estado!=='Cancelado');if(!listDia.length)return'';
+  const semana=restoDias.map(iso=>{const listDia=ordenes.filter(o=>o.fecha===iso&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);if(!listDia.length)return'';
     const porZona={};listDia.forEach(o=>{const z=o.zona||'—';(porZona[z]=porZona[z]||[]).push(o)});
     const zonasHTML=Object.entries(porZona).map(([z,arr])=>{const itemsHTML=arr.map(o=>`<div class="muted" style="padding:2px 0">${esc(o.cliente||'')} · ${esc(o.localidad||o.direccion||'')} · ${esc(o.horario||'')}</div>`).join('');
       return `<div style="margin-top:10px"><b>${esc(zonaLimpia(z))}</b> <span class="muted">· ${arr.length} viaje${arr.length===1?'':'s'}</span>${itemsHTML}</div>`}).join('');
@@ -1546,10 +1699,31 @@ function vRuta(){const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===fleteActu
 
 function onLocInput(){draft.localidad=$('w_loc').value.trim();const z=locData(draft.localidad).zona||'—';if($('w_zona'))$('w_zona').textContent=zonaLimpia(z)}
 function refreshCostos(){if($('w_costos'))$('w_costos').textContent=money((draft.total-sum(draft.pagosList))+costosACobrar(draft))}
+
+let rutaFleteSel='';
+function vRutaFlete(){
+  const choferesConViajes=[...new Set(ordenes.filter(o=>o.fecha===HOY&&o.flete&&necesitaFlete(o)&&o.estado!=='Cancelado'&&!o.archivada).map(o=>o.flete))].sort();
+  const todos=[...new Set([...FLETES,...choferesConViajes])];
+  if(!rutaFleteSel&&choferesConViajes.length)rutaFleteSel=choferesConViajes[0];
+  const opts=todos.map(f=>`<option ${rutaFleteSel===f?'selected':''}>${esc(f)}</option>`).join('');
+  const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===rutaFleteSel&&o.estado!=='Cancelado'&&!o.archivada);
+  const cardsHoy=!rutaFleteSel?'<div class="card"><div class="empty">Elegí un chofer para ver su ruta.</div></div>':(!list.length?`<div class="card"><div class="empty">${esc(rutaFleteSel)} no tiene viajes hoy.</div></div>`:list.map(o=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
+    return `<div class="flete-card"><div class="section-title"><h3>${esc(o.cliente)}</h3><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div><ul style="margin:8px 0 0;padding-left:18px">${m}</ul>${o.comentario?`<div class="probnote" style="margin:8px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</div>`:''}<div style="margin-top:6px"><b>A cobrar: ${money(cobro)}</b></div><div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a></div></div>`}).join(''));
+  const restoDias=proxDias(HOY,6).slice(1);
+  const semana=restoDias.map(iso=>{const listDia=ordenes.filter(o=>o.fecha===iso&&o.flete===rutaFleteSel&&o.estado!=='Cancelado'&&!o.archivada);if(!listDia.length)return'';
+    const porZona={};listDia.forEach(o=>{const z=o.zona||'—';(porZona[z]=porZona[z]||[]).push(o)});
+    const zonasHTML=Object.entries(porZona).map(([z,arr])=>{const itemsHTML=arr.map(o=>`<div class="muted" style="padding:2px 0">${esc(o.cliente||'')} · ${esc(o.localidad||o.direccion||'')} · ${esc(o.horario||'')}</div>`).join('');
+      return `<div style="margin-top:10px"><b>${esc(zonaLimpia(z))}</b> <span class="muted">· ${arr.length} viaje${arr.length===1?'':'s'}</span>${itemsHTML}</div>`}).join('');
+    const label=iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()];const pp=iso.split('-');
+    return `<div class="card"><div class="section-title"><h3 style="margin:0">${label} · ${+pp[2]}/${+pp[1]}</h3><span class="muted">${listDia.length} viaje${listDia.length===1?'':'s'}</span></div>${zonasHTML}</div>`}).join('');
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Ruta del flete · ${fmt(HOY)}</h2><span class="muted">${list.length} viaje${list.length===1?'':'s'} hoy</span></div>
+    <label class="lbl" style="display:block;margin:6px 0 4px">Ver la ruta de:</label>
+    <select style="max-width:280px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${opts}</select></div>${cardsHoy}${semana?`<div class="sub-h" style="margin:20px 2px 8px">Su semana</div>${semana}`:''}`}
 /* Bloque de un costo adicional (envío/instalación/escalera) con su selector de estado de pago — orden fijo: A cobrar, Pagado, Sin costo, default A cobrar */
 function costosTabla(){
   const est_flete=estadoCosto(draft,'costo_flete');
   const est_inst=estadoCosto(draft,'instalacion');
+  const hayInstalacion=(draft.lineas||[]).some(l=>l.instala);
   const notaFlete=est_flete==='pagado'?`Belgrano Home le debe ${money(draft.costo_flete||0)} al chofer`:(est_flete==='cobrar'&&draft.costo_flete>0?`El chofer cobra ${money(draft.costo_flete)} extra en destino`:'');
   const notaInst=est_inst==='pagado'?`Belgrano Home le debe ${money(draft.instalacion||0)} al chofer`:(est_inst==='cobrar'&&draft.instalacion>0?`El chofer cobra ${money(draft.instalacion)} extra en destino`:'');
   return `<div class="costo-tabla"><table>
@@ -1563,7 +1737,7 @@ function costosTabla(){
       </select></td>
       <td class="ct-monto"><input type="text" inputmode="numeric" id="w_cflete" value="${draft.costo_flete?moneyFmt(draft.costo_flete):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshCostos();refreshNotaCosto('costo_flete','w_cflete')"></td>
     </tr><tr id="nrow_costo_flete" style="${notaFlete?'':'display:none'}"><td colspan="3" id="nota_costo_flete" class="ct-nota">${notaFlete}</td></tr>
-    <tr>
+    ${hayInstalacion?`<tr>
       <td class="ct-lbl">Instalación</td>
       <td class="ct-est"><select onchange="setEstadoCosto('instalacion',this.value)">
         <option value="cobrar" ${est_inst==='cobrar'?'selected':''}>A cobrar</option>
@@ -1571,7 +1745,7 @@ function costosTabla(){
         <option value="sincosto" ${est_inst==='sincosto'?'selected':''}>Sin costo</option>
       </select></td>
       <td class="ct-monto"><input type="text" inputmode="numeric" id="w_inst" value="${draft.instalacion?moneyFmt(draft.instalacion):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshCostos();refreshNotaCosto('instalacion','w_inst')"></td>
-    </tr><tr id="nrow_instalacion" style="${notaInst?'':'display:none'}"><td colspan="3" id="nota_instalacion" class="ct-nota">${notaInst}</td></tr>
+    </tr><tr id="nrow_instalacion" style="${notaInst?'':'display:none'}"><td colspan="3" id="nota_instalacion" class="ct-nota">${notaInst}</td></tr>`:''}
     <tr>
       <td class="ct-lbl">Escalera</td>
       <td class="ct-est"><span class="muted">—</span></td>
@@ -1592,7 +1766,8 @@ function vConfig(){const chips=(arr,fn)=>arr.length?arr.map((v,i)=>`<span class=
   <div class="card"><h3>Fletes</h3><p class="muted">El orden acá es el orden en que aparecen en el desplegable de asignar chofer — poné arriba a los que más usás.</p><div class="chips">${chips(FLETES,'delFlete')}</div><div class="addrow"><input id="cfg_flete" placeholder="Nuevo flete"><button class="btn btn-primary btn-sm" onclick="addCfg('flete')">Agregar</button></div></div>
   <div class="card"><h3>Subida por escalera</h3><p class="muted">Valor por defecto que se precarga en cada orden nueva (envío o retiro, por piso × bulto). Se puede modificar puntualmente en cada orden si se pactó otra cosa con el cliente.</p><div class="addrow"><input id="cfg_esc" inputmode="numeric" value="${moneyFmt(ESCALERA_DEF)}" oninput="moneyIn(this)"><button class="btn btn-primary btn-sm" onclick="setEscaleraDef()">Guardar</button></div></div>
   <div class="card"><h3>Locales de origen</h3><div class="chips">${chips(LOCALES,'delLocal')}</div><div class="addrow"><input id="cfg_local" placeholder="Nuevo local"><button class="btn btn-primary btn-sm" onclick="addCfg('local')">Agregar</button></div></div>
-  <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>`}
+  <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>
+  ${(()=>{const arch=ordenes.filter(o=>o.archivada).sort((a,b)=>(b.archivadaInfo&&b.archivadaInfo.fecha||'').localeCompare(a.archivadaInfo&&a.archivadaInfo.fecha||''));if(!arch.length)return '<div class="card"><h3>Viajes eliminados</h3><p class="muted">No hay viajes eliminados. Cuando elimines uno, va a aparecer acá y vas a poder recuperarlo.</p></div>';return `<div class="card"><h3>Viajes eliminados (${arch.length})</h3><p class="muted">Están fuera de todas las vistas y conteos. Podés recuperarlos si hizo falta.</p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Cliente</th><th>Eliminado por</th><th>Motivo</th><th></th></tr></thead><tbody>${arch.map(o=>`<tr><td>${fmt(o.fecha)}</td><td><b>${esc(o.boleta)}</b></td><td>${esc(o.cliente||'')}</td><td>${esc(o.archivadaInfo&&o.archivadaInfo.por||'—')}</td><td class="muted">${esc(o.archivadaInfo&&o.archivadaInfo.motivo||'—')}</td><td><button class="btn btn-ghost btn-sm" onclick="recuperarViaje(${o.id})">Recuperar</button></td></tr>`).join('')}</tbody></table></div></div>`})()}`}
 function setEscaleraDef(){const v=moneyParse($('cfg_esc').value);ESCALERA_DEF=v||0;vConfig()}
 function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);vConfig()}
 function delTipo(i){TIPOS.splice(i,1);vConfig()}
