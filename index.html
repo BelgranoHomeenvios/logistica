@@ -16,6 +16,21 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .app-header .logo{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .app-header .title{font-weight:700;font-size:15px;letter-spacing:-.01em}
 .app-header .user{display:flex;align-items:center;gap:12px}
+.btn-logout{background:rgba(255,255,255,.15);color:#fff;border:none;font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer}
+.btn-logout:hover{background:rgba(255,255,255,.28)}
+#loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#eef1f5;padding:20px}
+.login-card{background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(15,26,42,.12);padding:36px 34px;width:100%;max-width:380px;text-align:center}
+.login-logo{width:52px;height:52px;background:var(--navy);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin:0 auto 16px}
+.login-card h1{font-size:19px;color:var(--navy);margin:0 0 4px}
+.login-sub{color:#5b6675;font-size:13.5px;margin:0 0 22px}
+.login-lbl{display:block;text-align:left;font-size:12.5px;font-weight:700;color:#3a4453;margin:12px 0 5px}
+.login-card input{width:100%;height:44px;padding:0 12px;border:1px solid #d0d7e2;border-radius:9px;font:inherit;font-size:15px;box-sizing:border-box}
+.login-card input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(22,50,79,.1)}
+.login-btn{width:100%;height:46px;margin-top:20px;background:var(--navy);color:#fff;border:none;border-radius:9px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.login-btn:hover{background:#1e3f5f}
+.login-btn:disabled{opacity:.7;cursor:default}
+.login-err{background:#fdecea;color:#b42318;font-size:13px;border-radius:8px;padding:9px 12px;margin-bottom:8px;text-align:left}
+.login-foot{color:#8a94a3;font-size:12px;margin:18px 0 0}
 .btn-cargar-viaje{display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff;border:none;font:inherit;font-size:13.5px;font-weight:600;padding:8px 15px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .btn-cargar-viaje:hover{background:#1d4fc4}
 .btn-cargar-viaje:active{transform:scale(.97)}
@@ -340,9 +355,9 @@ tr.rprob{background:#fef4f4}
 </style>
 </head>
 <body>
-<div class="demobar">Vista de trabajo (datos de ejemplo) · ver como:
-<select id="roleSel" onchange="setRole(this.value)"><option value="logistica">Logística (Lucas)</option><option value="direccion">Dirección (Jony / Brian / Daniel)</option><option value="admin">Admin (pulir vistas)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian, Juan…)</option><option value="vendedor">Vendedor (Ale, Nati…)</option></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Build 2026-07-08j · C. Distribución: columna N° de orden visible (ya no solo tooltip), ordenable</span></div>
+<div class="demobar" style="display:none">Modo admin · ver la app como:
+<select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas / Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian, Juan…)</option><option value="vendedor">Vendedor (Adrian, Ale, Nati…)</option></select>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
@@ -450,6 +465,81 @@ function pintarEstadoNube(estado){
 }
 /* ===================== FIN SUPABASE ===================== */
 
+/* ===================== LOGIN / SESIÓN ===================== */
+let usuarioActual=null;   // {email, rol, nombre}
+let rolReal=null;         // rol verdadero del usuario logueado (para el admin y su selector)
+
+/* Arranque con login: si hay sesión, entra; si no, muestra el login. */
+async function iniciarConLogin(){
+  if(!sb){ mostrarPantallaLogin('No hay conexión con el servidor. Revisá tu internet.'); return; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session&&session.user){ await entrarConUsuario(session.user); }
+    else{ mostrarPantallaLogin(); }
+  }catch(e){ console.error('getSession',e); mostrarPantallaLogin('No se pudo verificar la sesión. Probá de nuevo.'); }
+}
+
+/* Con un usuario ya autenticado, lee su rol y arranca la app. */
+async function entrarConUsuario(user){
+  try{
+    const email=(user.email||'').toLowerCase();
+    const {data,error}=await sb.from('usuarios_roles').select('rol,nombre').eq('email',email).maybeSingle();
+    if(error) throw error;
+    if(!data){ mostrarPantallaLogin('Tu usuario ('+email+') no tiene un rol asignado. Avisale a Brian.'); await sb.auth.signOut(); return; }
+    usuarioActual={email,rol:data.rol,nombre:data.nombre||email};
+    rolReal=data.rol;
+    role=data.rol;
+    tab=(TABS[role]&&TABS[role][0])?TABS[role][0][0]:'tablero';
+    /* Quitar pantalla de login si estaba */
+    const lg=document.getElementById('loginWrap'); if(lg) lg.remove();
+    document.getElementById('root').style.display='';
+    const demo=document.querySelector('.demobar'); if(demo) demo.style.display=rolReal==='admin'?'':'none';
+    if(rolReal==='admin'){const du=document.getElementById('demoUser'); if(du) du.textContent=usuarioActual.email; const rs=document.getElementById('roleSel'); if(rs) rs.value='admin';}
+    render();
+    sbCargarInicial();
+  }catch(e){ console.error('entrarConUsuario',e); mostrarPantallaLogin('No se pudo leer tu rol. Probá de nuevo en un momento.'); }
+}
+
+async function hacerLogin(){
+  const email=(document.getElementById('lg_email').value||'').trim().toLowerCase();
+  const pass=document.getElementById('lg_pass').value||'';
+  const btn=document.getElementById('lg_btn'); const err=document.getElementById('lg_err');
+  if(!email||!pass){ err.textContent='Escribí tu email y tu contraseña.'; err.style.display=''; return; }
+  btn.disabled=true; btn.textContent='Entrando…'; err.style.display='none';
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){ err.textContent='Email o contraseña incorrectos.'; err.style.display=''; btn.disabled=false; btn.textContent='Entrar'; return; }
+    await entrarConUsuario(data.user);
+  }catch(e){ console.error('login',e); err.textContent='No se pudo conectar. Probá de nuevo.'; err.style.display=''; btn.disabled=false; btn.textContent='Entrar'; }
+}
+
+async function cerrarSesion(){
+  try{ await sb.auth.signOut(); }catch(e){}
+  usuarioActual=null; rolReal=null;
+  location.reload();
+}
+
+function mostrarPantallaLogin(msgError){
+  document.getElementById('root').style.display='none';
+  const demo=document.querySelector('.demobar'); if(demo) demo.style.display='none';
+  let w=document.getElementById('loginWrap');
+  if(!w){ w=document.createElement('div'); w.id='loginWrap'; document.body.appendChild(w); }
+  w.innerHTML=`<div class="login-card">
+    <div class="login-logo">BH</div>
+    <h1>Belgrano Home · Logística</h1>
+    <p class="login-sub">Ingresá con tu cuenta para continuar.</p>
+    <div id="lg_err" class="login-err" style="${msgError?'':'display:none'}">${msgError?esc(msgError):''}</div>
+    <label class="login-lbl">Email</label>
+    <input id="lg_email" type="email" autocomplete="username" placeholder="tucuenta@gmail.com" onkeydown="if(event.key==='Enter')document.getElementById('lg_pass').focus()">
+    <label class="login-lbl">Contraseña</label>
+    <input id="lg_pass" type="password" autocomplete="current-password" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')hacerLogin()">
+    <button id="lg_btn" class="login-btn" onclick="hacerLogin()">Entrar</button>
+    <p class="login-foot">¿No podés entrar? Escribile a Brian para que revise tu usuario.</p>
+  </div>`;
+  const e=document.getElementById('lg_email'); if(e) e.focus();
+}
+/* ===================== FIN LOGIN ===================== */
+
 let id=12; const nid=()=>id++;
 let LOCALES=['2020','2299','Zavaleta','2160','Fábrica'];
 const PROVINCIAS=['CABA','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba','Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán'];
@@ -552,7 +642,7 @@ function esDireccion(){return role==='direccion'||role==='jony'||role==='admin'}
 function render(){
   _sbDetectarCambios();
   const who=whoLabel();
-  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${who}${role==='flete'?' · flete':''}</span><div class="avatar">${who[0]}</div></div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
+  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
   ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats}[tab])();
 }
 
@@ -1801,8 +1891,7 @@ document.addEventListener('keydown',function(e){
   if(i>-1&&i<focusables.length-1){focusables[i+1].focus();if(focusables[i+1].select)focusables[i+1].select()}
   else{const nextBtn=document.querySelector('.wiz-nav .btn-primary,.wiz-nav .btn-ok');if(nextBtn)nextBtn.click()}
 });
-render();
-sbCargarInicial();
+iniciarConLogin();
 </script>
 </body>
 </html>
