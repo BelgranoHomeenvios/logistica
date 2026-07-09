@@ -369,7 +369,10 @@ tr.rprob{background:#fef4f4}
 const SB_URL='https://iwrgivmqvzalzbfsnxvv.supabase.co';
 const SB_KEY='sb_publishable_700uBDWuIvX4swFDi5WXuw_iKEIbCzq';
 let sb=null, sbListo=false, sbError='';
-try{ sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){ sbError='No se pudo iniciar Supabase'; }
+try{ sb = window.supabase.createClient(SB_URL, SB_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true },
+  global:{ headers:{ apikey:SB_KEY } }
+}); }catch(e){ sbError='No se pudo iniciar Supabase'; }
 
 /* Snapshot de lo último guardado, para detectar qué cambió (diff) y persistir solo eso. */
 let _sbSnap = {};        // id -> JSON string de la orden tal como está en la base
