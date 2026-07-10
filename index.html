@@ -356,7 +356,7 @@ tr.rprob{background:#fef4f4}
 </head>
 <body>
 <div class="demobar" style="display:none">Modo admin · ver la app como:
-<select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas / Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian, Juan…)</option><option value="vendedor">Vendedor (Adrian, Ale, Nati…)</option></select>
+<select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (Fabian, Juan…)</option><option value="vendedor">Vendedor (Adrian, Ale, Nati…)</option></select>
 <span style="margin-left:auto;color:#b3bcc8;font-weight:400">Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
 <div id="modalRoot"></div>
@@ -380,6 +380,21 @@ let _sbCola = new Set(); // ids pendientes de guardar
 let _sbSuspender = false;// cuando aplicamos cambios que vienen de la base, no los reenviamos
 
 function _sbJson(o){ return JSON.stringify(o); }
+
+/* Auditoría: registra quién hizo cada movimiento de negocio. No bloquea la app si falla. */
+function registrarAuditoria(accion,o,detalle){
+  if(!sb) return;
+  const fila={
+    usuario_email: usuarioActual?usuarioActual.email:null,
+    usuario_nombre: whoLabel(),
+    rol: role,
+    accion: accion,
+    orden_id: o?o.id:null,
+    orden_boleta: o?o.boleta:null,
+    detalle: detalle||null
+  };
+  sb.from('auditoria').insert(fila).then(({error})=>{ if(error) console.error('auditoria',error); });
+}
 
 /* Detecta órdenes nuevas o modificadas comparando contra el snapshot, y las encola. */
 function _sbDetectarCambios(){
@@ -624,9 +639,10 @@ ordenes.forEach(o=>{if(o.costo_flete_estado===undefined)o.costo_flete_estado='co
 {const demo=ordenes.find(o=>o.boleta==='1003');if(demo)demo.costo_flete_estado='pagado'}
 
 let role='logistica', tab='tablero', fleteActual='Fabian', editId=null;
-const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['stats','Estadísticas']];
-const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['config','Configuración']];
-const TABS={logistica:TABS_LOG,admin:TABS_DIR,direccion:TABS_DIR,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['vlog','Logística']],jony:TABS_DIR};
+const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas']];
+const TABS_SOPORTE=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete']];
+const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['auditoria','Auditoría'],['config','Configuración']];
+const TABS={logistica:TABS_LOG,soporte:TABS_SOPORTE,admin:TABS_DIR,direccion:TABS_DIR,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['vlog','Logística']],jony:TABS_DIR};
 const root=document.getElementById('root');const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function money(n){return '$'+Number(n||0).toLocaleString('es-AR')}
@@ -640,13 +656,14 @@ function setTab(t){tab=t;if(t!=='cargar')editId=null;render()}
 /* ============ RENDER / NAV ============ */
 let toastMsg=null,toastTipo='info';
 function showToast(msg,tipo,dur){toastMsg=msg;toastTipo=tipo||'info';render();clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>{toastMsg=null;render()},dur||4200)}
-function whoLabel(){return {logistica:'Lucas',admin:'Admin',direccion:'Dirección',deposito:'Depósito',flete:fleteActual,vendedor:'Vendedor',jony:'Dirección'}[role]||'Lucas'}
+function whoLabel(){if(usuarioActual&&usuarioActual.nombre)return usuarioActual.nombre;return {logistica:'Lucas',soporte:'Soporte',admin:'Admin',direccion:'Dirección',deposito:'Depósito',flete:fleteActual,vendedor:'Vendedor',jony:'Dirección'}[role]||'Lucas'}
 function esDireccion(){return role==='direccion'||role==='jony'||role==='admin'}
+function esLogisticaOSoporte(){return role==='logistica'||role==='soporte'}
 function render(){
   _sbDetectarCambios();
   const who=whoLabel();
   root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
-  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats}[tab])();
+  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria}[tab])();
 }
 
 
@@ -1039,6 +1056,7 @@ function cuerpoReasignar(m){const o=ordenes.find(x=>x.id===m.oid);
 function confirmarReasignar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);
   if(!m.motivo.trim()){modalActivo.motivoError=true;renderModal();const el=$('mr_motivo');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}return}
   o.fleteHist=o.fleteHist||[];o.fleteHist.push({de:o.flete,a:m.nuevo,motivo:m.motivo.trim(),fecha:new Date().toISOString()});
+  registrarAuditoria('Reasignar chofer ('+(o.flete||'sin asignar')+' → '+m.nuevo+')',o,m.motivo.trim());
   o.flete=m.nuevo;cerrarModal();vOrdenes()}
 function cerrarOrden(id){if(!puedeLiquidar()){showToast('Solo Logística, Jony o el administrador pueden recibir y cargar el cobro del chofer.','error');return}
   const o=ordenes.find(x=>x.id===id);const saldo=cobroBH(o);
@@ -1145,7 +1163,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
         menu.push(menuItem('↩','Reabrir','reabrirOrden('+o.id+')'));
       }
       menu.push(menuItem('✎','Editar orden',`editId=${o.id};draft=null;setTab('cargar')`));
-      if(role==='logistica'||esDireccion())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
+      if(esLogisticaOSoporte()||esDireccion())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
       if(o.estadoHist&&o.estadoHist.length)menu.push(menuItem('🕑','Ver historial de estado','abrirModalEstadoHist('+o.id+')'));
       if(necesitaFlete(o)&&o.estado!=='Coordinada')menu.push(menuItem('🔁','Reasignar chofer (corrige el registro)','reasignarFlete('+o.id+')'));
       menu.push(menuItem('💬',o.comentario?'Editar comentario':'Agregar comentario','editarComentario('+o.id+')'));
@@ -1153,7 +1171,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
       if(puedeEliminar()){
         if(o.eliminSolicitada){menu.push(menuItem('✅','Aprobar eliminación pedida por '+esc(o.eliminSolicitada.por),'aprobarEliminar('+o.id+')',true));menu.push(menuItem('✕','Rechazar la solicitud de eliminación','rechazarEliminar('+o.id+')'));}
         menu.push(menuItem('🗑','Eliminar viaje (lo saca de todo)','eliminarViaje('+o.id+')',true));
-      } else if(role==='logistica'){
+      } else if(esLogisticaOSoporte()){
         if(!o.eliminSolicitada)menu.push(menuItem('🗑','Solicitar eliminación a Dirección','solicitarEliminar('+o.id+')',true));
       }
     }
@@ -1297,7 +1315,7 @@ function vCerradas(){
     <div class="ordfilters"><input id="cf_q" placeholder="Buscar N° de orden…" value="${esc(cerrFil.q)}" oninput="cerrFil.q=this.value;reCerr()"><input type="date" value="${cerrFil.fecha}" onchange="cerrFil.fecha=this.value;cerrPag=1;vCerradas()" title="Filtrar por día puntual"><select onchange="cerrFil.flete=this.value;cerrPag=1;vCerradas()"><option value="">Todos los fletes</option>${FLETES.map(f=>`<option ${cerrFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select><select onchange="cerrFil.tipo=this.value;cerrPag=1;vCerradas()"><option value="">Todos los tipos</option>${TIPOS.map(t=>`<option ${cerrFil.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>${hayFiltro?`<button class="btn btn-ghost btn-sm" onclick="cerrFil.q='';cerrFil.flete='';cerrFil.tipo='';cerrFil.fecha='';cerrPag=1;vCerradas()">Limpiar filtros</button>`:''}</div>
     ${navHTML}
     ${visibles.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Zona</th><th>Muebles</th><th>Flete</th><th>Cobranza</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${quedan>0?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="cerrMasPag()">Mostrar ${Math.min(quedan,CERR_PAG_SIZE)} más (quedan ${quedan})</button></div>`:''}`:`<div class="empty">${hayFiltro?'No hay órdenes con esos filtros.':'No hubo cierres ese día.'}</div>`}</div>`}
-function despachar(oid){const o=ordenes.find(x=>x.id===oid);if(o.confirmacion==='A confirmar'){showToast('Esta entrega todavía está A CONFIRMAR. Confirmala antes de despachar.','error');return}if(o.habilitada===false){showToast('Esta orden está condicionada a pago. Habilitala antes de despachar.','error');return}if(necesitaFlete(o)&&!o.flete){showToast('Esta orden todavía no tiene chofer asignado. Asignalo antes de despachar.','error');return}o.estadoPrev='Coordinada';o.estado='En viaje';if(o.comentario){showToast('Recordatorio para '+(o.flete||'el flete')+': '+o.comentario,'info',7000)}else{render()}}
+function despachar(oid){const o=ordenes.find(x=>x.id===oid);if(o.confirmacion==='A confirmar'){showToast('Esta entrega todavía está A CONFIRMAR. Confirmala antes de despachar.','error');return}if(o.habilitada===false){showToast('Esta orden está condicionada a pago. Habilitala antes de despachar.','error');return}if(necesitaFlete(o)&&!o.flete){showToast('Esta orden todavía no tiene chofer asignado. Asignalo antes de despachar.','error');return}o.estadoPrev='Coordinada';o.estado='En viaje';registrarAuditoria('Despachar',o);if(o.comentario){showToast('Recordatorio para '+(o.flete||'el flete')+': '+o.comentario,'info',7000)}else{render()}}
 function marcarConfirmacion(id,val){const o=ordenes.find(x=>x.id===id);o.confirmacion=val?'Confirmada':'A confirmar';vOrdenes()}
 let reclamoOpen=null;let reclamoFotoTmp='';
 let reaperturaOpen=null;let reaperturaErrorId=null;
@@ -1308,7 +1326,7 @@ function cuerpoEntregar(m){const o=ordenes.find(x=>x.id===m.oid);
   return `<h3>Confirmar entrega</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · Chofer: ${esc(o.flete||'—')}</p>
   <p style="margin:4px 0 0">¿Confirmás que <b>${esc(o.cliente||'el cliente')}</b> recibió el pedido?</p>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-ok" onclick="confirmarEntrega()">Confirmar entrega</button></div>`}
-function confirmarEntrega(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);o.estadoPrev='En viaje';o.estado='Entregada';cerrarModal();render()}
+function confirmarEntrega(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);o.estadoPrev='En viaje';o.estado='Entregada';registrarAuditoria('Marcar entregada',o);cerrarModal();render()}
 function cancelarSolicitudReapertura(){reaperturaOpen=null;render()}
 function enviarSolicitudReapertura(id){const o=ordenes.find(x=>x.id===id);const nota=$('t_reapertura')?$('t_reapertura').value.trim():'';
   if(!nota){reaperturaErrorId=id;render();const el=$('t_reapertura');if(el)el.focus();return}
@@ -1328,12 +1346,12 @@ function reprogramarOrden(id){abrirModalReprogramar(id)}
 /* ===== Eliminar / archivar viajes (oculto pero recuperable) ===== */
 function puedeEliminar(){return esDireccion()}
 function eliminarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;modalActivo={tipo:'eliminar',id};renderModal()}
-function confirmarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString()};o.eliminSolicitada=null;cerrarModal();showToast('Viaje eliminado (queda recuperable desde Configuración).','success');render()}
+function confirmarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString()};o.eliminSolicitada=null;registrarAuditoria('Eliminar viaje',o);cerrarModal();showToast('Viaje eliminado (queda recuperable desde Configuración).','success');render()}
 function solicitarEliminar(id){modalActivo={tipo:'solicitarElim',id};renderModal()}
-function confirmarSolicitarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;const mot=($('t_solelim')?$('t_solelim').value.trim():'');if(!mot){const em=$('t_solelim_err');if(em)em.style.display='';return}o.eliminSolicitada={por:whoLabel(),motivo:mot,fecha:new Date().toISOString()};cerrarModal();showToast('Solicitud de eliminación enviada a Dirección.','success');render()}
-function aprobarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString(),motivo:o.eliminSolicitada?o.eliminSolicitada.motivo:''};o.eliminSolicitada=null;showToast('Viaje eliminado.','success');render()}
-function rechazarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.eliminSolicitada=null;showToast('Solicitud de eliminación rechazada.','info');render()}
-function recuperarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=false;o.archivadaInfo=null;showToast('Viaje recuperado.','success');render()}
+function confirmarSolicitarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;const mot=($('t_solelim')?$('t_solelim').value.trim():'');if(!mot){const em=$('t_solelim_err');if(em)em.style.display='';return}o.eliminSolicitada={por:whoLabel(),motivo:mot,fecha:new Date().toISOString()};registrarAuditoria('Solicitar eliminación',o,mot);cerrarModal();showToast('Solicitud de eliminación enviada a Dirección.','success');render()}
+function aprobarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString(),motivo:o.eliminSolicitada?o.eliminSolicitada.motivo:''};o.eliminSolicitada=null;registrarAuditoria('Aprobar eliminación',o);showToast('Viaje eliminado.','success');render()}
+function rechazarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.eliminSolicitada=null;registrarAuditoria('Rechazar solicitud de eliminación',o);showToast('Solicitud de eliminación rechazada.','info');render()}
+function recuperarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=false;o.archivadaInfo=null;registrarAuditoria('Recuperar viaje eliminado',o);showToast('Viaje recuperado.','success');render()}
 
 /* ============ MODALES PROPIOS (reemplazan confirm/prompt del navegador) ============ */
 const MOTIVOS_CANCEL=['Error de tipeo','El cliente no puede recibirlo','El chofer no llegó a domicilio en horario','Otros'];
@@ -1364,7 +1382,7 @@ function cuerpoCancelar(m){const o=ordenes.find(x=>x.id===m.oid);
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarCancelar()">Cancelar viaje</button></div>`}
 function confirmarCancelar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);const motivo=m.motivo==='Otros'?m.otro.trim():m.motivo;
   if(!motivo){modalActivo.motivoError=true;renderModal();const el=$('mc_otro');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}return}
-  o.cancelHist=o.cancelHist||[];o.cancelHist.push({motivo,fecha:new Date().toISOString()});o.estadoPrev=o.estado;o.estado='Cancelado';cerrarModal();vOrdenes()}
+  o.cancelHist=o.cancelHist||[];o.cancelHist.push({motivo,fecha:new Date().toISOString()});o.estadoPrev=o.estado;o.estado='Cancelado';registrarAuditoria('Cancelar viaje',o,motivo);cerrarModal();vOrdenes()}
 
 function abrirModalReprogramar(oid){const o=ordenes.find(x=>x.id===oid);modalActivo={tipo:'reprogramar',oid,fecha:o.fecha,motivo:MOTIVOS_REPROG[0],otro:''};renderModal()}
 function cuerpoReprogramar(m){const o=ordenes.find(x=>x.id===m.oid);
@@ -1393,7 +1411,8 @@ function cuerpoEstado(m){const o=ordenes.find(x=>x.id===m.oid);
 function confirmarEstado(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);
   if(m.nuevo===o.estado){modalActivo.estadoError=true;renderModal();const el=$('me_estado');if(el){el.scrollIntoView({block:'center',behavior:'smooth'})}return}
   if(!(m.motivo||'').trim()){modalActivo.motivoError=true;renderModal();const el=$('me_motivo');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}return}
-  o.estadoHist=o.estadoHist||[];o.estadoHist.push({de:o.estado,a:m.nuevo,motivo:m.motivo.trim(),quien:role,fecha:new Date().toISOString()});
+  o.estadoHist=o.estadoHist||[];o.estadoHist.push({de:o.estado,a:m.nuevo,motivo:m.motivo.trim(),quien:whoLabel(),fecha:new Date().toISOString()});
+  registrarAuditoria('Cambiar estado ('+o.estado+' → '+m.nuevo+')',o,m.motivo.trim());
   o.estadoPrev=o.estado;o.estado=m.nuevo;
   if(m.nuevo==='Coordinada'||m.nuevo==='En viaje'){o.rendido=false;o.reaperturaSolicitada=null}
   cerrarModal();vOrdenes()}
@@ -1442,6 +1461,7 @@ function confirmarCobro(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.o
   const nota=(m.notaGeneral||'').trim();
   if(nota){o.notaEntregaHist=o.notaEntregaHist||[];o.notaEntregaHist.push({nota,chofer:o.flete||'',fecha:new Date().toISOString()});o.notaEntrega=nota}
   o.rendido=false;o.estadoPrev=o.estado;o.estado='Por rendir';
+  registrarAuditoria(m.modo==='retiro'?'Confirmar retiro':'Recibir del chofer',o,diff!==0||bhExtra!==0?(m.motivo||'').trim():null);
   cerrarModal();vOrdenes()}
 function verImprimir(oid){const o=ordenes.find(x=>x.id===oid);o.verificado=true;imprimir(o)}
 function fechaLarga(iso){try{const d=new Date(iso+'T00:00');const s=d.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});return s}catch(e){return fmt(iso)}}
@@ -1635,11 +1655,11 @@ let rendFil='todos'; // 'cerrar' | 'sinrendir' | 'rendidas' | 'prob' | 'todos'
 let rendChoferFil='';
 function esAdmin(){return role==='admin'}
 function esVendedor(){return role==='vendedor'}
-function puedeCargar(){return role==='logistica'||role==='vendedor'||esDireccion()}
+function puedeCargar(){return esLogisticaOSoporte()||role==='vendedor'||esDireccion()}
 function nuevaOrden(){editId=null;draft=null;tab='cargar';render()}
 function puedeCerrar(){return esDireccion()}
 /* Recibir del chofer (cargar cobrado/BH pagó) es tarea de Lucas en el día a día — la firma final de Rendición sigue siendo exclusiva de Dirección */
-function puedeLiquidar(){return role==='logistica'||esDireccion()}
+function puedeLiquidar(){return esLogisticaOSoporte()||esDireccion()}
 function iconBtn(cls,icon,title,onclick){return `<button class="btn ${cls} icon-btn" title="${esc(title)}" aria-label="${esc(title)}" onclick="${onclick}">${icon}</button>`}
 function textBtn(cls,label,title,onclick){return `<button class="btn ${cls} btn-sm" title="${esc(title)}" onclick="${onclick}">${esc(label)}</button>`}
 /* Retiro en el local: el cliente paga y se lleva el mueble en el mismo instante — no existe un "en viaje" real, así que es un solo paso, no dos */
@@ -1670,7 +1690,7 @@ let probBoletaOpen=null;
 function toggleProbBoleta(id,ev){if(ev)ev.stopPropagation();probBoletaOpen=probBoletaOpen===id?null:id;vRendicion()}
 function probMenuBoleta(o){return `<div class="ord-menu" style="position:absolute;right:0;top:32px" onclick="event.stopPropagation()"><button class="btn btn-ghost btn-sm" style="width:100%;text-align:left" onclick="firmarBoleta(${o.id},'Falta')">Falta</button><button class="btn btn-ghost btn-sm" style="width:100%;text-align:left" onclick="firmarBoleta(${o.id},'Sobra')">Sobra</button><button class="btn btn-ghost btn-sm" style="width:100%;text-align:left" onclick="firmarBoleta(${o.id},'No rindió')">No rindió</button></div>`}
 function firmarBoleta(id,res){if(!puedeCerrar()){showToast('Solo Jony (o el administrador) puede firmar la rendición.','error');return}const o=ordenes.find(x=>x.id===id);if(!o||o.rendido)return;probBoletaOpen=null;
-  if(res==='Recibí OK'){o.rendido=true;o.rendResult=res;o.estado='Cerrado';vRendicion();return}
+  if(res==='Recibí OK'){o.rendido=true;o.rendResult=res;o.estado='Cerrado';registrarAuditoria('Firmar rendición (Recibí OK)',o);vRendicion();return}
   modalActivo={tipo:'firmarprob',oid:id,res,motivo:''};renderModal()}
 function cuerpoFirmarProb(m){const o=ordenes.find(x=>x.id===m.oid);
   return `<h3>Marcar "${esc(m.res)}"</h3><p class="modal-sub">Boleta ${esc(o.boleta)} · ${esc(grupoRend(o))}</p>
@@ -1678,12 +1698,12 @@ function cuerpoFirmarProb(m){const o=ordenes.find(x=>x.id===m.oid);
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarFirmarProb()">Marcar ${esc(m.res)}</button></div>`}
 function confirmarFirmarProb(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);
   if(!m.motivo.trim()){modalActivo.motivoError=true;renderModal();const el=$('mz_motivoprob');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}return}
-  o.rendido=true;o.rendResult=m.res;o.rendMotivo=m.motivo.trim();o.estado='Cerrado';cerrarModal();vRendicion()}
-function firmarLoteFiltrado(){if(!puedeCerrar()){showToast('Solo Jony (o el administrador) puede firmar la rendición.','error');return}const pend=ordenes.filter(o=>o.fecha===rendDay&&o.estado==='Por rendir'&&!o.rendido&&(!rendChoferFil||grupoRend(o)===rendChoferFil));if(!pend.length)return;pend.forEach(o=>{o.rendido=true;o.rendResult='Recibí OK';o.estado='Cerrado'});vRendicion()}
+  o.rendido=true;o.rendResult=m.res;o.rendMotivo=m.motivo.trim();o.estado='Cerrado';registrarAuditoria('Firmar rendición ('+m.res+')',o,m.motivo.trim());cerrarModal();vRendicion()}
+function firmarLoteFiltrado(){if(!puedeCerrar()){showToast('Solo Jony (o el administrador) puede firmar la rendición.','error');return}const pend=ordenes.filter(o=>o.fecha===rendDay&&o.estado==='Por rendir'&&!o.rendido&&(!rendChoferFil||grupoRend(o)===rendChoferFil));if(!pend.length)return;pend.forEach(o=>{o.rendido=true;o.rendResult='Recibí OK';o.estado='Cerrado'});registrarAuditoria('Firmar rendición en lote ('+pend.length+' viajes'+(rendChoferFil?' · '+rendChoferFil:'')+')',null,fmt(rendDay));vRendicion()}
 function reabrirLoteFiltrado(){if(!puedeCerrar()){showToast('Solo Jony (o el administrador) puede reabrir la rendición.','error');return}const arr=ordenes.filter(o=>o.fecha===rendDay&&o.rendido&&(!rendChoferFil||grupoRend(o)===rendChoferFil));if(!arr.length)return;modalActivo={tipo:'reabrirlote',n:arr.length};renderModal()}
 function cuerpoReabrirLote(m){return `<h3>Reabrir rendición</h3><p style="margin:4px 0 0">¿Reabrir <b>${m.n}</b> rendición${m.n===1?'':'es'} del ${esc(fmt(rendDay))}${rendChoferFil?' de '+esc(rendChoferFil):''}? Vuelven a quedar pendientes de firmar.</p>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarReabrirLote()">Reabrir</button></div>`}
-function confirmarReabrirLote(){const arr=ordenes.filter(o=>o.fecha===rendDay&&o.rendido&&(!rendChoferFil||grupoRend(o)===rendChoferFil));arr.forEach(o=>{o.rendido=false;o.rendResult='';if(o.estado==='Cerrado')o.estado='Por rendir'});cerrarModal();vRendicion()}
+function confirmarReabrirLote(){const arr=ordenes.filter(o=>o.fecha===rendDay&&o.rendido&&(!rendChoferFil||grupoRend(o)===rendChoferFil));arr.forEach(o=>{o.rendido=false;o.rendResult='';if(o.estado==='Cerrado')o.estado='Por rendir'});registrarAuditoria('Reabrir rendición en lote ('+arr.length+' viajes'+(rendChoferFil?' · '+rendChoferFil:'')+')',null,fmt(rendDay));cerrarModal();vRendicion()}
 function slOf(o){return o.seLleva!=null?o.seLleva:((o.costo_flete||0)+(o.instalacion||0))}
 function rendResClass(r){return{'Recibí OK':'r-ok','Falta':'r-falta','Sobra':'r-sobra','No rindió':'r-no'}[r]||'r-ok'}
 /* Estadísticas de un día para los daypills y las tarjetas-filtro, mismo patrón que Centro de Distribución */
@@ -1775,7 +1795,35 @@ function vRendicion(){
     <div class="netos" style="margin-top:14px"><div><span class="nl">Cobró esperado</span><span class="nv">${money(t.sesp)}</span></div><div><span class="nl">Cobró real</span><span class="nv">${money(t.sreal)}</span></div><div><span class="nl">Le pagamos${t.sadic?' (+'+money(t.sadic)+' adic.)':''}</span><span class="nv">${money(t.spag+t.sadic)}</span></div><div class="neto-big"><span class="nl">NETO A RENDIR</span><span class="nv">${money(neto)}</span></div></div>
     <div class="row-actions" style="margin-top:12px">${loteBtn}${reabrirBtn}</div></div>`}
 
+/* ============ AUDITORÍA (solo admin/dirección) ============ */
+let auditoriaRows=null; let auditoriaCargando=false; let auditoriaFiltroTexto='';
+async function vAuditoria(){
+  if(!esDireccion()){ $('view').innerHTML='<div class="card"><div class="empty">No tenés acceso a esta sección.</div></div>'; return; }
+  if(auditoriaRows===null && !auditoriaCargando){
+    auditoriaCargando=true;
+    $('view').innerHTML='<div class="card"><div class="empty">Cargando auditoría…</div></div>';
+    try{
+      const {data,error}=await sb.from('auditoria').select('*').order('fecha',{ascending:false}).limit(500);
+      if(error) throw error;
+      auditoriaRows=data||[];
+    }catch(e){ console.error('cargarAuditoria',e); auditoriaRows=[]; showToast('No se pudo cargar la auditoría (¿ya creaste la tabla en Supabase?).','error',6000); }
+    auditoriaCargando=false;
+  }
+  renderAuditoria();
+}
+function refrescarAuditoria(){ auditoriaRows=null; vAuditoria(); }
+function buscarAuditoria(){ auditoriaFiltroTexto=($('auditFiltro')?$('auditFiltro').value:'').trim(); renderAuditoria(); }
+function renderAuditoria(){
+  const t=auditoriaFiltroTexto.toLowerCase();
+  const rows=(auditoriaRows||[]).filter(r=>!t||(r.usuario_nombre||'').toLowerCase().includes(t)||(r.accion||'').toLowerCase().includes(t)||(r.orden_boleta||'').toLowerCase().includes(t)||(r.detalle||'').toLowerCase().includes(t));
+  const filas=rows.map(r=>`<tr><td style="white-space:nowrap">${new Date(r.fecha).toLocaleString('es-AR')}</td><td>${esc(r.usuario_nombre||r.usuario_email||'—')}</td><td>${esc(r.accion||'')}</td><td>${r.orden_boleta?esc(r.orden_boleta):'—'}</td><td class="muted">${esc(r.detalle||'')}</td></tr>`).join('');
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Auditoría</h2><div class="row-actions"><input id="auditFiltro" placeholder="Buscar por usuario, acción o boleta…" value="${esc(auditoriaFiltroTexto)}" onkeydown="if(event.key==='Enter')buscarAuditoria()" style="width:280px"><button class="btn btn-ghost btn-sm" onclick="buscarAuditoria()">Buscar</button><button class="btn btn-ghost btn-sm" onclick="refrescarAuditoria()">Refrescar</button></div></div>
+  <p class="muted">Mostrando ${rows.length} de los últimos ${auditoriaRows?auditoriaRows.length:0} movimientos registrados.</p></div>
+  <div class="card"><div class="table-wrap"><table class="cdflat"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Orden</th><th>Detalle</th></tr></thead><tbody>${filas||'<tr><td colspan="5" class="muted">Sin resultados.</td></tr>'}</tbody></table></div></div>`;
+}
+
 /* FLETE */
+
 
 /* ============ RUTA (flete) ============ */
 function vRuta(){const list=ordenes.filter(o=>o.fecha===HOY&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);
