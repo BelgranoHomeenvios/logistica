@@ -445,6 +445,8 @@ async function sbCargarInicial(){
     pintarEstadoNube('ok');
     render();
     sbSuscribirRealtime();
+    sbCargarConfig();
+    sbSuscribirConfigRealtime();
   }catch(e){
     console.error('Carga inicial Supabase',e);
     sbError='No se pudieron cargar los datos de la nube';
@@ -480,6 +482,56 @@ function pintarEstadoNube(estado){
   let el=document.getElementById('nubeEstado');
   if(!el){ el=document.createElement('div'); el.id='nubeEstado'; el.style.cssText='position:fixed;bottom:10px;right:12px;z-index:940;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px'; document.body.appendChild(el); }
   el.style.background=c[0]; el.style.color=c[1]; el.textContent=c[2];
+}
+/* ===================== CONFIGURACIÓN (persistida en Supabase, tabla "configuracion", fila única id=1) ===================== */
+let _cfgSuspender=false;
+async function sbCargarConfig(){
+  if(!sb) return;
+  try{
+    const {data,error}=await sb.from('configuracion').select('data').eq('id',1).maybeSingle();
+    if(error) throw error;
+    if(data&&data.data){
+      const c=data.data;
+      if(Array.isArray(c.tipos)&&c.tipos.length) TIPOS=c.tipos;
+      if(Array.isArray(c.fletes)&&c.fletes.length) FLETES=c.fletes;
+      if(Array.isArray(c.locales)&&c.locales.length) LOCALES=c.locales;
+      if(typeof c.escalera_def==='number') ESCALERA_DEF=c.escalera_def;
+    }else{
+      await sbGuardarConfig(); // primera vez: no hay fila, sembramos con los valores por defecto
+    }
+  }catch(e){ console.error('cargar configuración',e); showToast('No se pudo cargar la configuración de la nube.','error',6000); }
+  if(tab==='config') vConfig();
+}
+let _cfgFlushTimer=null;
+function sbGuardarConfig(){
+  if(!sb) return;
+  clearTimeout(_cfgFlushTimer);
+  return new Promise(res=>{
+    _cfgFlushTimer=setTimeout(async ()=>{
+      _cfgSuspender=true;
+      try{
+        const {error}=await sb.from('configuracion').upsert({id:1,data:{tipos:TIPOS,fletes:FLETES,locales:LOCALES,escalera_def:ESCALERA_DEF}},{onConflict:'id'});
+        if(error){ console.error('guardar configuración',error); showToast('No se pudo guardar la configuración en la nube (reintentá).','error',6000); }
+      }catch(e){ console.error(e); showToast('No se pudo guardar la configuración en la nube (reintentá).','error',6000); }
+      setTimeout(()=>{_cfgSuspender=false},400);
+      res();
+    },350);
+  });
+}
+/* Realtime: si otro usuario (ej. Lucas desde su celular) cambia la config, se refleja acá sin recargar. */
+function sbSuscribirConfigRealtime(){
+  if(!sb) return;
+  sb.channel('configuracion-cambios')
+    .on('postgres_changes',{event:'*',schema:'public',table:'configuracion'},payload=>{
+      if(_cfgSuspender) return;
+      const c=payload.new&&payload.new.data; if(!c) return;
+      if(Array.isArray(c.tipos)) TIPOS=c.tipos;
+      if(Array.isArray(c.fletes)) FLETES=c.fletes;
+      if(Array.isArray(c.locales)) LOCALES=c.locales;
+      if(typeof c.escalera_def==='number') ESCALERA_DEF=c.escalera_def;
+      if(tab==='config') vConfig(); else render();
+    })
+    .subscribe();
 }
 /* ===================== FIN SUPABASE ===================== */
 
@@ -1562,6 +1614,7 @@ function cdBloques(iso,prefix){
     if(cdGroup==='flete')return it.o.flete?'0_'+it.o.flete:'1_zzz';
     if(cdGroup==='boleta')return it.o.boleta;
     if(cdGroup==='tipo')return it.o.tipo==='Movimiento Interno'?'Mov. interno':it.o.tipo;
+    if(cdGroup==='local'){const p=LOCALES.indexOf(it.l.local);return String(p<0?999:p).padStart(3,'0')+'_'+it.l.desc}
     return it.l.desc};
   items=[...items].sort((a,b)=>String(claveOrden(a)).localeCompare(String(claveOrden(b))));
   let filas='';
@@ -1574,7 +1627,7 @@ function cdBloques(iso,prefix){
     if(o.habilitada===false)estadoCell+=' <span class="condtag" style="display:inline">Condicional</span>';
     filas+=`<tr class="${s==='problema'?'rprob':''}"><td style="text-align:center">${l.cant}</td><td>${esc(l.desc)}</td><td class="muted">#${esc(o.boleta)}</td><td>${esc(o.flete||'Sin asignar')}</td><td><strong>${esc(l.local)}</strong></td><td>${estadoCell}</td></tr>`});
   return `<div class="table-wrap"><table class="cdflat"><thead><tr><th>Cant</th><th>Mueble</th><th>N° orden</th><th>Flete</th><th>Sale de</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table></div>`}
-function cdControles(){return `<div class="ordfilters" style="margin-top:14px"><div class="macrotog"><button class="${cdGroup==='flete'?'on':''}" onclick="cdGroup='flete';vCDist()">Ordenar por flete</button><button class="${cdGroup==='mueble'?'on':''}" onclick="cdGroup='mueble';vCDist()">Ordenar por mueble</button><button class="${cdGroup==='boleta'?'on':''}" onclick="cdGroup='boleta';vCDist()">Ordenar por boleta</button><button class="${cdGroup==='tipo'?'on':''}" onclick="cdGroup='tipo';vCDist()">Ordenar por tipo</button></div></div>`}
+function cdControles(){return `<div class="ordfilters" style="margin-top:14px"><div class="macrotog"><button class="${cdGroup==='flete'?'on':''}" onclick="cdGroup='flete';vCDist()">Ordenar por flete</button><button class="${cdGroup==='mueble'?'on':''}" onclick="cdGroup='mueble';vCDist()">Ordenar por mueble</button><button class="${cdGroup==='boleta'?'on':''}" onclick="cdGroup='boleta';vCDist()">Ordenar por boleta</button><button class="${cdGroup==='tipo'?'on':''}" onclick="cdGroup='tipo';vCDist()">Ordenar por tipo</button><button class="${cdGroup==='local'?'on':''}" onclick="cdGroup='local';vCDist()">Ordenar por local de origen</button></div>${cdGroup==='local'?'<p class="muted" style="margin-top:6px;font-size:12.5px">La prioridad es el orden de Configuración → Locales de origen. Para que Zavaleta salga primero, andá a Configuración y movelo al principio de la lista con las flechas.</p>':''}</div>`}
 function cdStatCards(st){const sel=(f,c)=>cdFil===f?`box-shadow:inset 0 0 0 2px ${c};cursor:pointer`:'cursor:pointer';
   return `<div class="cdtot">
   <div class="stat clik" style="background:#fff7e6;${sel('pend','#b45309')}" onclick="cdFil='pend';cdCol={};vCDist()"><div style="color:#b45309;font-size:13px;font-weight:700">Faltan separar</div><div class="value" style="color:#b45309">${st.falta}</div></div>
@@ -1909,15 +1962,15 @@ function vConfig(){const chips=(arr,fn)=>arr.length?arr.map((v,i)=>`<span class=
   <div class="card"><h3>Locales de origen</h3><div class="chips">${chips(LOCALES,'delLocal')}</div><div class="addrow"><input id="cfg_local" placeholder="Nuevo local"><button class="btn btn-primary btn-sm" onclick="addCfg('local')">Agregar</button></div></div>
   <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>
   ${(()=>{const arch=ordenes.filter(o=>o.archivada).sort((a,b)=>(b.archivadaInfo&&b.archivadaInfo.fecha||'').localeCompare(a.archivadaInfo&&a.archivadaInfo.fecha||''));if(!arch.length)return '<div class="card"><h3>Viajes eliminados</h3><p class="muted">No hay viajes eliminados. Cuando elimines uno, va a aparecer acá y vas a poder recuperarlo.</p></div>';return `<div class="card"><h3>Viajes eliminados (${arch.length})</h3><p class="muted">Están fuera de todas las vistas y conteos. Podés recuperarlos si hizo falta.</p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Cliente</th><th>Eliminado por</th><th>Motivo</th><th></th></tr></thead><tbody>${arch.map(o=>`<tr><td>${fmt(o.fecha)}</td><td><b>${esc(o.boleta)}</b></td><td>${esc(o.cliente||'')}</td><td>${esc(o.archivadaInfo&&o.archivadaInfo.por||'—')}</td><td class="muted">${esc(o.archivadaInfo&&o.archivadaInfo.motivo||'—')}</td><td><button class="btn btn-ghost btn-sm" onclick="recuperarViaje(${o.id})">Recuperar</button></td></tr>`).join('')}</tbody></table></div></div>`})()}`}
-function setEscaleraDef(){const v=moneyParse($('cfg_esc').value);ESCALERA_DEF=v||0;vConfig()}
-function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);vConfig()}
-function delTipo(i){TIPOS.splice(i,1);vConfig()}
-function delFlete(i){FLETES.splice(i,1);vConfig()}
-function delLocal(i){LOCALES.splice(i,1);vConfig()}
+function setEscaleraDef(){const v=moneyParse($('cfg_esc').value);ESCALERA_DEF=v||0;sbGuardarConfig();vConfig()}
+function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);sbGuardarConfig();vConfig()}
+function delTipo(i){TIPOS.splice(i,1);sbGuardarConfig();vConfig()}
+function delFlete(i){FLETES.splice(i,1);sbGuardarConfig();vConfig()}
+function delLocal(i){LOCALES.splice(i,1);sbGuardarConfig();vConfig()}
 function moverArr(arr,i,dir){const j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]]}
-function delTipoMv(i,dir){moverArr(TIPOS,i,dir);vConfig()}
-function delFleteMv(i,dir){moverArr(FLETES,i,dir);vConfig()}
-function delLocalMv(i,dir){moverArr(LOCALES,i,dir);vConfig()}
+function delTipoMv(i,dir){moverArr(TIPOS,i,dir);sbGuardarConfig();vConfig()}
+function delFleteMv(i,dir){moverArr(FLETES,i,dir);sbGuardarConfig();vConfig()}
+function delLocalMv(i,dir){moverArr(LOCALES,i,dir);sbGuardarConfig();vConfig()}
 
 /* Cierra el menú de acciones de la fila (⋮), el panel de muebles y el de reclamo al tocar afuera */
 document.addEventListener('click',function(e){
