@@ -13,6 +13,13 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .demobar select{font:inherit;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--navy)}
 .app-header{background:var(--navy);color:#fff;height:56px;padding:0 28px;display:flex;align-items:center;justify-content:space-between}
 .app-header .brand{display:flex;align-items:center;gap:12px}
+/* Selector de módulos Belgrano Soft — mismo bloque que el CRM, para que la barra
+   se vea igual en las dos apps y se pueda saltar de una a la otra sin salir. */
+.mod-switch{display:flex;gap:6px;margin-left:14px}
+.mod-switch-item{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7);text-decoration:none;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.08)}
+.mod-switch-item:hover{background:rgba(255,255,255,.16);color:#fff}
+.mod-switch-active{background:rgba(255,255,255,.22);color:#fff}
+@media(max-width:560px){.mod-switch{margin-left:8px;gap:4px}.mod-switch-item{padding:4px 9px;font-size:11.5px}}
 .app-header .logo{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .app-header .title{font-weight:700;font-size:15px;letter-spacing:-.01em}
 .app-header .user{display:flex;align-items:center;gap:12px}
@@ -412,6 +419,16 @@ try{ sb = window.supabase.createClient(SB_URL, SB_KEY, {
   global:{ headers:{ apikey:SB_KEY } }
 }); }catch(e){ sbError='No se pudo iniciar Supabase'; }
 
+/* Cliente del proyecto del CRM. Solo se usa para la sesión: sirve para desloguear de
+   los dos módulos con un mismo "Salir" y para intentar entrar al CRM con las mismas
+   credenciales cuando alguien se loguea acá. Nunca lee ni escribe datos de logística. */
+const CRM_URL='https://lbfucdevdeenpbextrpo.supabase.co';
+const CRM_KEY='sb_publishable_cN7gwnXKNNYWHWTfUf6FnA_feUphxLY';
+let sbCRM=null;
+try{ sbCRM = window.supabase.createClient(CRM_URL, CRM_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+}); }catch(e){ sbCRM=null; }
+
 /* Snapshot de lo último guardado, para detectar qué cambió (diff) y persistir solo eso. */
 let _sbSnap = {};        // id -> JSON string de la orden tal como está en la base
 let _sbCola = new Set(); // ids pendientes de guardar
@@ -619,12 +636,19 @@ async function hacerLogin(){
   try{
     const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error){ err.textContent='Email o contraseña incorrectos.'; err.style.display=''; btn.disabled=false; btn.textContent='Entrar'; return; }
+    /* Con las mismas credenciales dejamos abierta también la sesión del CRM, así el
+       botón CRM de la barra entra directo. Si esa cuenta no existe allá, no pasa nada:
+       se sigue de largo y el CRM pedirá su login cuando lo abra. */
+    try{ if(sbCRM) await sbCRM.auth.signInWithPassword({email,password:pass}); }catch(e){}
     await entrarConUsuario(data.user);
   }catch(e){ console.error('login',e); err.textContent='No se pudo conectar. Probá de nuevo.'; err.style.display=''; btn.disabled=false; btn.textContent='Entrar'; }
 }
 
 async function cerrarSesion(){
+  /* Salir tiene que cerrar los DOS módulos. Si solo cerrábamos el de logística,
+     el CRM quedaba abierto en el mismo navegador y el "Salir" mentía. */
   try{ await sb.auth.signOut(); }catch(e){}
+  try{ if(sbCRM) await sbCRM.auth.signOut(); }catch(e){}
   usuarioActual=null; rolReal=null;
   location.reload();
 }
@@ -767,7 +791,7 @@ function esLogisticaOSoporte(){return role==='logistica'||role==='soporte'}
 function render(){
   _sbDetectarCambios();
   const who=whoLabel();
-  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Home · Logística</div></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
+  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
   ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria}[tab])();
 }
 
