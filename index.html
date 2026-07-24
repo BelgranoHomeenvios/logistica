@@ -86,6 +86,8 @@ input.inval,select.inval{border-color:var(--red);background:#fef3f2}
 .icon-btn-xs{width:22px;height:22px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;vertical-align:middle;border-radius:5px}
 .refcol{text-align:center;white-space:nowrap}
 .refuerzo-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;vertical-align:middle;border-radius:6px}
+.refnota{margin-top:10px;background:#f0f7ff;border:1px solid #cfe0f5;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#16324f;line-height:1.5}
+.refnota div+div{margin-top:5px}
 .cmt-ico{cursor:help;font-size:13px;vertical-align:middle}
 .rd-diff{color:#b45309}
 .ord-actions{position:relative;display:flex;gap:6px;justify-content:flex-end;align-items:center}
@@ -1058,7 +1060,7 @@ function vCargar(){
       body=`<label class="field" style="margin-bottom:14px"><span class="lbl">Total de la compra</span><input type="text" inputmode="numeric" id="w_total" value="${draft.total?moneyFmt(draft.total):''}" placeholder="$0" oninput="moneyIn(this);readStep();refreshSaldo()"></label>
       <div class="sub-h">Pagos</div><div id="w_pagos">${draft.pagosList.map((pp,i)=>pagoRow(pp,i)).join('')}</div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="readStep();draft.pagosList.push('');vCargar()">+ Agregar pago</button>
-      <div class="saldo-big"><span>Saldo pendiente del pedido</span><span id="w_saldo">${money(saldo)}</span></div>`;
+      <div class="saldo-big"><span>Saldo pendiente del pedido</span><span id="w_saldo">${money(saldo)}</span></div>${refuerzosNotaHTML()}`;
       if(t!=='Retiro'){
         body+=`<div class="sub-h" style="margin-top:18px">Costos adicionales</div>`;
         body+=costosTabla();
@@ -1343,7 +1345,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
       } else {
         menu.push(menuItem('↩','Reabrir','reabrirOrden('+o.id+')'));
       }
-      if(o.refuerzo&&!o.refuerzo.confirmado&&(esLogisticaOSoporte()||esDireccion()))inline.push(iconBtn('btn-ok','💲✓','Confirmar refuerzo de '+money(o.refuerzo.monto)+' cargado por '+(o.refuerzo.por||'vendedor'),'confirmarRefuerzo('+o.id+')'));
+      if(o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&(esLogisticaOSoporte()||esDireccion()))inline.push(iconBtn('btn-ok','💲✓','Revisar refuerzo de '+money(o.refuerzo.monto)+' cargado por '+(o.refuerzo.por||'vendedor'),'abrirModalConfirmRefuerzo('+o.id+')'));
       menu.push(menuItem('✎','Editar orden',`editId=${o.id};draft=null;setTab('cargar')`));
       if(esLogisticaOSoporte()||esDireccion())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
       if(o.estadoHist&&o.estadoHist.length)menu.push(menuItem('🕑','Ver historial de estado','abrirModalEstadoHist('+o.id+')'));
@@ -1449,7 +1451,7 @@ function vOrdenes(){
     <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)"><select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${estadoOpts.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select><select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${hayRetiro?`<option value="Retiro" ${ordFil.flete==='Retiro'?'selected':''}>Retiro</option>`:''}${[...nombresF].sort().map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>
     ${(esActivas&&(ordCond||ordZona||ordProb||ordRet||ordTipo||ordVend))?`<div class="actfil">Filtros activos: ${ordVend?'<span class="afchip">👤 Cargadas por vendedores · a confirmar <button onclick="ordVend=false;vOrdenes()">×</button></span>':''}${ordCond?'<span class="afchip">Condicionadas · semana <button onclick="ordCond=false;vOrdenes()">×</button></span>':''}${ordZona?`<span class="afchip">Zona: ${esc(ordZona)} <button onclick="ordZona='';vOrdenes()">×</button></span>`:''}${ordProb?'<span class="afchip">Con problema <button onclick="ordProb=false;vOrdenes()">×</button></span>':''}${ordRet?`<span class="afchip">Retiro: ${esc(ordRet==='ALL'?'todos':ordRet)} <button onclick="ordRet='';vOrdenes()">×</button></span>`:''}${ordTipo?`<span class="afchip">Tipo: ${esc(ordTipo)} <button onclick="ordTipo='';vOrdenes()">×</button></span>`:''} <button class="btn btn-ghost btn-sm" onclick="ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';ordVend=false;vOrdenes()">Limpiar</button></div>`:''}
     ${(!esActivas)?`<p class="muted" style="margin:0 0 10px;font-size:12.5px">${totalSinPag} orden${totalSinPag===1?'':'es'}${usaPag&&quedanOrd>0?` · mostrando ${list.length}`:''}</p>`:''}
-    ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th><th style="text-align:center">💲</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>${(usaPag&&quedanOrd>0)?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="ordPag++;vOrdenes()">Mostrar ${Math.min(quedanOrd,ORD_PAG)} más (quedan ${quedanOrd})</button></div>`:''}`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
+    ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th><th style="text-align:center">Refuerzo</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>${(usaPag&&quedanOrd>0)?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="ordPag++;vOrdenes()">Mostrar ${Math.min(quedanOrd,ORD_PAG)} más (quedan ${quedanOrd})</button></div>`:''}`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
 
 /* ============ ORDENES CERRADAS (archivo) ============ */
 let cerrFil={q:'',flete:'',tipo:'',estado:'Cerrado',fecha:''};
@@ -1496,7 +1498,7 @@ function vCerradas(){
     <div class="macrotog" style="margin-bottom:12px"><button class="${cerrFil.estado==='Cerrado'?'on':''}" onclick="cerrFil.estado='Cerrado';cerrPag=1;vCerradas()">Cerradas</button><button class="${cerrFil.estado==='Cancelado'?'on':''}" onclick="cerrFil.estado='Cancelado';cerrPag=1;vCerradas()">Canceladas</button><button class="${cerrFil.estado===''?'on':''}" onclick="cerrFil.estado='';cerrPag=1;vCerradas()">Todas</button></div>
     <div class="ordfilters"><input id="cf_q" placeholder="Buscar N° de orden…" value="${esc(cerrFil.q)}" oninput="cerrFil.q=this.value;reCerr()"><input type="date" value="${cerrFil.fecha}" onchange="cerrFil.fecha=this.value;cerrPag=1;vCerradas()" title="Filtrar por día puntual"><select onchange="cerrFil.flete=this.value;cerrPag=1;vCerradas()"><option value="">Todos los fletes</option>${FLETES.map(f=>`<option ${cerrFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select><select onchange="cerrFil.tipo=this.value;cerrPag=1;vCerradas()"><option value="">Todos los tipos</option>${TIPOS.map(t=>`<option ${cerrFil.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>${hayFiltro?`<button class="btn btn-ghost btn-sm" onclick="cerrFil.q='';cerrFil.flete='';cerrFil.tipo='';cerrFil.fecha='';cerrPag=1;vCerradas()">Limpiar filtros</button>`:''}</div>
     ${navHTML}
-    ${visibles.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Zona</th><th>Muebles</th><th>Flete</th><th>Cobranza</th><th>Estado</th><th style="text-align:center">💲</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${quedan>0?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="cerrMasPag()">Mostrar ${Math.min(quedan,CERR_PAG_SIZE)} más (quedan ${quedan})</button></div>`:''}`:`<div class="empty">${hayFiltro?'No hay órdenes con esos filtros.':'No hubo cierres ese día.'}</div>`}</div>`}
+    ${visibles.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Zona</th><th>Muebles</th><th>Flete</th><th>Cobranza</th><th>Estado</th><th style="text-align:center">Refuerzo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${quedan>0?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="cerrMasPag()">Mostrar ${Math.min(quedan,CERR_PAG_SIZE)} más (quedan ${quedan})</button></div>`:''}`:`<div class="empty">${hayFiltro?'No hay órdenes con esos filtros.':'No hubo cierres ese día.'}</div>`}</div>`}
 function puedeSalir(o){if(o.estado!=='Coordinada')return '';
   if(o.confirmacion==='A confirmar')return 'Falta que Logística confirme la entrega';
   if(o.habilitada===false)return 'El cliente todavía no pagó — Logística la tiene que habilitar';
@@ -1567,7 +1569,7 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);return''}
 /* ===== Refuerzo de seña =====
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
@@ -1588,11 +1590,43 @@ function guardarRefuerzo(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.
   o.refuerzo={monto,nota,por:quien,rol:role,ts:new Date().toISOString(),confirmado:false,confirmadoPor:null,confirmadoTs:null};
   registrarAuditoria('Refuerzo cargado',o,'$'+money(monto)+(nota?' · '+nota:''));
   cerrarModal();showToast('Refuerzo cargado. Lucas lo va a ver para confirmarlo.','success');vOrdenes()}
-function confirmarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;o.refuerzo.confirmado=true;o.refuerzo.confirmadoPor=nombreRol(role);o.refuerzo.confirmadoTs=new Date().toISOString();registrarAuditoria('Refuerzo confirmado',o,'$'+money(o.refuerzo.monto));vOrdenes()}
+/* Lucas (o dirección) revisa el refuerzo: abre un pop-up con la cuenta del saldo y decide
+   confirmarlo (se registra como pago real en la orden) o marcarlo como cargado mal. */
+function abrirModalConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;modalActivo={tipo:'confirmarRefuerzo',oid};renderModal()}
+function cuerpoConfirmRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o||!o.refuerzo)return'';const r=o.refuerzo;
+  const saldoAntes=cobroBH(o);const nuevo=saldoAntes-(+r.monto||0);const cargDia=r.ts?new Date(r.ts).toLocaleDateString('es-AR'):'';
+  return `<h3>💲 Revisar refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}</p>
+  <div class="badge e-cond" style="margin-bottom:12px;white-space:normal">Cargado por ${esc(r.por||'')}${cargDia?' el '+cargDia:''}${r.nota?' · '+esc(r.nota):''}</div>
+  <div class="modal-saldo"><span>Saldo actual</span><b>${money(saldoAntes)}</b></div>
+  <div class="modal-saldo"><span>Refuerzo que pagó</span><b>− ${money(+r.monto||0)}</b></div>
+  <div class="saldo-big" style="margin-top:8px"><span>Saldo que queda</span><span style="color:${nuevo<0?'#b42318':(nuevo===0?'#15803d':'#16324f')}">${money(nuevo)}</span></div>
+  ${nuevo<0?`<p class="hint" style="color:#b42318;margin-top:6px">Pagó de más: quedan ${money(nuevo)} a favor del cliente.</p>`:''}
+  <p style="font-size:13px;color:#5b6472;line-height:1.5;margin-top:12px">Si confirmás, el refuerzo se registra como un pago en la orden y el saldo queda actualizado. Si estuvo mal cargado, marcalo como tal.</p>
+  <div class="modal-actions"><button class="btn btn-danger" onclick="rechazarRefuerzo(${o.id})">No confirmar (mal cargado)</button><button class="btn btn-ok" onclick="aplicarConfirmRefuerzo(${o.id})">✓ Confirmar y registrar el pago</button></div>`}
+function aplicarConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo||o.refuerzo.confirmado)return;const r=o.refuerzo;const monto=+r.monto||0;
+  const saldoAntes=cobroBH(o);
+  // El refuerzo entra como un pago real: se suma a la lista de pagos y recalcula el saldo.
+  let pl=(o.pagosList&&o.pagosList.length)?o.pagosList.map(x=>+x||0):((o.pagos>0)?[o.pagos]:[]);
+  pl.push(monto);o.pagosList=pl;o.pagos=pl.reduce((a,x)=>a+x,0);
+  const ahora=new Date().toISOString();
+  r.confirmado=true;r.confirmadoPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);r.confirmadoTs=ahora;r.saldoAntes=saldoAntes;r.saldoDespues=saldoAntes-monto;
+  o.refuerzosHist=o.refuerzosHist||[];
+  o.refuerzosHist.push({monto,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'confirmado',confirmadoPor:r.confirmadoPor,confirmadoTs:ahora,saldoAntes,saldoDespues:saldoAntes-monto});
+  registrarAuditoria('Refuerzo confirmado — pago aplicado',o,'$'+money(monto)+' · saldo '+money(saldoAntes)+' → '+money(saldoAntes-monto));
+  cerrarModal();showToast('Refuerzo confirmado y cargado como pago. Saldo actualizado.','success');vOrdenes()}
+function rechazarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const ahora=new Date().toISOString();
+  r.rechazado=true;r.rechazadoPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);r.rechazadoTs=ahora;
+  o.refuerzosHist=o.refuerzosHist||[];
+  o.refuerzosHist.push({monto:+r.monto||0,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'rechazado',rechazadoPor:r.rechazadoPor,rechazadoTs:ahora});
+  registrarAuditoria('Refuerzo NO confirmado (cargado mal)',o,'$'+money(+r.monto||0)+(r.por?' · cargado por '+r.por:''));
+  cerrarModal();showToast('Refuerzo marcado como cargado mal. No se aplicó ningún pago.','info');vOrdenes()}
 function refuerzoBadge(o){if(!o.refuerzo)return'';const r=o.refuerzo;
-  if(r.confirmado)return ` <span class="badge e-ok" title="Refuerzo confirmado por ${esc(r.confirmadoPor||'')}">💲 ${money(r.monto)} ✓</span>`;
-  return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar por Lucas">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
-function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.archivada&&o.estado!=='Cancelado').length}
+  if(r.rechazado)return ` <span class="badge e-prob" title="Refuerzo marcado como cargado mal por ${esc(r.rechazadoPor||'')}${r.nota?' · '+esc(r.nota):''}">💲 Cargado mal</span>`;
+  if(r.confirmado)return ` <span class="badge e-ok" title="Refuerzo confirmado por ${esc(r.confirmadoPor||'')} — aplicado al saldo">💲 ${money(r.monto)} ✓</span>`;
+  return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
+function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&!o.archivada&&o.estado!=='Cancelado').length}
+function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===editId);if(!o||!o.refuerzosHist)return'';const conf=o.refuerzosHist.filter(h=>h.estado==='confirmado');if(!conf.length)return'';
+  return `<div class="refnota">${conf.map(h=>`<div>💲 Refuerzo de <b>${money(h.monto)}</b> aplicado como pago — cargado por ${esc(h.por||'')}${h.cargadoTs?' el '+new Date(h.cargadoTs).toLocaleDateString('es-AR'):''}${h.confirmadoPor?', confirmado por '+esc(h.confirmadoPor):''}.${h.nota?` <span class="muted">(${esc(h.nota)})</span>`:''}</div>`).join('')}</div>`}
 /* Quién puede CARGAR un refuerzo: vendedores + soporte (Iara/Cintia) + dirección (Jony/Brian).
    Lucas (logística) no carga, solo confirma. */
 function puedeCargarRefuerzo(){return esVendedor()||role==='soporte'||esDireccion()}
