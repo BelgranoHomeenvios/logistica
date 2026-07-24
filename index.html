@@ -46,7 +46,7 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .tabs{background:#fff;border-bottom:1px solid var(--line);padding:0 28px;display:flex;gap:2px;overflow-x:auto}
 .tabs a{padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--sec);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}
 .tabs a.active{color:var(--navy);font-weight:700;border-bottom-color:var(--blue)}
-.container{max-width:1120px;margin:0 auto;padding:22px 28px 64px}
+.container{max-width:1320px;margin:0 auto;padding:22px 20px 64px}
 .card{background:var(--card);border:1px solid #e6eaef;border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:16px}
 .card h2{margin:0 0 6px;font-size:18px;font-weight:800;color:var(--navy)}.card h3{margin:0 0 8px;font-size:14px;font-weight:700;color:var(--navy)}
 .grid-stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
@@ -85,7 +85,7 @@ input.inval,select.inval{border-color:var(--red);background:#fef3f2}
 .icon-btn.btn-ghost{color:#5b6675}
 .icon-btn-xs{width:22px;height:22px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;vertical-align:middle;border-radius:5px}
 .refcol{text-align:center;white-space:nowrap}
-.refuerzo-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;vertical-align:middle;border-radius:6px}
+.refuerzo-btn{width:26px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1;vertical-align:middle;border-radius:6px}
 .refnota{margin-top:10px;background:#f0f7ff;border:1px solid #cfe0f5;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#16324f;line-height:1.5}
 .refnota div+div{margin-top:5px}
 .cmt-ico{cursor:help;font-size:13px;vertical-align:middle}
@@ -146,7 +146,7 @@ input.inval,select.inval{border-color:var(--red);background:#fef3f2}
 .mflag input{width:15px;height:15px;flex:none;margin:0;cursor:pointer}
 .pago-row{display:grid;grid-template-columns:120px 1fr 40px;gap:8px;align-items:end;margin-bottom:8px}
 .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:6px 16px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:middle}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:middle}
 .thsort{cursor:pointer;user-select:none}
 .thsort:hover{color:var(--navy)}
 .mattable{min-width:640px}
@@ -195,7 +195,7 @@ tbody tr:hover{background:#f7f9fb}
 .ordbtn:hover{color:var(--navy)}
 .chip button{border:none;background:#e2e8f0;color:#5b6675;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:700;line-height:1}
 .addrow{display:flex;gap:8px;max-width:380px}
-.ordfilters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.ordfilters input,.ordfilters select{max-width:230px;height:40px}.fletesel{height:36px;padding:0 8px;min-width:135px;border:1px solid #d0d7e2;border-radius:8px;background:#fff}.e-asignar{background:#fdecea;color:#b42318}
+.ordfilters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.ordfilters input,.ordfilters select{max-width:230px;height:40px}.fletesel{height:36px;padding:0 6px;min-width:112px;border:1px solid #d0d7e2;border-radius:8px;background:#fff}.e-asignar{background:#fdecea;color:#b42318}
 .daynav{display:inline-flex;align-items:center;gap:8px;margin:0 0 12px}
 .daynav input[type=date]{height:36px;width:170px;padding:0 10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit}
 .pagorow{margin-bottom:8px}.pagorow.del{display:grid;grid-template-columns:1fr auto;gap:8px}
@@ -1582,7 +1582,7 @@ function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   ${pend?`<div class="badge e-cond" style="margin-bottom:10px">Refuerzo cargado ${money(o.refuerzo.monto)} por ${esc(o.refuerzo.por||'')} — a confirmar por Lucas.</div>`:''}
   <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="${m.monto?money(m.monto):''}" oninput="modalActivo.monto=moneyParse(this.value)">
   <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value">${esc(m.nota||'')}</textarea>
-  <div class="modal-actions">${(o.refuerzo&&role==='admin')?`<button class="btn btn-danger" onclick="quitarRefuerzo(${o.id})">Quitar refuerzo</button>`:''}<button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">${pend?'Actualizar refuerzo':'Cargar refuerzo'}</button></div>`}
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">${pend?'Actualizar refuerzo':'Cargar refuerzo'}</button></div>`}
 function quitarRefuerzo(oid){if(role!=='admin'){showToast('Solo el administrador puede quitar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const m=+r.monto||0;
   // Solo deshace el pago si hay registro de que se aplicó (refuerzos confirmados con la versión
   // nueva). Los que quedaron de una versión anterior no tocaron el saldo, así que no se descuenta.
