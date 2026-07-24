@@ -1574,15 +1574,13 @@ function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoC
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
    aditivo: no toca el estado ni el ciclo de la orden. */
-function abrirModalRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o)return;const pend=o.refuerzo&&!o.refuerzo.confirmado?o.refuerzo:null;modalActivo={tipo:'refuerzo',oid,monto:pend?pend.monto:'',nota:pend?pend.nota:''};renderModal()}
-function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';const yaConf=o.refuerzo&&o.refuerzo.confirmado;const pend=o.refuerzo&&!o.refuerzo.confirmado;
+function abrirModalRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'refuerzo',oid,monto:'',nota:''};renderModal()}
+function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   return `<h3>💲 Refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}</p>
-  <p style="font-size:13.5px;color:#5b6472;line-height:1.5">El cliente vino a reforzar y pagó en el local. Cargá el monto para que Lucas lo vea en "Cargadas por vendedores" y lo confirme.</p>
-  ${yaConf?`<div class="badge e-ok" style="margin-bottom:10px">Ya hay un refuerzo confirmado de ${money(o.refuerzo.monto)} (${esc(o.refuerzo.confirmadoPor||'')}). Cargar otro lo reemplaza.</div>`:''}
-  ${pend?`<div class="badge e-cond" style="margin-bottom:10px">Refuerzo cargado ${money(o.refuerzo.monto)} por ${esc(o.refuerzo.por||'')} — a confirmar por Lucas.</div>`:''}
-  <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="${m.monto?money(m.monto):''}" oninput="modalActivo.monto=moneyParse(this.value)">
-  <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value">${esc(m.nota||'')}</textarea>
-  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">${pend?'Actualizar refuerzo':'Cargar refuerzo'}</button></div>`}
+  <p style="font-size:13.5px;color:#5b6472;line-height:1.5">El cliente vino a reforzar y pagó en el local. Cargá el monto para que Lucas lo vea y lo confirme.</p>
+  <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="" oninput="moneyIn(this);modalActivo.monto=moneyParse(this.value)">
+  <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value"></textarea>
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">Cargar refuerzo</button></div>`}
 function quitarRefuerzo(oid){if(role!=='admin'){showToast('Solo el administrador puede quitar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const m=+r.monto||0;
   // Solo deshace el pago si hay registro de que se aplicó (refuerzos confirmados con la versión
   // nueva). Los que quedaron de una versión anterior no tocaron el saldo, así que no se descuenta.
@@ -1627,13 +1625,16 @@ function aplicarConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||
   registrarAuditoria('Refuerzo confirmado — pago aplicado',o,'$'+money(monto)+' · saldo '+money(saldoAntes)+' → '+money(saldoAntes-monto));
   cerrarModal();showToast('Refuerzo confirmado y cargado como pago. Saldo actualizado.','success');vOrdenes()}
 function rechazarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const ahora=new Date().toISOString();
-  r.rechazado=true;r.rechazadoPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);r.rechazadoTs=ahora;
+  const rechPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);
+  // Un refuerzo mal cargado NO queda en la fila: se guarda en el histórico (para estadísticas)
+  // y la orden vuelve a mostrar solo el botón de $ para poder cargar uno nuevo.
   o.refuerzosHist=o.refuerzosHist||[];
-  o.refuerzosHist.push({monto:+r.monto||0,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'rechazado',rechazadoPor:r.rechazadoPor,rechazadoTs:ahora});
+  o.refuerzosHist.push({monto:+r.monto||0,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'rechazado',rechazadoPor:rechPor,rechazadoTs:ahora});
   registrarAuditoria('Refuerzo NO confirmado (cargado mal)',o,'$'+money(+r.monto||0)+(r.por?' · cargado por '+r.por:''));
-  cerrarModal();showToast('Refuerzo marcado como cargado mal. No se aplicó ningún pago.','info');vOrdenes()}
+  o.refuerzo=null;
+  cerrarModal();showToast('Refuerzo marcado como cargado mal (queda en el histórico). No se aplicó ningún pago.','info');vOrdenes()}
 function refuerzoBadge(o){if(!o.refuerzo)return'';const r=o.refuerzo;
-  if(r.rechazado)return ` <span class="badge e-prob" title="Refuerzo marcado como cargado mal por ${esc(r.rechazadoPor||'')}${r.nota?' · '+esc(r.nota):''}">💲 Cargado mal</span>`;
+  if(r.rechazado)return '';   // los mal cargados no se muestran en la fila (van al histórico)
   if(r.confirmado)return ` <span class="badge e-ok" title="Refuerzo confirmado por ${esc(r.confirmadoPor||'')} — aplicado al saldo">💲 ${money(r.monto)} ✓</span>`;
   return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
 function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&!o.archivada&&o.estado!=='Cancelado').length}
