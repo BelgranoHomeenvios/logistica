@@ -1433,10 +1433,7 @@ function vOrdenes(){
   const quedanOrd=totalSinPag-list.length;
   const vistaBtn=(k,txt,n)=>`<button class="vistatog${ordVista===k?' on':''}" onclick="ordVista='${k}';ordPag=1;ordFil.estado='';vOrdenes()">${txt}${n!=null?` <b>${n}</b>`:''}</button>`;
   const nPend=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
-  const conmutador=esVendedor()
-    ?`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('cerradas','Cerradas')}</div>`
-    :`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
-  if(esVendedor()&&ordVista!=='activas'&&ordVista!=='cerradas')ordVista='activas';
+  const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
   const esActivas=ordVista==='activas';
   const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada','En reclamo']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
   $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
