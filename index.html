@@ -1619,10 +1619,13 @@ function aplicarConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||
   let pl=(o.pagosList&&o.pagosList.length)?o.pagosList.map(x=>+x||0):((o.pagos>0)?[o.pagos]:[]);
   pl.push(monto);o.pagosList=pl;o.pagos=pl.reduce((a,x)=>a+x,0);
   const ahora=new Date().toISOString();
-  r.confirmado=true;r.confirmadoPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);r.confirmadoTs=ahora;r.saldoAntes=saldoAntes;r.saldoDespues=saldoAntes-monto;
+  const confPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);
   o.refuerzosHist=o.refuerzosHist||[];
-  o.refuerzosHist.push({monto,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'confirmado',confirmadoPor:r.confirmadoPor,confirmadoTs:ahora,saldoAntes,saldoDespues:saldoAntes-monto});
+  o.refuerzosHist.push({monto,por:r.por||'',nota:r.nota||'',cargadoTs:r.ts||ahora,estado:'confirmado',confirmadoPor:confPor,confirmadoTs:ahora,saldoAntes,saldoDespues:saldoAntes-monto});
   registrarAuditoria('Refuerzo confirmado — pago aplicado',o,'$'+money(monto)+' · saldo '+money(saldoAntes)+' → '+money(saldoAntes-monto));
+  // Confirmado = ya es plata de la cobranza (se ve en Cobranza y cargado en Saldos). No queda
+  // en la fila: se limpia el refuerzo y el monto vive en el pago. El detalle queda en el histórico.
+  o.refuerzo=null;
   cerrarModal();showToast('Refuerzo confirmado y cargado como pago. Saldo actualizado.','success');vOrdenes()}
 function rechazarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const ahora=new Date().toISOString();
   const rechPor=(usuarioActual&&usuarioActual.nombre)||nombreRol(role);
@@ -1635,7 +1638,7 @@ function rechazarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.ref
   cerrarModal();showToast('Refuerzo marcado como cargado mal (queda en el histórico). No se aplicó ningún pago.','info');vOrdenes()}
 function refuerzoBadge(o){if(!o.refuerzo)return'';const r=o.refuerzo;
   if(r.rechazado)return '';   // los mal cargados no se muestran en la fila (van al histórico)
-  if(r.confirmado)return ` <span class="badge e-ok" title="Refuerzo confirmado por ${esc(r.confirmadoPor||'')} — aplicado al saldo">💲 ${money(r.monto)} ✓</span>`;
+  if(r.confirmado)return '';  // los confirmados ya son parte de la cobranza: no quedan en la fila
   return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
 function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&!o.archivada&&o.estado!=='Cancelado').length}
 function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===editId);if(!o||!o.refuerzosHist)return'';const conf=o.refuerzosHist.filter(h=>h.estado==='confirmado');if(!conf.length)return'';
