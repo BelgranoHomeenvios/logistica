@@ -1641,8 +1641,14 @@ function refuerzoBadge(o){if(!o.refuerzo)return'';const r=o.refuerzo;
   if(r.confirmado)return '';  // los confirmados ya son parte de la cobranza: no quedan en la fila
   return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
 function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&!o.archivada&&o.estado!=='Cancelado').length}
-function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===editId);if(!o||!o.refuerzosHist)return'';const conf=o.refuerzosHist.filter(h=>h.estado==='confirmado');if(!conf.length)return'';
-  return `<div class="refnota">${conf.map(h=>`<div>💲 Refuerzo de <b>${money(h.monto)}</b> aplicado como pago — cargado por ${esc(h.por||'')}${h.cargadoTs?' el '+new Date(h.cargadoTs).toLocaleDateString('es-AR'):''}${h.confirmadoPor?', confirmado por '+esc(h.confirmadoPor):''}.${h.nota?` <span class="muted">(${esc(h.nota)})</span>`:''}</div>`).join('')}</div>`}
+function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===editId);if(!o||!o.refuerzosHist)return'';
+  const conf=o.refuerzosHist.filter(h=>h.estado==='confirmado');if(!conf.length)return'';
+  // La nota solo se muestra mientras el pago del refuerzo siga cargado en Saldos. Si Lucas lo
+  // borra desde acá (que es como se "quita" un refuerzo), la nota desaparece sola.
+  const pagos=((typeof draft!=='undefined'&&draft&&draft.pagosList)?draft.pagosList:(o.pagosList||[])).map(x=>+x||0);
+  const vivos=[];conf.forEach(h=>{const m=+h.monto||0;const i=pagos.indexOf(m);if(i>-1){pagos.splice(i,1);vivos.push(h);}});
+  if(!vivos.length)return'';
+  return `<div class="refnota">${vivos.map(h=>`<div>💲 Refuerzo de <b>${money(h.monto)}</b> aplicado como pago — cargado por ${esc(h.por||'')}${h.cargadoTs?' el '+new Date(h.cargadoTs).toLocaleDateString('es-AR'):''}${h.confirmadoPor?', confirmado por '+esc(h.confirmadoPor):''}.${h.nota?` <span class="muted">(${esc(h.nota)})</span>`:''}</div>`).join('')}</div>`}
 /* Quién puede CARGAR un refuerzo: vendedores + soporte (Iara/Cintia) + dirección (Jony/Brian).
    Lucas (logística) no carga, solo confirma. */
 function puedeCargarRefuerzo(){return esVendedor()||role==='soporte'||esDireccion()}
