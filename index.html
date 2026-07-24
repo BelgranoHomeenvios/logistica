@@ -796,7 +796,7 @@ function render(){
   _sbDetectarCambios();
   const who=whoLabel();
   root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
-  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cerradas:vCerradas,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria}[tab])();
+  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria}[tab])();
 }
 
 
@@ -1345,7 +1345,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
       } else {
         menu.push(menuItem('↩','Reabrir','reabrirOrden('+o.id+')'));
       }
-      if(o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&(esLogisticaOSoporte()||esDireccion()))inline.push(iconBtn('btn-ok','💲✓','Revisar refuerzo de '+money(o.refuerzo.monto)+' cargado por '+(o.refuerzo.por||'vendedor'),'abrirModalConfirmRefuerzo('+o.id+')'));
+      if(o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&puedeConfirmarRefuerzo())inline.push(iconBtn('btn-ok','💲✓','Revisar refuerzo de '+money(o.refuerzo.monto)+' cargado por '+(o.refuerzo.por||'vendedor'),'abrirModalConfirmRefuerzo('+o.id+')'));
       menu.push(menuItem('✎','Editar orden',`editId=${o.id};draft=null;setTab('cargar')`));
       if(esLogisticaOSoporte()||esDireccion())menu.push(menuItem('🔀','Cambiar estado','abrirModalEstado('+o.id+')'));
       if(o.estadoHist&&o.estadoHist.length)menu.push(menuItem('🕑','Ver historial de estado','abrirModalEstadoHist('+o.id+')'));
@@ -1453,52 +1453,6 @@ function vOrdenes(){
     ${(!esActivas)?`<p class="muted" style="margin:0 0 10px;font-size:12.5px">${totalSinPag} orden${totalSinPag===1?'':'es'}${usaPag&&quedanOrd>0?` · mostrando ${list.length}`:''}</p>`:''}
     ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th><th style="text-align:center">Refuerzo</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>${(usaPag&&quedanOrd>0)?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="ordPag++;vOrdenes()">Mostrar ${Math.min(quedanOrd,ORD_PAG)} más (quedan ${quedanOrd})</button></div>`:''}`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
 
-/* ============ ORDENES CERRADAS (archivo) ============ */
-let cerrFil={q:'',flete:'',tipo:'',estado:'Cerrado',fecha:''};
-let cerrDia='';
-let cerrPag=1;const CERR_PAG_SIZE=50;
-let _cerrTimer=null;
-function reCerr(){clearTimeout(_cerrTimer);_cerrTimer=setTimeout(()=>{cerrPag=1;vCerradas();const el=$('cf_q');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}},300)}
-function cerrMasPag(){cerrPag++;vCerradas()}
-function cerrDiasConCierres(){
-  return [...new Set(ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada&&(!cerrFil.estado||o.estado===cerrFil.estado)).map(o=>o.fecha))].sort();
-}
-function cerrNavDia(dir){
-  const dias=cerrDiasConCierres();if(!dias.length)return;
-  let i=dias.indexOf(cerrDia);
-  if(i<0)i=dias.length-1;
-  i=Math.max(0,Math.min(dias.length-1,i+dir));
-  cerrDia=dias[i];vCerradas();
-}
-function vCerradas(){
-  const hayFiltro=!!(cerrFil.q||cerrFil.flete||cerrFil.tipo||cerrFil.fecha);
-  let list=ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada);
-  if(cerrFil.estado)list=list.filter(o=>o.estado===cerrFil.estado);
-  if(cerrFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(cerrFil.q.toLowerCase()));
-  if(cerrFil.flete)list=list.filter(o=>o.flete===cerrFil.flete);
-  if(cerrFil.tipo)list=list.filter(o=>o.tipo===cerrFil.tipo);
-  if(cerrFil.fecha)list=list.filter(o=>o.fecha===cerrFil.fecha);
-
-  let navHTML='';
-  if(!hayFiltro){
-    const dias=cerrDiasConCierres();
-    if(!cerrDia||!dias.includes(cerrDia)){cerrDia=dias.filter(d=>d<HOY).pop()||dias[dias.length-1]||'';}
-    const i=dias.indexOf(cerrDia);
-    navHTML=`<div class="daynav"><button class="btn btn-ghost btn-sm" ${i<=0?'disabled':''} onclick="cerrNavDia(-1)">‹ Día anterior</button>
-      <input type="date" value="${cerrDia}" onchange="cerrDia=this.value;vCerradas()">
-      <button class="btn btn-ghost btn-sm" ${i>=dias.length-1?'disabled':''} onclick="cerrNavDia(1)">Día siguiente ›</button></div>`;
-    list=list.filter(o=>o.fecha===cerrDia);
-  }
-  list=list.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);
-  const totalFiltrado=list.length;
-  const visibles=hayFiltro?list.slice(0,cerrPag*CERR_PAG_SIZE):list;
-  const rows=visibles.map(o=>filaOrden(o,false)).join('');
-  const quedan=totalFiltrado-visibles.length;
-  $('view').innerHTML=`<div class="card"><h2>Órdenes cerradas</h2><p class="muted" style="margin:0 0 10px">${hayFiltro?`Resultado de la búsqueda en todo el archivo: <b>${totalFiltrado}</b> orden${totalFiltrado===1?'':'es'}.`:'Mostrando un día por vez. Movete con las flechas o buscá en todo el archivo con los filtros de abajo.'}</p>
-    <div class="macrotog" style="margin-bottom:12px"><button class="${cerrFil.estado==='Cerrado'?'on':''}" onclick="cerrFil.estado='Cerrado';cerrPag=1;vCerradas()">Cerradas</button><button class="${cerrFil.estado==='Cancelado'?'on':''}" onclick="cerrFil.estado='Cancelado';cerrPag=1;vCerradas()">Canceladas</button><button class="${cerrFil.estado===''?'on':''}" onclick="cerrFil.estado='';cerrPag=1;vCerradas()">Todas</button></div>
-    <div class="ordfilters"><input id="cf_q" placeholder="Buscar N° de orden…" value="${esc(cerrFil.q)}" oninput="cerrFil.q=this.value;reCerr()"><input type="date" value="${cerrFil.fecha}" onchange="cerrFil.fecha=this.value;cerrPag=1;vCerradas()" title="Filtrar por día puntual"><select onchange="cerrFil.flete=this.value;cerrPag=1;vCerradas()"><option value="">Todos los fletes</option>${FLETES.map(f=>`<option ${cerrFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select><select onchange="cerrFil.tipo=this.value;cerrPag=1;vCerradas()"><option value="">Todos los tipos</option>${TIPOS.map(t=>`<option ${cerrFil.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>${hayFiltro?`<button class="btn btn-ghost btn-sm" onclick="cerrFil.q='';cerrFil.flete='';cerrFil.tipo='';cerrFil.fecha='';cerrPag=1;vCerradas()">Limpiar filtros</button>`:''}</div>
-    ${navHTML}
-    ${visibles.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Zona</th><th>Muebles</th><th>Flete</th><th>Cobranza</th><th>Estado</th><th style="text-align:center">Refuerzo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${quedan>0?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="cerrMasPag()">Mostrar ${Math.min(quedan,CERR_PAG_SIZE)} más (quedan ${quedan})</button></div>`:''}`:`<div class="empty">${hayFiltro?'No hay órdenes con esos filtros.':'No hubo cierres ese día.'}</div>`}</div>`}
 function puedeSalir(o){if(o.estado!=='Coordinada')return '';
   if(o.confirmacion==='A confirmar')return 'Falta que Logística confirme la entrega';
   if(o.habilitada===false)return 'El cliente todavía no pagó — Logística la tiene que habilitar';
@@ -1581,28 +1535,22 @@ function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="" oninput="moneyIn(this);modalActivo.monto=moneyParse(this.value)">
   <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value"></textarea>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">Cargar refuerzo</button></div>`}
-function quitarRefuerzo(oid){if(role!=='admin'){showToast('Solo el administrador puede quitar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const m=+r.monto||0;
-  // Solo deshace el pago si hay registro de que se aplicó (refuerzos confirmados con la versión
-  // nueva). Los que quedaron de una versión anterior no tocaron el saldo, así que no se descuenta.
-  const aplicadoComoPago=!!(r.confirmado && o.refuerzosHist && o.refuerzosHist.some(h=>h.estado==='confirmado' && (+h.monto||0)===m));
-  if(aplicadoComoPago){
-    if(o.pagosList&&o.pagosList.length){const arr=o.pagosList.map(x=>+x||0);const i=arr.lastIndexOf(m);if(i>-1)arr.splice(i,1);o.pagosList=arr;o.pagos=arr.reduce((a,x)=>a+x,0);}
-    else if((o.pagos||0)>=m){o.pagos=(o.pagos||0)-m;}
-    for(let k=o.refuerzosHist.length-1;k>=0;k--){const h=o.refuerzosHist[k];if(h.estado==='confirmado'&&(+h.monto||0)===m){o.refuerzosHist.splice(k,1);break;}}
-  }
-  registrarAuditoria('Refuerzo quitado',o,'$'+money(m)+(aplicadoComoPago?' · pago deshecho':''));
-  o.refuerzo=null;
-  cerrarModal();showToast('Refuerzo quitado'+(aplicadoComoPago?' y pago deshecho. Saldo actualizado.':'.'),'success');vOrdenes()}
 function guardarRefuerzo(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);if(!o)return;const monto=moneyParse($('mrf_monto')?$('mrf_monto').value:m.monto);
   if(!monto||monto<=0){showToast('Poné el monto del refuerzo.','error');const el=$('mrf_monto');if(el)el.focus();return}
   const nota=($('mrf_nota')?$('mrf_nota').value:m.nota||'').trim();
   const quien=(typeof usuarioActual!=='undefined'&&usuarioActual&&usuarioActual.nombre)||nombreRol(role);
+  // Si ya había un refuerzo pendiente sin confirmar, no se pierde: se archiva como
+  // "reemplazado" en el histórico antes de cargar el nuevo.
+  if(o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado){
+    const vr=o.refuerzo;o.refuerzosHist=o.refuerzosHist||[];
+    o.refuerzosHist.push({monto:+vr.monto||0,por:vr.por||'',nota:vr.nota||'',cargadoTs:vr.ts||new Date().toISOString(),estado:'reemplazado',reemplazadoPor:quien,reemplazadoTs:new Date().toISOString()});
+  }
   o.refuerzo={monto,nota,por:quien,rol:role,ts:new Date().toISOString(),confirmado:false,confirmadoPor:null,confirmadoTs:null};
   registrarAuditoria('Refuerzo cargado',o,'$'+money(monto)+(nota?' · '+nota:''));
   cerrarModal();showToast('Refuerzo cargado. Lucas lo va a ver para confirmarlo.','success');vOrdenes()}
 /* Lucas (o dirección) revisa el refuerzo: abre un pop-up con la cuenta del saldo y decide
    confirmarlo (se registra como pago real en la orden) o marcarlo como cargado mal. */
-function abrirModalConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;modalActivo={tipo:'confirmarRefuerzo',oid};renderModal()}
+function abrirModalConfirmRefuerzo(oid){if(!puedeConfirmarRefuerzo()){showToast('Solo Lucas o dirección pueden confirmar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;modalActivo={tipo:'confirmarRefuerzo',oid};renderModal()}
 function cuerpoConfirmRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o||!o.refuerzo)return'';const r=o.refuerzo;
   const saldoAntes=cobroBH(o);const nuevo=saldoAntes-(+r.monto||0);const cargDia=r.ts?new Date(r.ts).toLocaleDateString('es-AR'):'';
   return `<h3>💲 Revisar refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}</p>
@@ -1652,6 +1600,9 @@ function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===
 /* Quién puede CARGAR un refuerzo: vendedores + soporte (Iara/Cintia) + dirección (Jony/Brian).
    Lucas (logística) no carga, solo confirma. */
 function puedeCargarRefuerzo(){return esVendedor()||role==='soporte'||esDireccion()}
+/* Quién puede CONFIRMAR un refuerzo: solo Lucas (logística) y dirección (Jony/Brian).
+   Soporte (Iara/Cintia) NO puede confirmarlos. */
+function puedeConfirmarRefuerzo(){return role==='logistica'||esDireccion()}
 /* Sobre qué órdenes tiene sentido cargar un refuerzo: las que están "a confirmar"
    o las que todavía tienen saldo a abonar. Si Lucas la dejó SIN saldo, no se carga plata.
    (Si ya tiene un refuerzo cargado, se deja ver/editar igual.) */
