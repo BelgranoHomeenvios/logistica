@@ -1582,7 +1582,19 @@ function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   ${pend?`<div class="badge e-cond" style="margin-bottom:10px">Refuerzo cargado ${money(o.refuerzo.monto)} por ${esc(o.refuerzo.por||'')} — a confirmar por Lucas.</div>`:''}
   <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="${m.monto?money(m.monto):''}" oninput="modalActivo.monto=moneyParse(this.value)">
   <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value">${esc(m.nota||'')}</textarea>
-  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">${pend?'Actualizar refuerzo':'Cargar refuerzo'}</button></div>`}
+  <div class="modal-actions">${(o.refuerzo&&role==='admin')?`<button class="btn btn-danger" onclick="quitarRefuerzo(${o.id})">Quitar refuerzo</button>`:''}<button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">${pend?'Actualizar refuerzo':'Cargar refuerzo'}</button></div>`}
+function quitarRefuerzo(oid){if(role!=='admin'){showToast('Solo el administrador puede quitar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;const r=o.refuerzo;const m=+r.monto||0;
+  // Solo deshace el pago si hay registro de que se aplicó (refuerzos confirmados con la versión
+  // nueva). Los que quedaron de una versión anterior no tocaron el saldo, así que no se descuenta.
+  const aplicadoComoPago=!!(r.confirmado && o.refuerzosHist && o.refuerzosHist.some(h=>h.estado==='confirmado' && (+h.monto||0)===m));
+  if(aplicadoComoPago){
+    if(o.pagosList&&o.pagosList.length){const arr=o.pagosList.map(x=>+x||0);const i=arr.lastIndexOf(m);if(i>-1)arr.splice(i,1);o.pagosList=arr;o.pagos=arr.reduce((a,x)=>a+x,0);}
+    else if((o.pagos||0)>=m){o.pagos=(o.pagos||0)-m;}
+    for(let k=o.refuerzosHist.length-1;k>=0;k--){const h=o.refuerzosHist[k];if(h.estado==='confirmado'&&(+h.monto||0)===m){o.refuerzosHist.splice(k,1);break;}}
+  }
+  registrarAuditoria('Refuerzo quitado',o,'$'+money(m)+(aplicadoComoPago?' · pago deshecho':''));
+  o.refuerzo=null;
+  cerrarModal();showToast('Refuerzo quitado'+(aplicadoComoPago?' y pago deshecho. Saldo actualizado.':'.'),'success');vOrdenes()}
 function guardarRefuerzo(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);if(!o)return;const monto=moneyParse($('mrf_monto')?$('mrf_monto').value:m.monto);
   if(!monto||monto<=0){showToast('Poné el monto del refuerzo.','error');const el=$('mrf_monto');if(el)el.focus();return}
   const nota=($('mrf_nota')?$('mrf_nota').value:m.nota||'').trim();
