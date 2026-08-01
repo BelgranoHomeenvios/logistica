@@ -399,6 +399,9 @@ tr.rprob{background:#fef4f4}
   .ruta-wrap{max-width:660px}
   .ruta-head{max-width:660px;margin:0 auto}
 }
+.btn-cargar-viaje.btn-refuerzo{background:#0f766e}
+.btn-cargar-viaje.btn-refuerzo:hover{background:#0b5d56}
+.badge.clik{cursor:pointer}
 .reclamo-ctx{display:flex;flex-wrap:wrap;gap:10px;background:#fdf2f0;border:1px solid #f3d0ca;border-radius:10px;padding:11px 14px;margin-bottom:18px}
 .reclamo-ctx>div{display:flex;flex-direction:column;min-width:118px}
 .reclamo-ctx b{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#a8564a;font-weight:700}
@@ -417,9 +420,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-02:40</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-03:30</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-02:40</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-03:30</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -905,6 +908,51 @@ function programarDevolucion(id){
 /* ---- Buscador de "Nuevo reclamo" ----
    El caso real es Cintia con el cliente enojado por teléfono: casi nunca tiene el remito
    a mano, así que un solo campo busca por número, nombre, teléfono o dirección. */
+/* ============ CARGAR REFUERZO ============
+   Antes el vendedor tenía que encontrar la fila de la orden en el tablero y apretar
+   un signo de pesos. Ahora arranca por donde arranca de verdad: buscando la orden. */
+function abrirBuscarRefuerzo(){
+  if(!puedeCargarRefuerzo()){showToast('Los refuerzos los carga el vendedor, Soporte o Dirección.','error');return}
+  modalActivo={tipo:'buscarRefuerzo',q:''};renderModal();
+}
+function buscarRefuerzoInput(){
+  const el=$('bsf_q');if(!el)return;const pos=el.value.length;
+  modalActivo.q=el.value;renderModal();
+  const e2=$('bsf_q');if(e2){e2.focus();e2.setSelectionRange(pos,pos)}
+}
+/* Solo órdenes con saldo: si ya está todo cobrado no hay nada que reforzar. */
+function candidatasRefuerzo(q){
+  const t=String(q||'').trim().toLowerCase();
+  if(t.length<2)return[];
+  return ordenes.filter(o=>!o.esReclamo&&!o.archivada&&o.estado!=='Cancelado'&&o.estado!=='Cerrado'&&cobroBH(o)>0)
+    .map(o=>({o,m:porQueCoincide(o,t)}))
+    .filter(x=>x.m)
+    .sort((a,b)=>a.m.r!==b.m.r?a.m.r-b.m.r:String(b.o.fecha).localeCompare(String(a.o.fecha)))
+    .slice(0,40)
+    .map(x=>Object.assign(x.o,{_match:x.m}));
+}
+function cuerpoBuscarRefuerzo(m){
+  const res=candidatasRefuerzo(m.q);
+  const filas=res.map(o=>{
+    const pend=o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado;
+    return `<div class="bsr-row" onclick="${pend?`abrirModalConfirmRefuerzo(${o.id})`:`abrirModalRefuerzo(${o.id})`}">
+      <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')}
+        ${(o._match&&o._match.r===0)?'<span class="badge e-entreg">coincidencia exacta</span>':''}
+        ${(o._match&&o._match.txt)?`<span class="muted" style="font-size:11.5px">· ${esc(o._match.txt)}</span>`:''}
+        ${pend?`<span class="badge e-cond" title="Ya tiene un refuerzo esperando confirmación">💲 ya tiene refuerzo</span>`:''}</div>
+      <div class="muted" style="font-size:12.5px">${esc(fmtDiaSem(o.fecha))} · ${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''} · ${esc(o.estado)}</div>
+      <div style="font-size:13px;margin-top:2px">Debe <b style="color:#b42318">${money(cobroBH(o))}</b></div>
+    </div>`;
+  }).join('');
+  const vacio=String(m.q||'').trim().length<2
+    ? '<p class="muted" style="margin:12px 0">Escribí al menos 2 letras. Buscá por número de orden, nombre, teléfono o dirección.</p>'
+    : (res.length?'':'<p class="muted" style="margin:12px 0">No encontré ninguna orden con saldo pendiente que coincida. Si ya está todo cobrado, no hay nada para reforzar.</p>');
+  return `<h3>Cargar refuerzo</h3>
+  <p style="margin:4px 0 10px" class="muted">El cliente vino a reforzar la seña y pagó en el local. Buscá su orden y cargá lo que pagó.</p>
+  <input id="bsf_q" value="${esc(m.q||'')}" placeholder="Número, nombre, teléfono o dirección…" style="width:100%;border:1px solid #d0d7e2;border-radius:8px;padding:10px 12px;font:inherit" oninput="buscarRefuerzoInput()">
+  <div class="bsr-list">${filas}</div>${vacio}
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Cerrar</button></div>`;
+}
 function abrirBuscarReclamo(){
   if(!puedeCargar()){showToast('No tenés permiso para cargar reclamos.','error');return}
   modalActivo={tipo:'buscarReclamo',q:''};renderModal();
@@ -1314,7 +1362,7 @@ function vTablero(){
   const _p0=diasNav[0].split('-'),_p5=diasNav[5].split('-');const semLabel='Del '+(+_p0[2])+'/'+(+_p0[1])+' al '+(+_p5[2])+'/'+(+_p5[1])+(diasNav[0]===HOY?' · desde hoy':'');
   
   $('view').innerHTML=`
-  ${esVendedor()?'':`<div class="card"><div class="section-title"><h2>Tablero · ${fmt(tbDia)}${esHoyTb?'':' <span class="badge e-cond" style="vertical-align:middle">'+(diaRel(tbDia)||'otro día')+'</span>'}</h2><div class="row-actions" style="gap:10px;flex-wrap:wrap">${navDia('tbDia','vTablero')}${puedeCargar()?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}</div></div>
+  ${esVendedor()?'':`<div class="card"><div class="section-title"><h2>Tablero · ${fmt(tbDia)}${esHoyTb?'':' <span class="badge e-cond" style="vertical-align:middle">'+(diaRel(tbDia)||'otro día')+'</span>'}</h2><div class="row-actions" style="gap:10px;flex-wrap:wrap">${navDia('tbDia','vTablero')}${puedeCargar()?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${puedeCargarRefuerzo()?'<button class="btn-cargar-viaje btn-refuerzo" onclick="abrirBuscarRefuerzo()"><span style="font-size:15px;line-height:1">＋</span> Cargar refuerzo</button>':''}</div></div>
     <p class="muted" style="margin:-2px 0 12px">El recorrido de una orden, paso a paso. Tocá cualquiera para ver esas órdenes.</p>
     <div class="flujo-grid">
       <div class="flujostat clik" onclick="irOrdenes({estado:'Coordinada',day:tbDia})"><div class="fs-lbl" style="color:#b45309">Falta entregar</div><div class="fs-val" style="color:#b45309">${faltan}</div></div>
@@ -1333,7 +1381,7 @@ function vTablero(){
       <div class="stat clik" onclick="irOrdenes({fab:true})" style="${enGest.length?'background:#fff7e6':''}" title="${enGest.length?'El más viejo lleva '+Math.max(...enGest.map(diasEnGestion))+' días':'Nada en gestión'}"><div style="font-size:13px;font-weight:700;color:${enGest.length?'#b45309':'#8a94a3'}">⏳ En gestión</div><div class="value" style="color:${enGest.length?'#b45309':'#0f1a2a'}">${enGest.length}</div>${enGest.length?`<div style="font-size:12px;color:#b45309">el más viejo, ${Math.max(...enGest.map(diasEnGestion))} días</div>`:''}</div>
       <div class="stat clik" onclick="irOrdenes({prob:true})" style="${probs.length?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${probs.length?'#b42318':'#8a94a3'}">Problemas depósito</div><div class="value" style="color:${probs.length?'#b42318':'#0f1a2a'}">${probs.length}</div></div>
     </div></div>`}
-  ${esVendedor()?`<div class="card"><div class="section-title"><h2 style="margin:0">Tablero · ${fmt(HOY)}</h2><div class="row-actions"><button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button></div></div></div>`:''}
+  ${esVendedor()?`<div class="card"><div class="section-title"><h2 style="margin:0">Tablero · ${fmt(HOY)}</h2><div class="row-actions"><button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button>${puedeCargarRefuerzo()?'<button class="btn-cargar-viaje btn-refuerzo" onclick="abrirBuscarRefuerzo()"><span style="font-size:15px;line-height:1">＋</span> Cargar refuerzo</button>':''}</div></div></div>`:''}
   ${matriz}`}
 
 /* CARGAR wizard */
@@ -1868,7 +1916,7 @@ function vOrdenes(){
   const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
   const esActivas=ordVista==='activas';
   const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
-  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${puedeCargarRefuerzo()?'<button class="btn-cargar-viaje btn-refuerzo" onclick="abrirBuscarRefuerzo()"><span style="font-size:15px;line-height:1">＋</span> Cargar refuerzo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
     ${conmutador}
     ${esActivas?`<div class="daytabs"><button class="weeknav" title="Semana anterior" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">‹</button>${tabsH}<button class="weeknav" title="Semana siguiente" onclick="weekRef=addDays(weekRef,7);vOrdenes()">›</button></div>`:''}</div>
     ${(esActivas&&!esVendedor())?`<div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}${(()=>{const cf=[...nombresF].filter(f=>cupoTarget[cupoKey(selDay,'F',f)]!=null);const cr=cupoTarget[cupoKey(selDay,'R','TODOS')]!=null?1:0;if(!cf.length&&!cr)return'';const retTotal=Object.values(porRet).reduce((a,b)=>a+b,0);const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(selDay,'F',f)],0)+(cr?cupoTarget[cupoKey(selDay,'R','TODOS')]:0);const sumAct=cf.reduce((a,f)=>a+(porF[f]||0),0)+retTotal;return ` <span class="cupototal">${sumAct}/${sumCupo}</span>`;})()}</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" title="Abre Google Maps con un punto por cada envío/expreso del día, para repartir por zona" onclick="abrirMapaDelDia('${selDay}')">📍 Ver mapa del día</button><button class="btn btn-ghost btn-sm" title="Bloquea el día para que no se agenden más entregas." onclick="toggleDiaCerrado()">${cerrado?'🔓 Desbloquear el día':'🔒 Bloquear el día'}</button></div></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy, su cupo, y las zonas sin cubrir. ${cerrado?'<b style="color:#b42318">Día bloqueado — no se aceptan más cargas.</b>':'Si cerrás el cupo de todos, el día se bloquea solo.'}</p>
@@ -1982,16 +2030,23 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
 /* ===== Refuerzo de seña =====
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
    aditivo: no toca el estado ni el ciclo de la orden. */
 function abrirModalRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'refuerzo',oid,monto:'',nota:''};renderModal()}
 function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
-  return `<h3>💲 Refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}</p>
+  const saldo=cobroBH(o);const queda=Math.max(0,saldo-(+m.monto||0));
+  return `<h3>Cargar refuerzo</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}${o.direccion?' · '+esc(o.direccion):''}</p>
+  <div class="reclamo-ctx" style="background:#f4f6f9;border-color:#dbe1e8">
+    <div><b>Total</b><span>${money(o.total||0)}</span></div>
+    <div><b>Pagado</b><span>${money(o.pagos||0)}</span></div>
+    <div><b>Saldo</b><span style="color:#b42318">${money(saldo)}</span></div>
+    <div><b>Queda debiendo</b><span style="color:${queda?'#b42318':'#15803d'}">${money(queda)}</span></div>
+  </div>
   <p style="font-size:13.5px;color:#5b6472;line-height:1.5">El cliente vino a reforzar y pagó en el local. Cargá el monto para que Lucas lo vea y lo confirme.</p>
-  <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="" oninput="moneyIn(this);modalActivo.monto=moneyParse(this.value)">
+  <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="${m.monto?moneyFmt(m.monto):''}" oninput="moneyIn(this);modalActivo.monto=moneyParse(this.value);renderModal();const e=$('mrf_monto');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}">
   <label>Nota (opcional)</label><textarea id="mrf_nota" placeholder="Ej: vino a reforzar, pagó en efectivo" oninput="modalActivo.nota=this.value"></textarea>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="guardarRefuerzo()">Cargar refuerzo</button></div>`}
 function guardarRefuerzo(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);if(!o)return;const monto=moneyParse($('mrf_monto')?$('mrf_monto').value:m.monto);
@@ -2046,7 +2101,7 @@ function rechazarRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.ref
 function refuerzoBadge(o){if(!o.refuerzo)return'';const r=o.refuerzo;
   if(r.rechazado)return '';   // los mal cargados no se muestran en la fila (van al histórico)
   if(r.confirmado)return '';  // los confirmados ya son parte de la cobranza: no quedan en la fila
-  return ` <span class="badge e-cond" title="Refuerzo cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — a confirmar">💲 Refuerzo ${money(r.monto)} · a confirmar</span>`}
+  return `<span class="badge e-cond clik" title="Refuerzo de ${money(r.monto)} cargado por ${esc(r.por||'')}${r.nota?' · '+esc(r.nota):''} — tocá para confirmarlo" onclick="abrirModalConfirmRefuerzo(${o.id})">Pendiente ${money(r.monto)}</span>`}
 function refuerzosPend(){return ordenes.filter(o=>o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&!o.archivada&&o.estado!=='Cancelado').length}
 function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===editId);if(!o||!o.refuerzosHist)return'';
   const conf=o.refuerzosHist.filter(h=>h.estado==='confirmado');if(!conf.length)return'';
@@ -2066,10 +2121,7 @@ function puedeConfirmarRefuerzo(){return role==='logistica'||esDireccion()}
    o las que todavía tienen saldo a abonar. Si Lucas la dejó SIN saldo, no se carga plata.
    (Si ya tiene un refuerzo cargado, se deja ver/editar igual.) */
 function refuerzoAplica(o){if(esOrdenReclamo(o))return false;return o.confirmacion==='A confirmar' || cobroBH(o)>0 || !!o.refuerzo}
-function refuerzoCell(o){
-  const btn=(puedeCargarRefuerzo()&&refuerzoAplica(o))?`<button class="btn btn-ghost refuerzo-btn" title="Cargar/ver refuerzo de seña (vino a reforzar y pagó en el local)" onclick="abrirModalRefuerzo(${o.id})">💲</button>`:'';
-  return btn+refuerzoBadge(o);
-}
+function refuerzoCell(o){return refuerzoBadge(o)}
 function cuerpoEliminar(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';const _r=esOrdenReclamo(o);
   return `<h3>Eliminar viaje</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472;line-height:1.5">El viaje se saca de todas las vistas, conteos y estadísticas. <b>Queda recuperable</b> desde Configuración por si te arrepentís.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar viaje</button></div>`}
 function cuerpoSolicitarElim(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';
