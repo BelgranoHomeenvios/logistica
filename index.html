@@ -417,9 +417,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v01.08-23:10</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-01:15</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v01.08-23:10</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-01:15</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -512,7 +512,9 @@ async function sbCargarInicial(){
     /* nid arranca por encima del id más alto usado, para no chocar */
     const maxId=ordenes.reduce((m,o)=>Math.max(m,+o.id||0),12);
     id=maxId+1;
+    const _norm=normalizarEnReclamo();
     _sbSuspender=false; sbListo=true;
+    if(_norm)showToast(_norm+' orden'+(_norm===1?'':'es')+' que estaban "En reclamo" volvieron a Entregada. Cargales el reclamo con el botón Cargar reclamo.','info',8000);
     pintarEstadoNube('ok');
     render();
     sbSuscribirRealtime();
@@ -742,6 +744,11 @@ function movimData(o){return MOVIM_RECLAMO.find(x=>x[0]===(o&&o.movim))||MOVIM_R
 /* RNº 4231 — y RNº 4231-2 si es el segundo reclamo de la misma orden, para no confundirlos */
 function reclamoNroDe(o){return esOrdenReclamo(o)?('R'+o.boleta+((o.reclamoSeq||1)>1?'-'+o.reclamoSeq:'')):o.boleta}
 function reclamosDeBoleta(b){return ordenes.filter(o=>o.esReclamo&&o.boleta===b&&o.estado!=='Cancelado'&&!o.archivada)}
+function diasAbierto(o){
+  const ini=o.cargadoFecha||(o.estadoHist&&o.estadoHist[0]&&o.estadoHist[0].fecha);
+  if(!ini)return 0;
+  return Math.max(0,Math.round((Date.now()-new Date(ini).getTime())/86400000));
+}
 function reclamosAbiertos(){return ordenes.filter(o=>o.esReclamo&&!o.archivada&&o.estado!=='Cancelado'&&o.estado!=='Cerrado')}
 function optsReclamo(sel){return ['Envío','Retiro','Expreso'].map(v=>`<option value="${v}" ${sel===v?'selected':''}>${v} reclamo</option>`).join('')}
 
@@ -907,14 +914,30 @@ function buscarReclamoInput(){
   modalActivo.q=el.value;renderModal();
   const e2=$('bsr_q');if(e2){e2.focus();e2.setSelectionRange(pos,pos)}
 }
+/* Por qué coincidió cada fila, para poder ordenar por relevancia y además decírselo
+   al usuario: buscar "5626" traía cinco entregas cuyo TELÉFONO contenía esos dígitos
+   y la orden 5626 quedaba abajo del corte. */
+function porQueCoincide(o,t){
+  const b=String(o.boleta||'').toLowerCase();
+  if(b===t)return {r:0,txt:''};
+  if(b.startsWith(t))return {r:1,txt:'empieza con '+t};
+  if(b.includes(t))return {r:2,txt:'el número lo contiene'};
+  if(String(o.cliente||'').toLowerCase().includes(t))return {r:3,txt:'coincide el cliente'};
+  if([o.tel1,o.tel2].map(x=>String(x||'').toLowerCase()).some(x=>x.includes(t)))return {r:4,txt:'coincide el teléfono'};
+  if(String(o.direccion||'').toLowerCase().includes(t))return {r:5,txt:'coincide la dirección'};
+  if(String(o.localidad||'').toLowerCase().includes(t))return {r:6,txt:'coincide la localidad'};
+  return null;
+}
 function candidatasReclamo(q){
   const t=String(q||'').trim().toLowerCase();
   if(t.length<2)return[];
   const ent=['En viaje','Entregada','Por rendir','Cerrado'];
   return ordenes.filter(o=>!o.esReclamo&&!o.archivada&&ent.includes(o.estado))
-    .filter(o=>[o.boleta,o.cliente,o.tel1,o.tel2,o.direccion,o.localidad].map(x=>String(x||'').toLowerCase()).some(x=>x.includes(t)))
-    .sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)))
-    .slice(0,40);
+    .map(o=>({o,m:porQueCoincide(o,t)}))
+    .filter(x=>x.m)
+    .sort((a,b)=>a.m.r!==b.m.r?a.m.r-b.m.r:String(b.o.fecha).localeCompare(String(a.o.fecha)))
+    .slice(0,40)
+    .map(x=>Object.assign(x.o,{_match:x.m}));
 }
 function haceCuanto(iso){
   const d=Math.round((new Date(HOY+'T00:00')-new Date(iso+'T00:00'))/86400000);
@@ -930,6 +953,8 @@ function cuerpoBuscarReclamo(m){
     const mu=o.lineas.map(l=>l.cant+'× '+l.desc).join(' · ');
     return `<div class="bsr-row" onclick="${ab.length?`elegirReclamoExistente(${ab[0].id})`:`generarReclamo(${o.id});cerrarModal()`}">
       <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')}
+        ${(o._match&&o._match.r===0)?'<span class="badge e-entreg">coincidencia exacta</span>':''}
+        ${(o._match&&o._match.txt)?`<span class="muted" style="font-size:11.5px">· ${esc(o._match.txt)}</span>`:''}
         ${ab.length?`<span class="badge e-prob" title="Ya tiene un reclamo abierto">🚩 ya tiene reclamo</span>`:''}</div>
       <div class="muted" style="font-size:12.5px">${esc(fmt(o.fecha))} · <b>${esc(haceCuanto(o.fecha))}</b> · ${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''}</div>
       <div class="muted" style="font-size:12px">${nm} mueble${nm===1?'':'s'}: ${esc(mu)} · entregó ${esc(o.flete||'—')}</div>
@@ -1051,15 +1076,29 @@ function moneyIn(el){el.value=moneyFmt(el.value)}
 
 let ordenes=[]; /* Datos de ejemplo para testear con Lucas/Sebas/Fabián — se reemplazan por datos reales al conectar Supabase */
 
+/* "En reclamo" dejó de ser un estado: un reclamo ahora es un registro aparte con su R.
+   Las órdenes que quedaron con ese estado vuelven a Entregada, que es donde realmente
+   estaban antes de que alguien apretara ese botón. Queda el rastro en el historial. */
+function normalizarEnReclamo(){
+  let n=0;
+  ordenes.forEach(o=>{
+    if(o.estado==='En reclamo'){
+      o.estadoHist=o.estadoHist||[];
+      o.estadoHist.push({de:'En reclamo',a:'Entregada',accion:'Se dejó de usar "En reclamo" como estado',motivo:'El reclamo pasa a registrarse aparte, con su propio número R',auto:true,quien:'Sistema',rol:'',fecha:new Date().toISOString()});
+      o.estado='Entregada'; n++;
+    }
+  });
+  return n;
+}
 /* Normalización: toda orden vieja sin estado de pago definido arranca en 'cobrar' (a cobrar en destino) — mantiene el comportamiento actual sin romper nada */
 ordenes.forEach(o=>{if(o.costo_flete_estado===undefined)o.costo_flete_estado='cobrar';if(o.instalacion_estado===undefined)o.instalacion_estado='cobrar';if(o.escalera_estado===undefined)o.escalera_estado='cobrar'});
 /* Ejemplo de demo: la orden 1003 tiene el envío ya cobrado en el local — así se ve el caso real que disparó este cambio */
 {const demo=ordenes.find(o=>o.boleta==='1003');if(demo)demo.costo_flete_estado='pagado'}
 
 let role='logistica', tab='tablero', fleteActual='Juan Fredes', vendedorActual='Nati', editId=null;
-const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas']];
-const TABS_SOPORTE=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete']];
-const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['auditoria','Auditoría'],['config','Configuración']];
+const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas']];
+const TABS_SOPORTE=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete']];
+const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['auditoria','Auditoría'],['config','Configuración']];
 const TABS={logistica:TABS_LOG,soporte:TABS_SOPORTE,admin:TABS_DIR,direccion:TABS_DIR,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['vlog','Logística']],jony:TABS_DIR};
 const root=document.getElementById('root');const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -1088,7 +1127,7 @@ function render(){
   _sbDetectarCambios();
   const who=whoLabel();
   root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>${toastMsg?`<div class="toast toast-${toastTipo}">${esc(toastMsg)}</div>`:''}`;
-  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria}[tab])();
+  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria,reclamos:vReclamos}[tab])();
 }
 
 
@@ -1290,7 +1329,7 @@ function vTablero(){
       <div class="stat clik" onclick="irOrdenes({refuerzo:true})" style="${refPend?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${refPend?'#b45309':'#8a94a3'}">💲 Refuerzos a confirmar</div><div class="value" style="color:${refPend?'#b45309':'#0f1a2a'}">${refPend}</div></div>
       <div class="stat clik" onclick="irOrdenes({cond:true})" style="${condicSem?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${condicSem?'#b45309':'#8a94a3'}">Condicionadas · semana</div><div class="value" style="color:${condicSem?'#b45309':'#0f1a2a'}">${condicSem}</div></div>
       <div class="stat clik" onclick="irOrdenes({flete:'__sin'})" style="${sinAsig?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${sinAsig?'#b42318':'#8a94a3'}">Sin asignar</div><div class="value" style="color:${sinAsig?'#b42318':'#0f1a2a'}">${sinAsig}</div></div>
-      <div class="stat clik" onclick="irOrdenes({recl:true})" style="${reclamos?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${reclamos?'#b42318':'#8a94a3'}">🚩 Reclamos abiertos</div><div class="value" style="color:${reclamos?'#b42318':'#0f1a2a'}">${reclamos}</div></div>
+      <div class="stat clik" onclick="setTab('reclamos')" style="${reclamos?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${reclamos?'#b42318':'#8a94a3'}">🚩 Reclamos abiertos</div><div class="value" style="color:${reclamos?'#b42318':'#0f1a2a'}">${reclamos}</div></div>
       <div class="stat clik" onclick="irOrdenes({fab:true})" style="${enGest.length?'background:#fff7e6':''}" title="${enGest.length?'El más viejo lleva '+Math.max(...enGest.map(diasEnGestion))+' días':'Nada en gestión'}"><div style="font-size:13px;font-weight:700;color:${enGest.length?'#b45309':'#8a94a3'}">⏳ En gestión</div><div class="value" style="color:${enGest.length?'#b45309':'#0f1a2a'}">${enGest.length}</div>${enGest.length?`<div style="font-size:12px;color:#b45309">el más viejo, ${Math.max(...enGest.map(diasEnGestion))} días</div>`:''}</div>
       <div class="stat clik" onclick="irOrdenes({prob:true})" style="${probs.length?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${probs.length?'#b42318':'#8a94a3'}">Problemas depósito</div><div class="value" style="color:${probs.length?'#b42318':'#0f1a2a'}">${probs.length}</div></div>
     </div></div>`}
@@ -1525,8 +1564,8 @@ function selDia(iso){selDay=iso;ordFil={q:'',estado:'',flete:''};ordCond=false;o
 let weekRef=HOY;
 let selDay=HOY;
 let diasCerrados={};
-const ESTADOS=['Por completar','Coordinada','En viaje','Entregada','Por rendir','Cerrado','En reclamo','Cancelado'];
-const ESTADOS_ACTIVOS=['Por completar','Coordinada','En viaje','Entregada','Por rendir','En reclamo'];
+const ESTADOS=['Registrado','Por completar','Coordinada','En viaje','Entregada','Por rendir','Cerrado','Cancelado'];
+const ESTADOS_ACTIVOS=['Por completar','Coordinada','En viaje','Entregada','Por rendir'];
 const DIASSEM=['Lun','Mar','Mié','Jue','Vie','Sáb'];
 const DOW=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 function proxDias(desde,n){const a=[];let d=new Date(desde+'T00:00');while(a.length<n){if(d.getDay()!==0)a.push(isoOf(d));d.setDate(d.getDate()+1)}return a}
@@ -1689,7 +1728,7 @@ function fletesDelDia(fecha){const dayO=ordenes.filter(o=>o.fecha===fecha&&o.est
   FLETES.forEach(f=>{if(cupoTarget[cupoKey(fecha,'F',f)]!=null||cupoActivo[cupoKey(fecha,'F',f)])activos.add(f)});
   return [...activos]}
 function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.lineas.some(l=>l.sep==='problema');
-    const dirMapa=direccionParaMapa(o);const aplicaMapa=o.tipo==='Envío'||(o.tipo==='Expreso'&&o.expresoModo==='flete');
+    const dirMapa=direccionParaMapa(o);const aplicaMapa=!sinProgramar(o)&&(o.tipo==='Envío'||(o.tipo==='Expreso'&&o.expresoModo==='flete'));
     const inline=[];
     const menu=[];
     if(!esVendedor()){
@@ -1700,7 +1739,9 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
         if(prob){inline.push(iconBtn('btn-danger','🛠','Resolver problema de depósito','resolverProblema('+o.id+')'))}
         else if(o.habilitada===false){inline.push(iconBtn('btn-ok','🔓','Habilitar (estaba condicionada a pago)','marcarHabil('+o.id+',true)'))}
         else{
-          if(o.confirmacion==='A confirmar')inline.push(o.esReclamo
+          /* Confirmar un reclamo implica avalar quién paga. Antes de programarlo
+             todavía no hay nada que avalar, así que el botón aparece recién ahí. */
+          if(o.confirmacion==='A confirmar'&&!sinProgramar(o))inline.push(o.esReclamo
             ?iconBtn('btn-ok','✓','Confirmar el reclamo y quién se hace cargo','abrirConfirmReclamo('+o.id+')')
             :iconBtn('btn-ok','✓','Confirmar entrega','marcarConfirmacion('+o.id+',true)'));
           if(o.estado==='Coordinada'&&o.confirmacion!=='A confirmar'){
@@ -1743,7 +1784,9 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
     const acc=[`<div class="ord-actions">${inline.join('')}${kebab}</div>`];
     const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);
     const dsc=diasSinCerrar(o);
-    return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(reclamoNroDe(o))}</strong>${o.sinOrden?' <span class="badge e-cond" title="Reclamo sin orden vinculada: no hay entrega original en el sistema">sin orden</span>':''}${(o.esReclamo&&!o.sinOrden)?` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`:''}${o.verificado?' ✓':''} <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td><b>${money(cobro)}</b></td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${sinProgramar(o)?' <span class="badge e-cond" title="Todavía no se definió qué se va a hacer ni cuándo">📝 sin programar</span>':''}${(o.confirmacion==='A confirmar'&&!sinProgramar(o))?' <span class="badge e-cond">A confirmar</span>':''}${pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
+    return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(reclamoNroDe(o))}</strong>${o.sinOrden?' <span class="badge e-cond" title="Reclamo sin orden vinculada: no hay entrega original en el sistema">sin orden</span>':''}${(o.esReclamo&&!o.sinOrden)?(sinProgramar(o)
+      ? ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))}">🚩</span>`
+      : ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`):''}${o.verificado?' ✓':''}${sinProgramar(o)?'':` <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>`}${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td><b>${money(cobro)}</b></td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${(o.confirmacion==='A confirmar'&&!sinProgramar(o))?' <span class="badge e-cond">A confirmar</span>':''}${sinProgramar(o)?'':pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
 function vOrdenes(){
   if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
   const dias=semanaDe(weekRef);
@@ -1797,10 +1840,13 @@ function vOrdenes(){
   const meta=todosLlenos?'<span class="tgt ok">día completo</span>'
     :(metaHoy!=null?`<span class="tgt">${firmes}/~${metaHoy}</span>${sinCupoHoy?`<span class="muted" style="font-size:10px"> · falta poner cupo a ${sinCupoHoy} chofer${sinCupoHoy===1?'':'es'}</span>`:''}`:'');
   let list, usaPag=false, totalSinPag=0;
+  /* Los reclamos sin programar no son viajes todavía: viven en la solapa Reclamos. */
+  const _sacarSinProgramar=arr=>arr.filter(o=>!sinProgramar(o));
   if(ordVista==='activas'){
     const scope=(ordVend||ordRefuerzo||ordRecl||ordGest)?null:(ordCond?semanaDe(weekRef):[selDay]);list=ordenes.filter(o=>(!scope||scope.includes(o.fecha))&&!o.archivada);
     if(ordRecl)list=list.filter(o=>o.esReclamo);if(ordGest)list=list.filter(enGestion);if(ordVend)list=list.filter(esPedidoVendedor);if(ordRefuerzo)list=list.filter(o=>o.refuerzo&&!o.refuerzo.confirmado);if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
     if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(esProceso)}
+    list=_sacarSinProgramar(list);
   } else if(ordVista==='pendientes'){
     list=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
     if(ordFil.estado)list=list.filter(o=>(esVendedor()?estadoVista(o):o.estado)===ordFil.estado);
@@ -1820,7 +1866,7 @@ function vOrdenes(){
   const nPend=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
   const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
   const esActivas=ordVista==='activas';
-  const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada','En reclamo']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
+  const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
   $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
     ${conmutador}
     ${esActivas?`<div class="daytabs"><button class="weeknav" title="Semana anterior" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">‹</button>${tabsH}<button class="weeknav" title="Semana siguiente" onclick="weekRef=addDays(weekRef,7);vOrdenes()">›</button></div>`:''}</div>
@@ -1873,7 +1919,40 @@ function cancelarSolicitudReapertura(){reaperturaOpen=null;render()}
 function enviarSolicitudReapertura(id){const o=ordenes.find(x=>x.id===id);const nota=$('t_reapertura')?$('t_reapertura').value.trim():'';
   if(!nota){reaperturaErrorId=id;render();const el=$('t_reapertura');if(el)el.focus();return}
   reaperturaErrorId=null;o.reaperturaSolicitada={motivo:nota,fecha:new Date().toISOString(),chofer:fleteActual};reaperturaOpen=null;render()}
-function fleteProblema(id){autoSalida(id);reclamoOpen=id;reclamoFotoTmp='';render()}
+/* El chofer está parado en la puerta con el mueble en la mano: no es momento de escribir.
+   Un toque y listo. Lo que pasó lo averigua Cintia después, hablando con el cliente.
+   NO toca el estado del viaje: puede marcar Entregada y Problema al mismo tiempo. */
+function fleteProblema(id){
+  const o=ordenes.find(x=>x.id===id); if(!o)return;
+  const base=o.esReclamo?(ordenes.find(x=>x.id===(o.reclamoDe&&o.reclamoDe.ordenId))||o):o;
+  const abiertos=reclamosDeBoleta(base.boleta).filter(r=>r.estado!=='Cerrado'&&r.estado!=='Cancelado');
+  if(abiertos.length){showToast('Ya hay un reclamo abierto para esta entrega — Cintia lo está viendo.','info',5000);return}
+  const r=crearReclamoRegistrado(base,'chofer');
+  registrarAuditoria('Avisar problema (reclamo '+reclamoNroDe(r)+')',base);
+  showToast('Aviso enviado. Cintia se va a comunicar para ver qué pasó.','success',5200);
+  render();
+}
+/* Crea un reclamo ya registrado, sin pasar por el formulario. */
+function crearReclamoRegistrado(base,origen){
+  const nuevo={
+    id:nid(), esReclamo:true, estado:'Registrado', confirmacion:'A confirmar',
+    boleta:base.boleta, reclamoSeq:reclamosDeBoleta(base.boleta).length+1,
+    reclamoDe:{ordenId:base.id,boleta:base.boleta,fecha:base.fecha,flete:base.flete||fleteAutoLabel(base),tipo:base.tipo,zona:base.zona||'',cliente:base.cliente||''},
+    tipo:base.tipo==='Movimiento Interno'?'Envío':base.tipo, movim:'traemos',
+    fecha:'', horario:'', flete:'',
+    cliente:base.cliente||'', tel1:base.tel1||'', tel2:base.tel2||'',
+    localidad:base.localidad||'', zona:base.zona||'', direccion:base.direccion||'', pisodepto:base.pisodepto||'',
+    retiroLocal:base.retiroLocal||'', lineas:(base.lineas||[]).map(l=>({...l})),
+    quePaso:'', solucionNota:'', comentario:'', observaciones:'',
+    total:0, pagos:0, pagosList:[], costo_flete:0, instalacion:0, escalera:0,
+    costo_flete_estado:'cobrar', instalacion_estado:'cobrar', escalera_estado:'cobrar',
+    pagaReclamo:'bh', verificado:false,
+    abiertoPor:origen, cargadoPor:whoLabel(), cargadoRol:role, cargadoFecha:new Date().toISOString()
+  };
+  ordenes.push(nuevo);
+  return nuevo;
+}
+function abiertoPorChofer(o){return esOrdenReclamo(o)&&o.abiertoPor==='chofer'}
 function onReclamoFoto(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{reclamoFotoTmp=r.result;const pv=$('fotoPrev');if(pv)pv.innerHTML='<img src="'+reclamoFotoTmp+'" style="max-width:120px;border-radius:6px;margin-left:8px;vertical-align:middle">'};r.readAsDataURL(f)}
 function enviarReclamo(id){const o=ordenes.find(x=>x.id===id);o.reclamoNota=$('t_reclamo')?$('t_reclamo').value.trim():'';if(reclamoFotoTmp)o.reclamoFoto=reclamoFotoTmp;o.estadoPrev=o.estado;setEstado(o,'En reclamo',{accion:'Problema en la entrega',motivo:o.reclamoNota||''});reclamoOpen=null;reclamoFotoTmp='';render()}
 function editarComentario(id){const o=ordenes.find(x=>x.id===id);const actual=o.comentario||'';const nuevo=prompt('Comentario para el flete (dejalo vacío para borrarlo):',actual);if(nuevo===null)return;const limpio=nuevo.trim();if(limpio===actual)return;o.comentarioHist=o.comentarioHist||[];o.comentarioHist.push({texto:actual||'(vacío)',fecha:new Date().toISOString()});o.comentario=limpio;render()}
@@ -1985,7 +2064,7 @@ function puedeConfirmarRefuerzo(){return role==='logistica'||esDireccion()}
 /* Sobre qué órdenes tiene sentido cargar un refuerzo: las que están "a confirmar"
    o las que todavía tienen saldo a abonar. Si Lucas la dejó SIN saldo, no se carga plata.
    (Si ya tiene un refuerzo cargado, se deja ver/editar igual.) */
-function refuerzoAplica(o){return o.confirmacion==='A confirmar' || cobroBH(o)>0 || !!o.refuerzo}
+function refuerzoAplica(o){if(sinProgramar(o))return false;return o.confirmacion==='A confirmar' || cobroBH(o)>0 || !!o.refuerzo}
 function refuerzoCell(o){
   const btn=(puedeCargarRefuerzo()&&refuerzoAplica(o))?`<button class="btn btn-ghost refuerzo-btn" title="Cargar/ver refuerzo de seña (vino a reforzar y pagó en el local)" onclick="abrirModalRefuerzo(${o.id})">💲</button>`:'';
   return btn+refuerzoBadge(o);
@@ -2027,7 +2106,7 @@ function confirmarReprogramar(){const m=modalActivo;const o=ordenes.find(x=>x.id
   const motivo=m.motivo==='Otros'?m.otro.trim():m.motivo;if(!motivo){modalActivo.motivoError=true;renderModal();const el=$('mrp_otro');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}return}
   o.fechaHist=o.fechaHist||[];o.fechaHist.push({de:o.fecha,a:nueva,motivo,fecha:new Date().toISOString()});o.fecha=nueva;cerrarModal();vOrdenes()}
 
-const TODOS_ESTADOS=['Coordinada','En viaje','Entregada','Por rendir','En reclamo','Cerrado','Cancelado'];
+const TODOS_ESTADOS=['Coordinada','En viaje','Entregada','Por rendir','Cerrado','Cancelado'];
 function abrirModalEstado(oid){const o=ordenes.find(x=>x.id===oid);modalActivo={tipo:'estado',oid,nuevo:o.estado,motivo:''};renderModal()}
 function cuerpoEstado(m){const o=ordenes.find(x=>x.id===m.oid);
   return `<h3>Cambiar estado</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} — estado actual: <b>${esc(o.estado)}</b></p>
@@ -2497,6 +2576,73 @@ function renderAuditoria(){
 
 
 /* ============ RUTA (flete) ============ */
+let reclVista='abiertos'; let reclQ='';
+function setReclVista(v){reclVista=v;vReclamos()}
+function buscarReclamos(){const el=$('rec_q');if(!el)return;const pos=el.value.length;reclQ=el.value;vReclamos();const e2=$('rec_q');if(e2){e2.focus();e2.setSelectionRange(pos,pos)}}
+function listaReclamos(){
+  const t=reclQ.trim().toLowerCase();
+  return ordenes.filter(o=>o.esReclamo&&!o.archivada)
+    .filter(o=>reclVista==='todos'?true:(o.estado!=='Cerrado'&&o.estado!=='Cancelado'))
+    .filter(o=>!t||[o.boleta,o.cliente,o.tel1,o.direccion,o.localidad,o.quePaso].map(x=>String(x||'').toLowerCase()).some(x=>x.includes(t)))
+    .sort((a,b)=>{
+      /* Primero los que están hace más tiempo sin resolverse: son los que enojan al cliente. */
+      const pa=sinProgramar(a)?0:1, pb=sinProgramar(b)?0:1;
+      if(pa!==pb)return pa-pb;
+      return diasAbierto(b)-diasAbierto(a);
+    });
+}
+function filaReclamo(o){
+  const dias=diasAbierto(o);
+  const alarma=dias>=7;
+  const nm=sum((o.lineas||[]).map(l=>l.cant));
+  const mu=(o.lineas||[]).map(l=>l.cant+'× '+l.desc).join(' · ');
+  const orig=o.sinOrden?'<span class="muted">sin orden vinculada</span>'
+    :`<b>${esc(o.reclamoDe?o.reclamoDe.boleta:o.boleta)}</b><br><span class="muted" style="font-size:12px">${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} · ${esc(o.reclamoDe&&o.reclamoDe.flete||'—')}</span>`;
+  const acc=[];
+  if(sinProgramar(o)&&puedeCargar())acc.push(iconBtn('btn-primary','🚚','Programar el viaje de este reclamo','programarReclamo('+o.id+')'));
+  acc.push(iconBtn('btn-ghost','✎','Editar el reclamo',`editId=${o.id};draft=null;setTab('cargar')`));
+  if(puedeVerHistorial()&&o.estadoHist&&o.estadoHist.length)acc.push(iconBtn('btn-ghost','🕑','Ver el historial','abrirModalEstadoHist('+o.id+')'));
+  if(!sinProgramar(o))acc.push(iconBtn('btn-ghost','📋','Ver el viaje en Órdenes',`irOrdenes({day:'${o.fecha}'})`));
+  if(puedeEliminar())acc.push(iconBtn('btn-danger','🗑','Eliminar el reclamo','eliminarViaje('+o.id+')'));
+  return `<tr class="${alarma?'rprob':''}">
+    <td style="white-space:nowrap"><b>${esc(reclamoNroDe(o))}</b>${abiertoPorChofer(o)?' <span class="badge e-cond" title="Lo avisó el chofer desde el domicilio — hay que llamar al cliente">🚚 avisó el chofer</span>':''}</td>
+    <td>${orig}</td>
+    <td>${esc(o.cliente||'—')}${o.tel1?`<br><span class="muted" style="font-size:12px">${esc(o.tel1)}</span>`:''}${o.localidad?`<br><span class="muted" style="font-size:12px">${esc(o.localidad)}</span>`:''}</td>
+    <td style="max-width:280px">${o.quePaso?esc(o.quePaso):'<span class="muted">— sin cargar, hay que llamar al cliente</span>'}</td>
+    <td title="${esc(mu)}">${nm}${nm?` <span class="muted" style="font-size:12px">${esc(mu.slice(0,60))}${mu.length>60?'…':''}</span>`:''}</td>
+    <td style="text-align:center;white-space:nowrap"><b style="${alarma?'color:#b42318':''}">${dias}</b> <span class="muted" style="font-size:12px">día${dias===1?'':'s'}</span></td>
+    <td><span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></td>
+    <td style="text-align:right;white-space:nowrap">${acc.join('')}</td>
+  </tr>`;
+}
+function vReclamos(){
+  const list=listaReclamos();
+  const abiertos=ordenes.filter(o=>o.esReclamo&&!o.archivada&&o.estado!=='Cerrado'&&o.estado!=='Cancelado');
+  const sinProg=abiertos.filter(sinProgramar).length;
+  const viejos=abiertos.filter(o=>diasAbierto(o)>=7).length;
+  $('view').innerHTML=`
+  <div class="card"><div class="section-title"><h2>Reclamos</h2>
+    <div class="row-actions">${puedeCargar()?'<button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}</div></div>
+    <p class="muted" style="margin:-4px 0 12px">El caso, no el viaje. Cuando un reclamo tenga viaje programado también vas a verlo en Órdenes.</p>
+    <div class="cdtot">
+      <div class="stat"><div style="font-size:13px;font-weight:700;color:${abiertos.length?'#b42318':'#8a94a3'}">🚩 Abiertos</div><div class="value" style="color:${abiertos.length?'#b42318':'#0f1a2a'}">${abiertos.length}</div></div>
+      <div class="stat"><div style="font-size:13px;font-weight:700;color:${sinProg?'#b45309':'#8a94a3'}">📝 Sin programar</div><div class="value" style="color:${sinProg?'#b45309':'#0f1a2a'}">${sinProg}</div><div style="font-size:12px;color:#8a94a3">falta definir qué se hace</div></div>
+      <div class="stat"><div style="font-size:13px;font-weight:700;color:${viejos?'#b42318':'#8a94a3'}">⏳ Hace 7 días o más</div><div class="value" style="color:${viejos?'#b42318':'#0f1a2a'}">${viejos}</div><div style="font-size:12px;color:#8a94a3">el cliente está esperando</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ordfilters"><div class="macrotog">
+      <button class="${reclVista==='abiertos'?'on':''}" onclick="setReclVista('abiertos')">Abiertos</button>
+      <button class="${reclVista==='todos'?'on':''}" onclick="setReclVista('todos')">Todos</button>
+    </div>
+    <input id="rec_q" value="${esc(reclQ)}" placeholder="Buscar por número, cliente, teléfono o qué pasó…" style="min-width:280px;border:1px solid #d0d7e2;border-radius:8px;padding:9px 11px;font:inherit" oninput="buscarReclamos()"></div>
+    <p class="muted" style="margin:10px 0 0">${list.length} reclamo${list.length===1?'':'s'}</p>
+    ${list.length?`<div class="table-wrap"><table><thead><tr>
+      <th>Reclamo</th><th>Entrega original</th><th>Cliente</th><th>Qué pasó</th><th>Muebles</th><th style="text-align:center">Abierto</th><th>Estado</th><th></th>
+    </tr></thead><tbody>${list.map(filaReclamo).join('')}</tbody></table></div>`
+    :'<p class="muted" style="margin:14px 0">No hay reclamos que mostrar acá.</p>'}
+  </div>`;
+}
 function vRuta(){const esHoyR=rutaDia===HOY;const _l=ordenes.filter(o=>o.fecha===rutaDia&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);autoOrdenarSiHaceFalta(_l);const list=rutaOrdenada(_l);
   const cardsHoy=!list.length?`<div class="card"><div class="empty">No tenés viajes ${esHoyR?'hoy':'ese día'}.</div></div>`:list.map((o,idx)=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
     return `<div class="flete-card"><div class="paradahead"><span class="ph-left">${badgeParada(idx,list.length)}<span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></span>${flechasParada(o,idx,list.length,'vRuta')}</div><h3 class="cliente-h3">${esc(o.cliente)}</h3><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div>${avisoHorario(o)}${o.esReclamo?`<div class="ruta-reclamo"><b>🚩 ${esc(reclamoNroDe(o))} · ${esc(movimData(o)[1])}</b>${o.solucionNota?`<div>${esc(o.solucionNota)}</div>`:''}<div class="rr-paga">${o.confirmacion==='A confirmar'?'⏳ Todavía sin confirmar — no salgas con este viaje':(reclamoSinCargo(o)||cobroDestino(o)<=0?'✓ NO COBRAR — se hace cargo '+esc((pagaData(o)||['','Belgrano Home'])[1]):'💲 COBRAR '+money(cobroDestino(o))+' — paga '+esc((pagaData(o)||['','el cliente'])[1]))}</div></div>`:''}<ul style="margin:8px 0 0;padding-left:18px">${m}</ul>${o.comentario?`<div class="probnote" style="margin:8px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</div>`:''}<div class="cobro-big">A cobrar: ${money(cobro)}</div>${o.estado==='Entregada'?(o.reaperturaSolicitada?`<div class="probnote" style="margin:8px 0;background:#eef2ff;border-color:#c7d2fe;color:#3730a3">Le avisaste a Lucas: "${esc(o.reaperturaSolicitada.motivo)}" — esperando que la reabra.</div>`:(reaperturaOpen===o.id?`<div class="reclform"><textarea id="t_reapertura" class="${reaperturaErrorId===o.id?'field-error':''}" oninput="this.classList.remove('field-error');const em=document.getElementById('t_reapertura_err');if(em)em.style.display='none'" placeholder="Contá qué pasó: la marqué por error, todavía no la entregué, etc."></textarea>${reaperturaErrorId===o.id?`<div id="t_reapertura_err" class="field-error-msg">Contá brevemente qué pasó, así Lucas entiende por qué pedís reabrirla.</div>`:''}<div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarSolicitudReapertura(${o.id})">Confirmar solicitud a Lucas</button><button class="btn btn-ghost btn-sm" onclick="cancelarSolicitudReapertura()">Cancelar</button></div></div>`:`<div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="solicitarReapertura(${o.id})">¿La marcaste por error? Avisarle a Lucas</button></div>`)):''}${o.estado==='En reclamo'?`<div class="probnote" style="margin:8px 0">Problema: ${esc(o.reclamoNota||'(sin nota)')}${o.reclamoFoto?`<br><img src="${o.reclamoFoto}" style="max-width:150px;border-radius:6px;margin-top:6px">`:''}</div>`:''}${reclamoOpen===o.id?`<div class="reclform"><textarea id="t_reclamo" placeholder="Contá qué pasó: cliente no estaba, no entró el mueble, vino roto…">${esc(o.reclamoNota||'')}</textarea><div class="row-actions"><label class="btn btn-ghost btn-sm" style="cursor:pointer">Adjuntar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onReclamoFoto(this)"></label><span id="fotoPrev"></span></div><div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarReclamo(${o.id})">Enviar problema</button><button class="btn btn-ghost btn-sm" onclick="reclamoOpen=null;reclamoFotoTmp='';render()">Cancelar</button></div></div>`:`<div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a>${btnWhatsapp(o)}${(o.estado==='En viaje'||o.estado==='Coordinada')?(puedeSalir(o)==='ok'||o.estado==='En viaje'?`<button class="btn btn-ok btn-sm" onclick="marcarEntregada(${o.id})">Entregada</button><button class="btn btn-danger btn-sm" onclick="fleteProblema(${o.id})">Problema</button>`:`<span class="btn btn-ghost btn-sm" style="flex:2;justify-content:center;opacity:.65;cursor:default" title="${esc(puedeSalir(o))}">${esc(puedeSalir(o))}</span>`):''}</div>`}</div>`}).join('');
