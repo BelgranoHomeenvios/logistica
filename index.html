@@ -420,9 +420,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-03:30</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-05:00</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-03:30</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-05:00</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -808,6 +808,63 @@ function programarReclamo(id){
   draft.modoReclamo='programar'; draft.paso=1;
   if(!draft.fecha)draft.fecha='';
   tab='cargar'; render();
+}
+/* Qué le pasó a la orden que ya existe con ese número, dicho como lo diría una persona. */
+function queLePasoA(o){
+  const d=fmtDiaSem(o.fecha);
+  const m={
+    'Por completar':'está cargada pero sin completar',
+    'Coordinada':'ya tiene un envío programado para el '+d,
+    'En viaje':'ya salió el '+d+' — está en la calle',
+    'Entregada':'ya se entregó el '+d,
+    'Por rendir':'ya se entregó el '+d+' y está por rendir',
+    'Cerrado':'ya se entregó y se cerró el '+d
+  };
+  return m[o.estado]||('está en '+o.estado+' del '+d);
+}
+function mismasBoletas(boleta,exceptoId){
+  const b=String(boleta||'').trim();
+  if(!b)return[];
+  return ordenes.filter(o=>String(o.boleta)===b&&!o.esReclamo&&!o.archivada&&o.estado!=='Cancelado'&&o.id!==exceptoId);
+}
+/* Se dispara al salir del campo del N° de orden. */
+function chequearBoleta(){
+  if(!draft||draft.esReclamo||draft._boletaOk)return;
+  const el=$('w_bol'); if(el)draft.boleta=el.value.trim();
+  const otras=mismasBoletas(draft.boleta,editId);
+  if(!otras.length)return;
+  modalActivo={tipo:'yaExiste',boleta:draft.boleta,ids:otras.map(o=>o.id),desdeGuardar:false};
+  renderModal();
+}
+function cuerpoYaExiste(m){
+  const otras=m.ids.map(id=>ordenes.find(o=>o.id===id)).filter(Boolean);
+  const filas=otras.map(o=>{
+    const nm=sum((o.lineas||[]).map(l=>l.cant));
+    const saldo=cobroBH(o);
+    return `<div class="bsr-row" style="cursor:default">
+      <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')} <span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div>
+      <div style="font-size:13px;margin-top:2px">${esc(queLePasoA(o))}</div>
+      <div class="muted" style="font-size:12.5px">${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''} · ${esc(o.flete||'sin chofer')} · ${nm} mueble${nm===1?'':'s'}${saldo>0?' · debe '+money(saldo):''}</div>
+    </div>`;
+  }).join('');
+  return `<h3>El N° ${esc(m.boleta)} ya existe</h3>
+  <p style="margin:4px 0 10px" class="muted">Fijate si es la misma antes de seguir.</p>
+  <div class="bsr-list">${filas}</div>
+  <div class="modal-actions" style="flex-wrap:wrap">
+    <button class="btn btn-ghost" onclick="verLaQueExiste(${otras.length?otras[0].id:0})">Ver la que existe</button>
+    <button class="btn btn-primary" onclick="esOtroViaje()">Es otro viaje</button>
+  </div>`;
+}
+function esOtroViaje(){
+  const m=modalActivo; if(draft)draft._boletaOk=true;
+  cerrarModal();
+  if(m&&m.desdeGuardar)guardarDraft(m.parcial); else vCargar();
+}
+function verLaQueExiste(id){
+  cerrarModal(); draft=null; editId=null;
+  const o=ordenes.find(x=>x.id===id);
+  irOrdenes(o?{day:o.fecha}:{});
+  if(o)showToast('Esta es la orden '+esc(o.boleta)+' que ya estaba cargada.','info',5000);
 }
 function reclamoCtxHTML(){
   const r=draft.reclamoDe; if(!r)return'';
@@ -1447,7 +1504,7 @@ function vCargar(){
     <button type="button" class="btn btn-ghost btn-sm" onclick="readStep();draft.lineas.push({cant:1,desc:'',local:'2020'});vCargar()">+ Agregar mueble</button>`;
   }
   else if(P===1)body=`<div class="sub-h">${draft.esReclamo?'Estado del reclamo':'Estado de la reserva'}</div>${esVendedor()?'<div class="avisoVend">⏳ <b>Queda A CONFIRMAR por Logística.</b> Reservás el día para el cliente; Lucas confirma si entra en la capacidad de esa fecha.</div>':`<div class="macrotog" style="margin-bottom:16px"><button type="button" class="${draft.confirmacion==='Confirmada'?'on':''}" onclick="setConfirm('Confirmada')">✓ Confirmada</button><button type="button" class="${draft.confirmacion==='A confirmar'?'on':''}" onclick="setConfirm('A confirmar')">⏳ A confirmar</button></div>${draft.confirmacion==='A confirmar'?'<p class="muted" style="margin:-10px 0 16px">Se reserva el día pero la entrega queda condicionada — no se va a poder despachar hasta que la confirmes.</p>':''}`}${(draft.esReclamo&&!draft.sinOrden)?reclamoCtxHTML():''}${draft.sinOrden?'<div class="reclamo-ctx" style="background:#f4f6f9;border-color:#dbe1e8"><div style="min-width:100%"><b>Sin orden vinculada</b><span style="font-size:12.5px;font-weight:400;color:#5a6473">No hay entrega original en el sistema. Cargá los datos del cliente en el paso siguiente.</span></div></div>':''}<div class="sub-h">${draft.esReclamo?'Datos del viaje de reclamo':'Datos de la orden'}</div><div class="form-grid">
-    <label class="field"><span class="lbl">N° de orden</span><input id="w_bol" class="${invc('boleta').trim()}" value="${esc(draft.boleta)}" ${(draft.esReclamo&&!draft.sinOrden)?'readonly title="Se hereda de la entrega original — no se edita" style="background:#f2f5f9;color:#5a6473;cursor:not-allowed"':''} ${draft.sinOrden?'placeholder="Dejalo vacío si no lo tenés"':''}></label>
+    <label class="field"><span class="lbl">N° de orden</span><input id="w_bol" class="${invc('boleta').trim()}" value="${esc(draft.boleta)}" onblur="chequearBoleta()" ${(draft.esReclamo&&!draft.sinOrden)?'readonly title="Se hereda de la entrega original — no se edita" style="background:#f2f5f9;color:#5a6473;cursor:not-allowed"':''} ${draft.sinOrden?'placeholder="Dejalo vacío si no lo tenés"':''}></label>
     <label class="field"><span class="lbl">${draft.esReclamo?'Día del viaje <span class="hint">(lo pone Lucas)</span>':'Día de entrega'}</span><input type="date" id="w_fec" class="${invc('fecha').trim()}" value="${draft.fecha}"></label>
     <label class="field"><span class="lbl">Tipo de envío</span><select id="w_tipo" onchange="setTipo(this.value)">${draft.esReclamo?optsReclamo(draft.tipo):opts(TIPOS,draft.tipo)}</select></label>
     ${draft.esReclamo?`<label class="field"><span class="lbl">¿Qué se hace en el viaje?</span><select id="w_movim" onchange="setMovim(this.value)">${MOVIM_RECLAMO.map(mv=>`<option value="${mv[0]}" ${draft.movim===mv[0]?'selected':''}>${mv[1]}</option>`).join('')}</select></label>`:''}
@@ -1518,11 +1575,11 @@ function refreshExp(){const el=$('w_expsaldo');if(el)el.innerHTML=expSaldoHTML()
 function guardarDraft(parcial){readStep();const t=draft.tipo;
   if(!draft.boleta&&draft.sinOrden)draft.boleta=proximoNroSinOrden();
   if(!draft.boleta){draft._inval=['boleta'];vCargar();showToast('Necesitás cargar el N° de orden antes de guardar.','error');return}
-  if(!editId&&!draft.esReclamo){
-    const dup=ordenes.find(x=>x.boleta===draft.boleta&&!x.esReclamo&&x.estado!=='Cancelado');
-    if(dup){
-      const info=(dup.cliente||'(sin cliente cargado)')+' · '+dup.estado+(dup.flete?' · '+dup.flete:'')+' · '+fmt(dup.fecha);
-      if(!confirm('Ya existe una orden activa con la boleta '+draft.boleta+':\n\n'+info+'\n\n¿Es realmente un envío nuevo?\n\nAceptar = seguir y guardar esta como una orden distinta.\nCancelar = no guardar — quizás esto es un reclamo de esa entrega y conviene marcarla así en vez de duplicarla.'))return;
+  if(!editId&&!draft.esReclamo&&!draft._boletaOk){
+    const otras=mismasBoletas(draft.boleta,null);
+    if(otras.length){
+      modalActivo={tipo:'yaExiste',boleta:draft.boleta,ids:otras.map(o=>o.id),desdeGuardar:true,parcial:!!parcial};
+      renderModal();return;
     }
   }
   if(draft.modoReclamo!=='registro'&&diasCerrados[draft.fecha]){showToast('Ese día está cerrado para programar. Reabrilo en Órdenes o elegí otro día.','error');return}
@@ -2016,7 +2073,10 @@ function reprogramarOrden(id){abrirModalReprogramar(id)}
 /* ===== Eliminar / archivar viajes (oculto pero recuperable) ===== */
 function puedeEliminar(){return esDireccion()}
 function eliminarViaje(id){const o=ordenes.find(x=>x.id===id);if(!o)return;modalActivo={tipo:'eliminar',id};renderModal()}
-function confirmarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString()};o.eliminSolicitada=null;registrarAuditoria('Eliminar viaje',o);cerrarModal();showToast('Viaje eliminado (queda recuperable desde Configuración).','success');render()}
+function confirmarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;const _r=esOrdenReclamo(o);
+  o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString(),tipo:_r?'reclamo':'viaje'};o.eliminSolicitada=null;
+  registrarAuditoria(_r?('Eliminar reclamo '+reclamoNroDe(o)):'Eliminar viaje',o);
+  cerrarModal();showToast(_r?'Reclamo eliminado — la entrega original quedó intacta. Es recuperable desde Configuración.':'Viaje eliminado (queda recuperable desde Configuración).','success',5200);render()}
 function solicitarEliminar(id){modalActivo={tipo:'solicitarElim',id};renderModal()}
 function confirmarSolicitarEliminar(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.id);if(!o)return;const mot=($('t_solelim')?$('t_solelim').value.trim():'');if(!mot){const em=$('t_solelim_err');if(em)em.style.display='';return}o.eliminSolicitada={por:whoLabel(),motivo:mot,fecha:new Date().toISOString()};registrarAuditoria('Solicitar eliminación',o,mot);cerrarModal();showToast('Solicitud de eliminación enviada a Dirección.','success');render()}
 function aprobarEliminar(id){const o=ordenes.find(x=>x.id===id);if(!o)return;o.archivada=true;o.archivadaInfo={por:whoLabel(),fecha:new Date().toISOString(),motivo:o.eliminSolicitada?o.eliminSolicitada.motivo:''};o.eliminSolicitada=null;registrarAuditoria('Aprobar eliminación',o);showToast('Viaje eliminado.','success');render()}
@@ -2030,7 +2090,7 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='yaExiste')return cuerpoYaExiste(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
 /* ===== Refuerzo de seña =====
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
@@ -2123,9 +2183,17 @@ function puedeConfirmarRefuerzo(){return role==='logistica'||esDireccion()}
 function refuerzoAplica(o){if(esOrdenReclamo(o))return false;return o.confirmacion==='A confirmar' || cobroBH(o)>0 || !!o.refuerzo}
 function refuerzoCell(o){return refuerzoBadge(o)}
 function cuerpoEliminar(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';const _r=esOrdenReclamo(o);
+  if(_r){
+    const ent=o.sinOrden?null:(o.reclamoDe||null);
+    return `<h3>Eliminar el reclamo ${esc(reclamoNroDe(o))}</h3>
+    <p class="modal-sub">${esc(o.cliente||'')}${ent?' · sobre la entrega '+esc(ent.boleta):' · sin orden vinculada'}</p>
+    <p style="font-size:14px;color:#5b6472;line-height:1.5">Se elimina <b>solamente el reclamo</b>.${ent?` La entrega original <b>${esc(ent.boleta)}</b> del ${esc(fmt(ent.fecha))} <b>no se toca</b>: sigue igual, con su cobranza y su rendición.`:' No hay entrega vinculada.'}</p>
+    <p style="font-size:14px;color:#5b6472;line-height:1.5"><b>Queda recuperable</b> desde Configuración por si te arrepentís.</p>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar el reclamo</button></div>`;
+  }
   return `<h3>Eliminar viaje</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472;line-height:1.5">El viaje se saca de todas las vistas, conteos y estadísticas. <b>Queda recuperable</b> desde Configuración por si te arrepentís.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar viaje</button></div>`}
-function cuerpoSolicitarElim(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';
-  return `<h3>Solicitar eliminación</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472">Contá por qué habría que eliminarla. Dirección la revisa y decide.</p><textarea id="t_solelim" placeholder="Ej: la cargué por error / está duplicada / me equivoqué de cliente" style="width:100%;min-height:80px;padding:10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit"></textarea><div id="t_solelim_err" class="field-error-msg" style="display:none">Escribí el motivo así Dirección entiende por qué.</div><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarSolicitarEliminar()">Enviar solicitud</button></div>`}
+function cuerpoSolicitarElim(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';const _r=esOrdenReclamo(o);
+  return `<h3>Solicitar eliminación${_r?' del reclamo':''}</h3><p class="modal-sub">${_r?('Reclamo '+esc(reclamoNroDe(o))+(o.reclamoDe?' · la entrega '+esc(o.reclamoDe.boleta)+' no se toca':'')):('Orden N° '+esc(o.boleta))} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472">Contá por qué habría que eliminarla. Dirección la revisa y decide.</p><textarea id="t_solelim" placeholder="Ej: la cargué por error / está duplicada / me equivoqué de cliente" style="width:100%;min-height:80px;padding:10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit"></textarea><div id="t_solelim_err" class="field-error-msg" style="display:none">Escribí el motivo así Dirección entiende por qué.</div><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarSolicitarEliminar()">Enviar solicitud</button></div>`}
 function cuerpoImprimirSemana(m){
   const todos=m.sel.size===m.choferes.length;
   return `<h3>Imprimir separación de la semana</h3><p class="modal-sub">Elegí qué choferes querés imprimir. Se arma una hoja por día, con los muebles que Sebas tiene que separar para cada uno.</p>
@@ -2778,7 +2846,7 @@ function vConfig(){const chips=(arr,fn)=>arr.length?arr.map((v,i)=>`<span class=
   <div class="card"><h3>Subida por escalera</h3><p class="muted">Valor por defecto que se precarga en cada orden nueva (envío o retiro, por piso × bulto). Se puede modificar puntualmente en cada orden si se pactó otra cosa con el cliente.</p><div class="addrow"><input id="cfg_esc" inputmode="numeric" value="${moneyFmt(ESCALERA_DEF)}" oninput="moneyIn(this)"><button class="btn btn-primary btn-sm" onclick="setEscaleraDef()">Guardar</button></div></div>
   <div class="card"><h3>Locales de origen</h3><div class="chips">${chips(LOCALES,'delLocal')}</div><div class="addrow"><input id="cfg_local" placeholder="Nuevo local"><button class="btn btn-primary btn-sm" onclick="addCfg('local')">Agregar</button></div></div>
   <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>
-  ${(()=>{const arch=ordenes.filter(o=>o.archivada).sort((a,b)=>(b.archivadaInfo&&b.archivadaInfo.fecha||'').localeCompare(a.archivadaInfo&&a.archivadaInfo.fecha||''));if(!arch.length)return '<div class="card"><h3>Viajes eliminados</h3><p class="muted">No hay viajes eliminados. Cuando elimines uno, va a aparecer acá y vas a poder recuperarlo.</p></div>';return `<div class="card"><h3>Viajes eliminados (${arch.length})</h3><p class="muted">Están fuera de todas las vistas y conteos. Podés recuperarlos si hizo falta.</p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Cliente</th><th>Eliminado por</th><th>Motivo</th><th></th></tr></thead><tbody>${arch.map(o=>`<tr><td>${fmt(o.fecha)}</td><td><b>${esc(o.boleta)}</b></td><td>${esc(o.cliente||'')}</td><td>${esc(o.archivadaInfo&&o.archivadaInfo.por||'—')}</td><td class="muted">${esc(o.archivadaInfo&&o.archivadaInfo.motivo||'—')}</td><td><button class="btn btn-ghost btn-sm" onclick="recuperarViaje(${o.id})">Recuperar</button></td></tr>`).join('')}</tbody></table></div></div>`})()}`}
+  ${(()=>{const arch=ordenes.filter(o=>o.archivada).sort((a,b)=>(b.archivadaInfo&&b.archivadaInfo.fecha||'').localeCompare(a.archivadaInfo&&a.archivadaInfo.fecha||''));if(!arch.length)return '<div class="card"><h3>Viajes eliminados</h3><p class="muted">No hay viajes eliminados. Cuando elimines uno, va a aparecer acá y vas a poder recuperarlo.</p></div>';return `<div class="card"><h3>Viajes eliminados (${arch.length})</h3><p class="muted">Están fuera de todas las vistas y conteos. Podés recuperarlos si hizo falta.</p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Cliente</th><th>Eliminado por</th><th>Motivo</th><th></th></tr></thead><tbody>${arch.map(o=>`<tr><td>${fmt(o.fecha)}</td><td><b>${esc(reclamoNroDe(o))}</b>${o.esReclamo?' <span class="badge e-reclamo">reclamo</span>':''}</td><td>${esc(o.cliente||'')}</td><td>${esc(o.archivadaInfo&&o.archivadaInfo.por||'—')}</td><td class="muted">${esc(o.archivadaInfo&&o.archivadaInfo.motivo||'—')}</td><td><button class="btn btn-ghost btn-sm" onclick="recuperarViaje(${o.id})">Recuperar</button></td></tr>`).join('')}</tbody></table></div></div>`})()}`}
 function setEscaleraDef(){const v=moneyParse($('cfg_esc').value);ESCALERA_DEF=v||0;sbGuardarConfig();vConfig()}
 function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);sbGuardarConfig();vConfig()}
 function delTipo(i){TIPOS.splice(i,1);sbGuardarConfig();vConfig()}
