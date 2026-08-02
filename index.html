@@ -420,9 +420,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-05:00</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-17:00</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-05:00</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-17:00</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -981,7 +981,7 @@ function buscarRefuerzoInput(){
 function candidatasRefuerzo(q){
   const t=String(q||'').trim().toLowerCase();
   if(t.length<2)return[];
-  return ordenes.filter(o=>!o.esReclamo&&!o.archivada&&o.estado!=='Cancelado'&&o.estado!=='Cerrado'&&cobroBH(o)>0)
+  return ordenes.filter(o=>!o.esReclamo&&!o.archivada&&o.estado!=='Cancelado')
     .map(o=>({o,m:porQueCoincide(o,t)}))
     .filter(x=>x.m)
     .sort((a,b)=>a.m.r!==b.m.r?a.m.r-b.m.r:String(b.o.fecha).localeCompare(String(a.o.fecha)))
@@ -994,16 +994,17 @@ function cuerpoBuscarRefuerzo(m){
     const pend=o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado;
     return `<div class="bsr-row" onclick="${pend?`abrirModalConfirmRefuerzo(${o.id})`:`abrirModalRefuerzo(${o.id})`}">
       <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')}
-        ${(o._match&&o._match.r===0)?'<span class="badge e-entreg">coincidencia exacta</span>':''}
-        ${(o._match&&o._match.txt)?`<span class="muted" style="font-size:11.5px">· ${esc(o._match.txt)}</span>`:''}
-        ${pend?`<span class="badge e-cond" title="Ya tiene un refuerzo esperando confirmación">💲 ya tiene refuerzo</span>`:''}</div>
-      <div class="muted" style="font-size:12.5px">${esc(fmtDiaSem(o.fecha))} · ${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''} · ${esc(o.estado)}</div>
-      <div style="font-size:13px;margin-top:2px">Debe <b style="color:#b42318">${money(cobroBH(o))}</b></div>
+        ${pend?`<span class="badge e-cond" title="Ya tiene un refuerzo esperando confirmación">💲 ya tiene refuerzo</span>`:''}
+        ${o.estado==='Cerrado'?'<span class="badge e-prob" title="La rendición de esta orden ya se firmó — cargar un refuerzo acá la reabre">⚠ ya cerrada</span>':''}</div>
+      <div class="muted" style="font-size:12.5px">${esc(fmtDiaSem(o.fecha))} · ${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''}</div>
+      <div style="font-size:13px;margin-top:2px">${cobroDestino(o)>0
+        ?`A cobrar <b style="color:#b42318">${money(cobroDestino(o))}</b>${cobroBH(o)!==cobroDestino(o)?` <span class="muted" style="font-size:11.5px">(mercadería ${money(cobroBH(o))} + costos ${money(cobroDestino(o)-cobroBH(o))})</span>`:''}`
+        :'<span class="muted">Sin saldo pendiente</span>'}</div>
     </div>`;
   }).join('');
   const vacio=String(m.q||'').trim().length<2
     ? '<p class="muted" style="margin:12px 0">Escribí al menos 2 letras. Buscá por número de orden, nombre, teléfono o dirección.</p>'
-    : (res.length?'':'<p class="muted" style="margin:12px 0">No encontré ninguna orden con saldo pendiente que coincida. Si ya está todo cobrado, no hay nada para reforzar.</p>');
+    : (res.length?'':'<p class="muted" style="margin:12px 0">No encontré ninguna orden que coincida. Probá con el nombre del cliente o la dirección.</p>');
   return `<h3>Cargar refuerzo</h3>
   <p style="margin:4px 0 10px" class="muted">El cliente vino a reforzar la seña y pagó en el local. Buscá su orden y cargá lo que pagó.</p>
   <input id="bsf_q" value="${esc(m.q||'')}" placeholder="Número, nombre, teléfono o dirección…" style="width:100%;border:1px solid #d0d7e2;border-radius:8px;padding:10px 12px;font:inherit" oninput="buscarRefuerzoInput()">
@@ -1359,6 +1360,18 @@ function vStats(){
 }
 /* ============ TABLERO ============ */
 let tbWeek=HOY;
+let capAbierta=false;   /* la matriz de capacidad arranca plegada: se abre cuando hace falta */
+/* Plegado igual se ve lo esencial: cuántos viajes hay hoy y quiénes están al límite. */
+function resumenCapacidad(){
+  const hoy=ordenes.filter(o=>o.fecha===tbDia&&esProceso(o)&&!sinProgramar(o));
+  const porChofer={};
+  hoy.forEach(o=>{const f=o.flete||'Sin asignar';porChofer[f]=(porChofer[f]||0)+1});
+  const n=Object.keys(porChofer).length;
+  if(!hoy.length)return 'Tocá para ver la ocupación de cada chofer. Hoy no hay viajes cargados.';
+  const top=Object.entries(porChofer).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]+' '+x[1]).join(' · ');
+  return `Tocá para ver la ocupación · ${hoy.length} viaje${hoy.length===1?'':'s'} hoy entre ${n} chofer${n===1?'':'es'} — ${top}`;
+}
+function toggleCapacidad(){capAbierta=!capAbierta;vTablero()}
 let tbDia=HOY;
 let rutaDia=HOY;
 function diaRel(iso){return iso===HOY?'hoy':(iso===addDays(HOY,1)?'mañana':(iso===addDays(HOY,-1)?'ayer':''))}
@@ -1414,8 +1427,9 @@ function vTablero(){
     const sumAct=cf.reduce((a,f)=>a+(matDatos[iso].porCh[f]?matDatos[iso].porCh[f].n:0),0)+ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&o.tipo==='Retiro').length;
     return `<td class="matcell clik" onclick="irOrdenes({day:'${iso}'})"><b class="cupototal" style="margin:0">${sumAct}/${sumCupo}</b></td>`;
   }).join('')}</tr>`;
-  const matriz=`<div class="card"><div class="section-title"><h3>Capacidad por chofer</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${esVendedor()?'<p class="muted" style="margin:-2px 0 10px">Ocupación de cada chofer por día.</p>':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
-    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${esVendedor()?'':filaSin+filaTotal+filaCupoTotal}</tbody></table></div></div>`;
+  const matriz=`<div class="card"><div class="section-title"><h3 class="clik" onclick="toggleCapacidad()" style="user-select:none">${capAbierta?'▾':'▸'} Capacidad por chofer</h3><div class="row-actions" style="${capAbierta?'':'display:none'}"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${!capAbierta?`<p class="muted clik" onclick="toggleCapacidad()" style="margin:-2px 0 0;user-select:none">${resumenCapacidad()}</p>`:''}${!capAbierta?'':esVendedor()?'<p class="muted" style="margin:-2px 0 10px">Ocupación de cada chofer por día.</p>':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
+${!capAbierta?'':`
+    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${esVendedor()?'':filaSin+filaTotal+filaCupoTotal}</tbody></table></div>`}</div>`;
   const _p0=diasNav[0].split('-'),_p5=diasNav[5].split('-');const semLabel='Del '+(+_p0[2])+'/'+(+_p0[1])+' al '+(+_p5[2])+'/'+(+_p5[1])+(diasNav[0]===HOY?' · desde hoy':'');
   
   $('view').innerHTML=`
@@ -1973,7 +1987,7 @@ function vOrdenes(){
   const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
   const esActivas=ordVista==='activas';
   const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
-  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${puedeCargarRefuerzo()?'<button class="btn-cargar-viaje btn-refuerzo" onclick="abrirBuscarRefuerzo()"><span style="font-size:15px;line-height:1">＋</span> Cargar refuerzo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
+  $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
     ${conmutador}
     ${esActivas?`<div class="daytabs"><button class="weeknav" title="Semana anterior" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">‹</button>${tabsH}<button class="weeknav" title="Semana siguiente" onclick="weekRef=addDays(weekRef,7);vOrdenes()">›</button></div>`:''}</div>
     ${(esActivas&&!esVendedor())?`<div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}${(()=>{const cf=[...nombresF].filter(f=>cupoTarget[cupoKey(selDay,'F',f)]!=null);const cr=cupoTarget[cupoKey(selDay,'R','TODOS')]!=null?1:0;if(!cf.length&&!cr)return'';const retTotal=Object.values(porRet).reduce((a,b)=>a+b,0);const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(selDay,'F',f)],0)+(cr?cupoTarget[cupoKey(selDay,'R','TODOS')]:0);const sumAct=cf.reduce((a,f)=>a+(porF[f]||0),0)+retTotal;return ` <span class="cupototal">${sumAct}/${sumCupo}</span>`;})()}</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" title="Abre Google Maps con un punto por cada envío/expreso del día, para repartir por zona" onclick="abrirMapaDelDia('${selDay}')">📍 Ver mapa del día</button><button class="btn btn-ghost btn-sm" title="Bloquea el día para que no se agenden más entregas." onclick="toggleDiaCerrado()">${cerrado?'🔓 Desbloquear el día':'🔒 Bloquear el día'}</button></div></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy, su cupo, y las zonas sin cubrir. ${cerrado?'<b style="color:#b42318">Día bloqueado — no se aceptan más cargas.</b>':'Si cerrás el cupo de todos, el día se bloquea solo.'}</p>
@@ -2097,13 +2111,14 @@ function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoC
    aditivo: no toca el estado ni el ciclo de la orden. */
 function abrirModalRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'refuerzo',oid,monto:'',nota:''};renderModal()}
 function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
-  const saldo=cobroBH(o);const queda=Math.max(0,saldo-(+m.monto||0));
+  const saldo=cobroBH(o);const queda=Math.max(0,saldo-(+m.monto||0));const costos=cobroDestino(o)-saldo;
   return `<h3>Cargar refuerzo</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}${o.direccion?' · '+esc(o.direccion):''}</p>
   <div class="reclamo-ctx" style="background:#f4f6f9;border-color:#dbe1e8">
     <div><b>Total</b><span>${money(o.total||0)}</span></div>
     <div><b>Pagado</b><span>${money(o.pagos||0)}</span></div>
     <div><b>Saldo</b><span style="color:#b42318">${money(saldo)}</span></div>
     <div><b>Queda debiendo</b><span style="color:${queda?'#b42318':'#15803d'}">${money(queda)}</span></div>
+    ${costos>0?`<div><b>Costos en destino</b><span title="Flete, instalación, escalera y peaje — el chofer los cobra aparte">${money(costos)}</span></div>`:''}
   </div>
   <p style="font-size:13.5px;color:#5b6472;line-height:1.5">El cliente vino a reforzar y pagó en el local. Cargá el monto para que Lucas lo vea y lo confirme.</p>
   <label>Monto que pagó</label><input id="mrf_monto" inputmode="numeric" placeholder="$" value="${m.monto?moneyFmt(m.monto):''}" oninput="moneyIn(this);modalActivo.monto=moneyParse(this.value);renderModal();const e=$('mrf_monto');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}">
@@ -2134,7 +2149,7 @@ function cuerpoConfirmRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o||!
   <div class="saldo-big" style="margin-top:8px"><span>Saldo que queda</span><span style="color:${nuevo<0?'#b42318':(nuevo===0?'#15803d':'#16324f')}">${money(nuevo)}</span></div>
   ${nuevo<0?`<p class="hint" style="color:#b42318;margin-top:6px">Pagó de más: quedan ${money(nuevo)} a favor del cliente.</p>`:''}
   <p style="font-size:13px;color:#5b6472;line-height:1.5;margin-top:12px">Si confirmás, el refuerzo se registra como un pago en la orden y el saldo queda actualizado. Si estuvo mal cargado, marcalo como tal.</p>
-  <div class="modal-actions"><button class="btn btn-danger" onclick="rechazarRefuerzo(${o.id})">No confirmar (mal cargado)</button><button class="btn btn-ok" onclick="aplicarConfirmRefuerzo(${o.id})">✓ Confirmar y registrar el pago</button></div>`}
+  <div class="modal-actions"><button class="btn btn-danger" onclick="rechazarRefuerzo(${o.id})">No confirmar</button><button class="btn btn-ok" onclick="aplicarConfirmRefuerzo(${o.id})">✓ Confirmar pago</button></div>`}
 function aplicarConfirmRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo||o.refuerzo.confirmado)return;const r=o.refuerzo;const monto=+r.monto||0;
   const saldoAntes=cobroBH(o);
   // El refuerzo entra como un pago real: se suma a la lista de pagos y recalcula el saldo.
@@ -2173,7 +2188,7 @@ function refuerzosNotaHTML(){if(!editId)return'';const o=ordenes.find(x=>x.id===
   return `<div class="refnota">${vivos.map(h=>`<div>💲 Refuerzo de <b>${money(h.monto)}</b> aplicado como pago — cargado por ${esc(h.por||'')}${h.cargadoTs?' el '+new Date(h.cargadoTs).toLocaleDateString('es-AR'):''}${h.confirmadoPor?', confirmado por '+esc(h.confirmadoPor):''}.${h.nota?` <span class="muted">(${esc(h.nota)})</span>`:''}</div>`).join('')}</div>`}
 /* Quién puede CARGAR un refuerzo: vendedores + soporte (Iara/Cintia) + dirección (Jony/Brian).
    Lucas (logística) no carga, solo confirma. */
-function puedeCargarRefuerzo(){return esVendedor()||role==='soporte'||esDireccion()}
+function puedeCargarRefuerzo(){return esVendedor()||role==='soporte'||role==='logistica'||esDireccion()}
 /* Quién puede CONFIRMAR un refuerzo: solo Lucas (logística) y dirección (Jony/Brian).
    Soporte (Iara/Cintia) NO puede confirmarlos. */
 function puedeConfirmarRefuerzo(){return role==='logistica'||esDireccion()}
@@ -2740,6 +2755,7 @@ function vReclamos(){
   const list=listaReclamos();
   const abiertos=ordenes.filter(o=>o.esReclamo&&!o.archivada&&o.estado!=='Cerrado'&&o.estado!=='Cancelado');
   const sinProg=abiertos.filter(sinProgramar).length;
+  const programados=abiertos.length-sinProg;   /* ya tienen viaje con fecha y chofer */
   const viejos=abiertos.filter(o=>diasAbierto(o)>=7).length;
   $('view').innerHTML=`
   <div class="card"><div class="section-title"><h2>Reclamos</h2>
@@ -2748,6 +2764,7 @@ function vReclamos(){
     <div class="cdtot">
       <div class="stat"><div style="font-size:13px;font-weight:700;color:${abiertos.length?'#b42318':'#8a94a3'}">🚩 Abiertos</div><div class="value" style="color:${abiertos.length?'#b42318':'#0f1a2a'}">${abiertos.length}</div></div>
       <div class="stat"><div style="font-size:13px;font-weight:700;color:${sinProg?'#b45309':'#8a94a3'}">📝 Sin programar</div><div class="value" style="color:${sinProg?'#b45309':'#0f1a2a'}">${sinProg}</div><div style="font-size:12px;color:#8a94a3">falta definir qué se hace</div></div>
+      <div class="stat"><div style="font-size:13px;font-weight:700;color:${programados?'#185FA5':'#8a94a3'}">🚚 Programados</div><div class="value" style="color:${programados?'#185FA5':'#0f1a2a'}">${programados}</div><div style="font-size:12px;color:#8a94a3">ya tienen viaje con fecha</div></div>
       <div class="stat"><div style="font-size:13px;font-weight:700;color:${viejos?'#b42318':'#8a94a3'}">⏳ Hace 7 días o más</div><div class="value" style="color:${viejos?'#b42318':'#0f1a2a'}">${viejos}</div><div style="font-size:12px;color:#8a94a3">el cliente está esperando</div></div>
     </div>
   </div>
