@@ -414,15 +414,36 @@ tr.rprob{background:#fef4f4}
 .bsr-main{font-size:14px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .ruta-reclamo{margin-top:9px;border-left:4px solid #b42318;background:#fdf2f0;border-radius:6px;padding:8px 11px;font-size:13.5px}
 .ruta-reclamo .rr-paga{margin-top:5px;font-weight:800}
+/* Ruta del flete — vista de escritorio de Lucas (tabla densa, no tarjetas) */
+.rutatab{min-width:940px}
+.rutatab th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#8a94a3;white-space:nowrap}
+.rutatab td{font-size:13px;vertical-align:top;padding:9px 10px}
+.rf-numwrap{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.rutatab .rf-cli{font-weight:700;color:var(--navy)}
+.rutatab .rf-mue{color:#5b6472;font-size:12.5px;max-width:300px}
+.rutatab .rf-cob{white-space:nowrap;text-align:right}
+.rutatab .rf-hor{white-space:nowrap}
+.rf-sub td{padding:0 10px 9px;border-bottom:1px solid var(--line2)}
+.rf-av{display:block;font-size:12.5px;border-radius:6px;padding:5px 9px;margin-top:4px}
+.rf-recl{background:#fdf2f0;border-left:4px solid #b42318;color:#7a1d13}
+.rf-com,.rf-hora{background:#fff7e6;border:1px solid #f3d19b;color:#b45309}
+.rf-tot{margin-top:10px;text-align:right;font-size:13.5px;color:var(--navy)}
+/* Semana desplegable (Mi ruta y Ruta del flete) */
+.sem-head{cursor:pointer;user-select:none}
+.sem-head:hover h3{color:#1e5fce}
+.sem-viaje{padding:6px 0 7px;border-bottom:1px dashed #e6eaef}
+.sem-viaje:last-child{border-bottom:none}
+.sem-cli{font-weight:700;color:var(--navy);font-size:13.5px}
+.sem-mue{font-size:12.5px;color:#5b6472;margin-top:2px}
 </style>
 </head>
 <body>
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v02.08-17:00</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v04.08-20:30</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v02.08-17:00</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v04.08-20:30</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -2784,17 +2805,62 @@ function vReclamos(){
 function vRuta(){const esHoyR=rutaDia===HOY;const _l=ordenes.filter(o=>o.fecha===rutaDia&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);autoOrdenarSiHaceFalta(_l);const list=rutaOrdenada(_l);
   const cardsHoy=!list.length?`<div class="card"><div class="empty">No tenés viajes ${esHoyR?'hoy':'ese día'}.</div></div>`:list.map((o,idx)=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
     return `<div class="flete-card"><div class="paradahead"><span class="ph-left">${badgeParada(idx,list.length)}<span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></span>${flechasParada(o,idx,list.length,'vRuta')}</div><h3 class="cliente-h3">${esc(o.cliente)}</h3><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div>${avisoHorario(o)}${o.esReclamo?`<div class="ruta-reclamo"><b>🚩 ${esc(reclamoNroDe(o))} · ${esc(movimData(o)[1])}</b>${o.solucionNota?`<div>${esc(o.solucionNota)}</div>`:''}<div class="rr-paga">${o.confirmacion==='A confirmar'?'⏳ Todavía sin confirmar — no salgas con este viaje':(reclamoSinCargo(o)||cobroDestino(o)<=0?'✓ NO COBRAR — se hace cargo '+esc((pagaData(o)||['','Belgrano Home'])[1]):'💲 COBRAR '+money(cobroDestino(o))+' — paga '+esc((pagaData(o)||['','el cliente'])[1]))}</div></div>`:''}<ul style="margin:8px 0 0;padding-left:18px">${m}</ul>${o.comentario?`<div class="probnote" style="margin:8px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</div>`:''}<div class="cobro-big">A cobrar: ${money(cobro)}</div>${o.estado==='Entregada'?(o.reaperturaSolicitada?`<div class="probnote" style="margin:8px 0;background:#eef2ff;border-color:#c7d2fe;color:#3730a3">Le avisaste a Lucas: "${esc(o.reaperturaSolicitada.motivo)}" — esperando que la reabra.</div>`:(reaperturaOpen===o.id?`<div class="reclform"><textarea id="t_reapertura" class="${reaperturaErrorId===o.id?'field-error':''}" oninput="this.classList.remove('field-error');const em=document.getElementById('t_reapertura_err');if(em)em.style.display='none'" placeholder="Contá qué pasó: la marqué por error, todavía no la entregué, etc."></textarea>${reaperturaErrorId===o.id?`<div id="t_reapertura_err" class="field-error-msg">Contá brevemente qué pasó, así Lucas entiende por qué pedís reabrirla.</div>`:''}<div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarSolicitudReapertura(${o.id})">Confirmar solicitud a Lucas</button><button class="btn btn-ghost btn-sm" onclick="cancelarSolicitudReapertura()">Cancelar</button></div></div>`:`<div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="solicitarReapertura(${o.id})">¿La marcaste por error? Avisarle a Lucas</button></div>`)):''}${o.estado==='En reclamo'?`<div class="probnote" style="margin:8px 0">Problema: ${esc(o.reclamoNota||'(sin nota)')}${o.reclamoFoto?`<br><img src="${o.reclamoFoto}" style="max-width:150px;border-radius:6px;margin-top:6px">`:''}</div>`:''}${reclamoOpen===o.id?`<div class="reclform"><textarea id="t_reclamo" placeholder="Contá qué pasó: cliente no estaba, no entró el mueble, vino roto…">${esc(o.reclamoNota||'')}</textarea><div class="row-actions"><label class="btn btn-ghost btn-sm" style="cursor:pointer">Adjuntar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onReclamoFoto(this)"></label><span id="fotoPrev"></span></div><div class="row-actions" style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="enviarReclamo(${o.id})">Enviar problema</button><button class="btn btn-ghost btn-sm" onclick="reclamoOpen=null;reclamoFotoTmp='';render()">Cancelar</button></div></div>`:`<div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a>${btnWhatsapp(o)}${(o.estado==='En viaje'||o.estado==='Coordinada')?(puedeSalir(o)==='ok'||o.estado==='En viaje'?`<button class="btn btn-ok btn-sm" onclick="marcarEntregada(${o.id})">Entregada</button><button class="btn btn-danger btn-sm" onclick="fleteProblema(${o.id})">Problema</button>`:`<span class="btn btn-ghost btn-sm" style="flex:2;justify-content:center;opacity:.65;cursor:default" title="${esc(puedeSalir(o))}">${esc(puedeSalir(o))}</span>`):''}</div>`}</div>`}).join('');
-  const restoDias=proxDias(rutaDia,6).slice(1);
-  const semana=restoDias.map(iso=>{const listDia=ordenes.filter(o=>o.fecha===iso&&o.flete===fleteActual&&o.estado!=='Cancelado'&&!o.archivada);if(!listDia.length)return'';
-    const porZona={};listDia.forEach(o=>{const z=o.zona||'—';(porZona[z]=porZona[z]||[]).push(o)});
-    const zonasHTML=Object.entries(porZona).map(([z,arr])=>{const itemsHTML=arr.map(o=>`<div class="muted" style="padding:2px 0">${esc(o.cliente||'')} · ${esc(o.localidad||o.direccion||'')} · ${esc(o.horario||'')}</div>`).join('');
-      return `<div style="margin-top:10px"><b>${esc(zonaLimpia(z))}</b> <span class="muted">· ${arr.length} viaje${arr.length===1?'':'s'}</span>${itemsHTML}</div>`}).join('');
-    const label=iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()];const pp=iso.split('-');
-    return `<div class="card"><div class="section-title"><h3 style="margin:0">${label} · ${+pp[2]}/${+pp[1]}</h3><span class="muted">${listDia.length} viaje${listDia.length===1?'':'s'}</span></div>${zonasHTML}</div>`}).join('');
-  $('view').innerHTML=`<div class="card ruta-head"><div class="section-title" style="align-items:flex-start"><h2 style="margin:0">Mi ruta · ${fmt(rutaDia)}${esHoyR?'':' <span class="badge e-cond" style="vertical-align:middle">'+(diaRel(rutaDia)||'otro día')+'</span>'}</h2><span class="muted">${list.length} viaje${list.length===1?'':'s'}</span></div>${navDia('rutaDia','vRuta')}${btnRecorrido(list)?`<div style="margin-top:12px">${btnRecorrido(list)}</div>`:''}${btnOrdenHorario(list,'vRuta')?`<div style="margin-top:8px">${btnOrdenHorario(list,'vRuta')}</div>`:''}</div><div class="ruta-wrap">${cardsHoy}</div>${semana?`<div class="sub-h" style="margin:20px 2px 8px">Tu semana</div><p class="muted" style="margin:0 2px 10px">Lo que Lucas ya te asignó para los próximos días. El detalle completo de cada viaje se habilita el día que te toca.</p>${semana}`:''}`}
+  const semana=semanaBloque(fleteActual,rutaDia,'vRuta');
+  $('view').innerHTML=`<div class="card ruta-head"><div class="section-title" style="align-items:flex-start"><h2 style="margin:0">Mi ruta · ${fmt(rutaDia)}${esHoyR?'':' <span class="badge e-cond" style="vertical-align:middle">'+(diaRel(rutaDia)||'otro día')+'</span>'}</h2><span class="muted">${list.length} viaje${list.length===1?'':'s'}</span></div>${navDia('rutaDia','vRuta')}${btnRecorrido(list)?`<div style="margin-top:12px">${btnRecorrido(list)}</div>`:''}${btnOrdenHorario(list,'vRuta')?`<div style="margin-top:8px">${btnOrdenHorario(list,'vRuta')}</div>`:''}</div><div class="ruta-wrap">${cardsHoy}</div>${semana?`<div class="sub-h" style="margin:20px 2px 8px">Tu semana</div><p class="muted" style="margin:0 2px 10px">Lo que Lucas ya te asignó para los próximos días. Tocá el día para abrir el detalle: domicilio, horario y muebles.</p>${semana}`:''}`}
 
 function onLocInput(){draft.localidad=$('w_loc').value.trim();const z=locData(draft.localidad).zona||'—';if($('w_zona'))$('w_zona').textContent=zonaLimpia(z)}
 function refreshCostos(){if($('w_costos'))$('w_costos').textContent=money((draft.total-sum(draft.pagosList))+costosACobrar(draft))}
+
+/* ── SEMANA DEL CHOFER — compartida por Mi ruta (chofer) y Ruta del flete (Lucas) ──
+   Cada día es un desplegable. Plegado: el resumen por zona de siempre.
+   Abierto: el mismo detalle que el día de hoy — cliente, domicilio completo,
+   localidad, horario y muebles. Mañana arranca abierto porque es el día que
+   Lucas manda. El botón de copiar solo aparece del lado de Lucas. */
+let semanaOpen={};
+function toggleSemanaDia(iso,fn){semanaOpen[iso]=!semanaOpen[iso];(window[fn]||vRuta)()}
+function fleteDeVista(fn){return fn==='vRutaFlete'?rutaFleteSel:fleteActual}
+function viajesDeDia(flete,iso){return ordenes.filter(o=>o.fecha===iso&&o.flete===flete&&o.estado!=='Cancelado'&&!o.archivada)}
+function agruparPorZona(list){const p={};list.forEach(o=>{const z=o.zona||'—';(p[z]=p[z]||[]).push(o)});return p}
+function mueblesLinea(o){return (o.lineas||[]).map(l=>l.cant+'× '+l.desc).join(' · ')}
+function dirCompleta(o){return (o.direccion||'')+(o.pisodepto?' · '+o.pisodepto:'')}
+function etiquetaDia(iso){return iso===HOY?'HOY':(iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()])}
+function ddmm(iso){const p=iso.split('-');return (+p[2])+'/'+(+p[1])}
+
+function semanaBloque(flete,desde,fn){
+  if(!flete)return '';
+  const puedeCopiar=(fn==='vRutaFlete');
+  return proxDias(desde,6).slice(1).map(iso=>{
+    const listDia=viajesDeDia(flete,iso);if(!listDia.length)return'';
+    if(semanaOpen[iso]===undefined)semanaOpen[iso]=(iso===addDays(HOY,1));
+    const abierto=!!semanaOpen[iso];
+    const zonasHTML=Object.entries(agruparPorZona(listDia)).map(([z,arr])=>{
+      const itemsHTML=arr.map(o=>abierto
+        ?`<div class="sem-viaje"><div class="sem-cli">${esc(o.cliente||'(sin nombre)')}${o.esReclamo?` <span class="badge e-reclamo">🚩 ${esc(reclamoNroDe(o))}</span>`:''}</div><div class="muted">${esc(dirCompleta(o))} · ${esc(o.localidad||'')} · ${esc(o.horario||'')}</div><div class="sem-mue">${mueblesLinea(o)?esc(mueblesLinea(o)):'<span class="muted">sin muebles cargados</span>'}</div></div>`
+        :`<div class="muted" style="padding:2px 0">${esc(o.cliente||'')} · ${esc(o.localidad||o.direccion||'')} · ${esc(o.horario||'')}</div>`).join('');
+      return `<div style="margin-top:10px"><b>${esc(zonaLimpia(z))}</b> <span class="muted">· ${arr.length} viaje${arr.length===1?'':'s'}</span>${itemsHTML}</div>`}).join('');
+    return `<div class="card"><div class="section-title sem-head" onclick="toggleSemanaDia('${iso}','${fn}')"><h3 style="margin:0">${abierto?'▾':'▸'} ${etiquetaDia(iso)} · ${ddmm(iso)}</h3><span class="muted">${listDia.length} viaje${listDia.length===1?'':'s'}</span></div>${zonasHTML}${puedeCopiar?`<div class="row-actions" style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="copiarDiaWA('${iso}','${fn}')">📋 Copiar para WhatsApp</button></div>`:''}</div>`}).join('')
+}
+
+/* Texto listo para pegar en el WhatsApp del chofer. No lleva importes: el saldo
+   puede cambiar hasta el día del viaje (pagos, refuerzos) y no queremos que el
+   chofer salga con un número viejo en la cabeza. */
+function textoDiaWA(flete,iso){
+  const list=rutaOrdenada(viajesDeDia(flete,iso));if(!list.length)return'';
+  let n=0;
+  const cuerpo=Object.entries(agruparPorZona(list)).map(([z,arr])=>{
+    const items=arr.map(o=>{n++;const mu=mueblesLinea(o);
+      return `${n}) ${o.cliente||'(sin nombre)'} — ${dirCompleta(o)} · ${o.localidad||''} · ${o.horario||''}`+(mu?`\n   ${mu}`:'')}).join('\n');
+    return `*${zonaLimpia(z)}* (${arr.length})\n${items}`}).join('\n\n');
+  return `🚚 ${flete} · ${etiquetaDia(iso)} ${ddmm(iso)} · ${list.length} viaje${list.length===1?'':'s'}\n\n${cuerpo}`
+}
+function copiarDiaWA(iso,fn){const flete=fleteDeVista(fn);const txt=textoDiaWA(flete,iso);
+  if(!txt){showToast('No hay viajes para copiar ese día.','info');return}
+  copiarTexto(txt,'Copiado — pegalo en el WhatsApp de '+flete)}
+function copiarTexto(txt,okMsg){const ok=()=>showToast(okMsg||'Copiado','info');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok).catch(()=>copiarFallback(txt,ok))}
+  else copiarFallback(txt,ok)}
+function copiarFallback(txt,cb){try{const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);cb()}
+  catch(e){showToast('No se pudo copiar solo. Seleccioná el texto a mano.','error')}}
 
 let rutaFleteSel='';
 function vRutaFlete(){
@@ -2803,18 +2869,32 @@ function vRutaFlete(){
   if(!rutaFleteSel&&choferesConViajes.length)rutaFleteSel=choferesConViajes[0];
   const opts=todos.map(f=>`<option ${rutaFleteSel===f?'selected':''}>${esc(f)}</option>`).join('');
   const _lf=ordenes.filter(o=>o.fecha===HOY&&o.flete===rutaFleteSel&&o.estado!=='Cancelado'&&!o.archivada);autoOrdenarSiHaceFalta(_lf);const list=rutaOrdenada(_lf);
-  const cardsHoy=!rutaFleteSel?'<div class="card"><div class="empty">Elegí un chofer para ver su ruta.</div></div>':(!list.length?`<div class="card"><div class="empty">${esc(rutaFleteSel)} no tiene viajes hoy.</div></div>`:list.map((o,idx)=>{const m=o.lineas.map(l=>`<li>${l.cant} × ${esc(l.desc)}</li>`).join('');const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);const dir=esc(o.direccion)+(o.pisodepto?' · '+esc(o.pisodepto):'');
-    return `<div class="flete-card"><div class="paradahead"><span class="ph-left">${badgeParada(idx,list.length)}<span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></span>${flechasParada(o,idx,list.length,'vRutaFlete')}</div><h3 class="cliente-h3">${esc(o.cliente)}</h3><div class="muted">${dir} · ${esc(o.localidad)} · ${esc(o.horario)}</div>${avisoHorario(o)}${o.esReclamo?`<div class="ruta-reclamo"><b>🚩 ${esc(reclamoNroDe(o))} · ${esc(movimData(o)[1])}</b>${o.solucionNota?`<div>${esc(o.solucionNota)}</div>`:''}<div class="rr-paga">${o.confirmacion==='A confirmar'?'⏳ Todavía sin confirmar — no salgas con este viaje':(reclamoSinCargo(o)||cobroDestino(o)<=0?'✓ NO COBRAR — se hace cargo '+esc((pagaData(o)||['','Belgrano Home'])[1]):'💲 COBRAR '+money(cobroDestino(o))+' — paga '+esc((pagaData(o)||['','el cliente'])[1]))}</div></div>`:''}<ul style="margin:8px 0 0;padding-left:18px">${m}</ul>${o.comentario?`<div class="probnote" style="margin:8px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</div>`:''}<div class="cobro-big">A cobrar: ${money(cobro)}</div><div class="row-actions" style="margin-top:11px"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(o.direccion)}" target="_blank">Maps</a>${btnWhatsapp(o)}</div></div>`}).join(''));
-  const restoDias=proxDias(HOY,6).slice(1);
-  const semana=restoDias.map(iso=>{const listDia=ordenes.filter(o=>o.fecha===iso&&o.flete===rutaFleteSel&&o.estado!=='Cancelado'&&!o.archivada);if(!listDia.length)return'';
-    const porZona={};listDia.forEach(o=>{const z=o.zona||'—';(porZona[z]=porZona[z]||[]).push(o)});
-    const zonasHTML=Object.entries(porZona).map(([z,arr])=>{const itemsHTML=arr.map(o=>`<div class="muted" style="padding:2px 0">${esc(o.cliente||'')} · ${esc(o.localidad||o.direccion||'')} · ${esc(o.horario||'')}</div>`).join('');
-      return `<div style="margin-top:10px"><b>${esc(zonaLimpia(z))}</b> <span class="muted">· ${arr.length} viaje${arr.length===1?'':'s'}</span>${itemsHTML}</div>`}).join('');
-    const label=iso===addDays(HOY,1)?'MAÑANA':DOW[new Date(iso+'T00:00').getDay()];const pp=iso.split('-');
-    return `<div class="card"><div class="section-title"><h3 style="margin:0">${label} · ${+pp[2]}/${+pp[1]}</h3><span class="muted">${listDia.length} viaje${listDia.length===1?'':'s'}</span></div>${zonasHTML}</div>`}).join('');
+  const cobroDe=o=>recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);
+  const filas=list.map((o,idx)=>{
+    const mu=mueblesLinea(o);const avisos=[];
+    if(o.esReclamo)avisos.push(`<span class="rf-av rf-recl"><b>🚩 ${esc(reclamoNroDe(o))} · ${esc(movimData(o)[1])}</b>${o.solucionNota?' — '+esc(o.solucionNota):''} · ${o.confirmacion==='A confirmar'?'⏳ todavía sin confirmar — que no salga con este viaje':(reclamoSinCargo(o)||cobroDestino(o)<=0?'✓ NO COBRAR — se hace cargo '+esc((pagaData(o)||['','Belgrano Home'])[1]):'💲 COBRAR '+money(cobroDestino(o))+' — paga '+esc((pagaData(o)||['','el cliente'])[1]))}</span>`);
+    if(horarioEspecial(o))avisos.push(`<span class="rf-av rf-hora"><b>⏰ Horario comprometido con el cliente:</b> ${esc(o.horario)}</span>`);
+    if(o.comentario)avisos.push(`<span class="rf-av rf-com"><b>⚠ Aviso de Logística:</b> ${esc(o.comentario)}</span>`);
+    return `<tr>
+      <td><div class="rf-numwrap">${badgeParada(idx,list.length)}${flechasParada(o,idx,list.length,'vRutaFlete')}</div></td>
+      <td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></td>
+      <td class="rf-cli">${esc(o.cliente||'(sin nombre)')}</td>
+      <td>${esc(dirCompleta(o))}<br><span class="muted">${esc(o.localidad||'')}</span></td>
+      <td class="rf-hor">${esc(o.horario||'')}</td>
+      <td class="rf-mue">${mu?esc(mu):'<span class="muted">—</span>'}</td>
+      <td class="rf-cob"><b>${money(cobroDe(o))}</b></td>
+      <td>${direccionParaMapa(o)?`<a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(direccionParaMapa(o))}" target="_blank">Maps</a>`:''}</td>
+    </tr>${avisos.length?`<tr class="rf-sub"><td colspan="8">${avisos.join('')}</td></tr>`:''}`}).join('');
+  const totalDia=list.reduce((a,o)=>a+cobroDe(o),0);
+  const hoyHTML=!rutaFleteSel?'<div class="card"><div class="empty">Elegí un chofer para ver su ruta.</div></div>'
+    :(!list.length?`<div class="card"><div class="empty">${esc(rutaFleteSel)} no tiene viajes hoy.</div></div>`
+    :`<div class="card"><div class="section-title"><h3 style="margin:0">Viajes de hoy</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="copiarDiaWA('${HOY}','vRutaFlete')">📋 Copiar para WhatsApp</button></div></div>
+      <div class="table-wrap"><table class="rutatab"><thead><tr><th>Parada</th><th>Estado</th><th>Cliente</th><th>Domicilio</th><th>Horario</th><th>Muebles</th><th style="text-align:right">A cobrar</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
+      <div class="rf-tot">Total a cobrar del día: <b>${money(totalDia)}</b></div></div>`);
+  const semana=semanaBloque(rutaFleteSel,HOY,'vRutaFlete');
   $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Ruta del flete · ${fmt(HOY)}</h2><span class="muted">${list.length} viaje${list.length===1?'':'s'} hoy</span></div>
     <label class="lbl" style="display:block;margin:6px 0 4px">Ver la ruta de:</label>
-    <select style="max-width:280px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${opts}</select>${btnRecorrido(list)?`<div style="margin-top:12px">${btnRecorrido(list)}</div>`:''}${btnOrdenHorario(list,'vRutaFlete')?`<div style="margin-top:8px">${btnOrdenHorario(list,'vRutaFlete')}</div>`:''}</div><div class="ruta-wrap">${cardsHoy}</div>${semana?`<div class="sub-h" style="margin:20px 2px 8px">Su semana</div>${semana}`:''}`}
+    <select style="max-width:280px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${opts}</select>${btnRecorrido(list)?`<div style="margin-top:12px">${btnRecorrido(list)}</div>`:''}${btnOrdenHorario(list,'vRutaFlete')?`<div style="margin-top:8px">${btnOrdenHorario(list,'vRutaFlete')}</div>`:''}</div>${hoyHTML}${semana?`<div class="sub-h" style="margin:20px 2px 8px">Su semana</div><p class="muted" style="margin:0 2px 10px">Tocá el día para abrir el detalle y copiárselo al chofer.</p>${semana}`:''}`}
 /* Bloque de un costo adicional (envío/instalación/escalera) con su selector de estado de pago — orden fijo: A cobrar, Pagado, Sin costo, default A cobrar */
 function costosTabla(){
   const est_flete=estadoCosto(draft,'costo_flete');
