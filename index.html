@@ -441,9 +441,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v04.08-21:45</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v05.08-00:20</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v04.08-21:45</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v05.08-00:20</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -593,6 +593,9 @@ async function sbCargarConfig(){
       if(Array.isArray(c.fletes)&&c.fletes.length) FLETES=c.fletes;
       if(Array.isArray(c.locales)&&c.locales.length) LOCALES=c.locales;
       if(typeof c.escalera_def==='number') ESCALERA_DEF=c.escalera_def;
+      if(typeof c.umbral_autoriz==='number') UMBRAL_AUTORIZ=c.umbral_autoriz;
+      if(typeof c.autoriz_desde==='string') AUTORIZ_DESDE=c.autoriz_desde;
+      aplicarCuposDeConfig(c);
     }else{
       await sbGuardarConfig(); // primera vez: no hay fila, sembramos con los valores por defecto
     }
@@ -607,7 +610,7 @@ function sbGuardarConfig(){
     _cfgFlushTimer=setTimeout(async ()=>{
       _cfgSuspender=true;
       try{
-        const {error}=await sb.from('configuracion').upsert({id:1,data:{tipos:TIPOS,fletes:FLETES,locales:LOCALES,escalera_def:ESCALERA_DEF}},{onConflict:'id'});
+        const {error}=await sb.from('configuracion').upsert({id:1,data:{tipos:TIPOS,fletes:FLETES,locales:LOCALES,escalera_def:ESCALERA_DEF,umbral_autoriz:UMBRAL_AUTORIZ,autoriz_desde:AUTORIZ_DESDE,cupos:{t:cupoTarget,c:cupoCerrado,a:cupoActivo,d:diasCerrados}}},{onConflict:'id'});
         if(error){ console.error('guardar configuración',error); showToast('No se pudo guardar la configuración en la nube (reintentá).','error',6000); }
       }catch(e){ console.error(e); showToast('No se pudo guardar la configuración en la nube (reintentá).','error',6000); }
       setTimeout(()=>{_cfgSuspender=false},400);
@@ -626,6 +629,9 @@ function sbSuscribirConfigRealtime(){
       if(Array.isArray(c.fletes)) FLETES=c.fletes;
       if(Array.isArray(c.locales)) LOCALES=c.locales;
       if(typeof c.escalera_def==='number') ESCALERA_DEF=c.escalera_def;
+      if(typeof c.umbral_autoriz==='number') UMBRAL_AUTORIZ=c.umbral_autoriz;
+      if(typeof c.autoriz_desde==='string') AUTORIZ_DESDE=c.autoriz_desde;
+      aplicarCuposDeConfig(c);
       if(tab==='config') vConfig(); else render();
     })
     .subscribe();
@@ -1186,6 +1192,66 @@ function netoOrden(o){return cobroDestino(o)-lePagamosChofer(o)}
    Es distinto de "Cerrado", que ahora es EXCLUSIVO de cuando Jony firma la rendición. */
 function recibido(o){return o.estado==='Por rendir'||o.estado==='Cerrado'}
 function cobroBH(o){return (o.total||0)-(o.pagos||0)}
+
+/* ══════════ AUTORIZACIÓN DE DIRECCIÓN POR MONTO ══════════
+   Una entrega donde el cliente nos tiene que pagar A NOSOTROS más del umbral
+   en el domicilio necesita el OK de Jony o de Brian. Se mide SOLO la mercadería
+   (cobroBH = total − pagos): el flete, la instalación y la escalera son plata
+   del chofer, no nuestra, así que no cuentan.
+   La orden se puede cargar y programar igual, pero queda FRIZADA: no sale.
+   La autorización se ata al MONTO autorizado — si después sube, se cae sola. */
+let UMBRAL_AUTORIZ=550000;
+let AUTORIZ_DESDE='2026-08-05';   /* corre para las entregas de esta fecha en adelante */
+function aplicaAutoriz(o){
+  if(!o||o.archivada||o.estado==='Cancelado')return false;
+  if(o.tipo==='Movimiento Interno'||o.tipo==='Expreso')return false;   /* el expreso ya va prepago total */
+  if(!o.fecha||o.fecha<AUTORIZ_DESDE)return false;                     /* no se aplica retroactivo */
+  return true}
+function montoAutoriz(o){return cobroBH(o)}
+function requiereAutoriz(o){return aplicaAutoriz(o)&&montoAutoriz(o)>UMBRAL_AUTORIZ}
+function autorizVigente(o){const a=o&&o.autoriz;return !!(a&&a.estado==='ok'&&montoAutoriz(o)<=(a.monto||0))}
+function autorizVencida(o){const a=o&&o.autoriz;return !!(a&&a.estado==='ok'&&montoAutoriz(o)>(a.monto||0))}
+function frizada(o){return requiereAutoriz(o)&&!autorizVigente(o)&&['Por completar','Coordinada','Registrado'].includes(o.estado)}
+function pendientesAutoriz(){return ordenes.filter(o=>frizada(o)&&(!o.autoriz||o.autoriz.estado!=='rechazada'))}
+function rechazadasAutoriz(){return ordenes.filter(o=>frizada(o)&&o.autoriz&&o.autoriz.estado==='rechazada')}
+function motivoFrizada(o){
+  const a=o.autoriz;
+  if(a&&a.estado==='rechazada')return 'Dirección no autorizó esta entrega'+(a.motivo?': '+a.motivo:'');
+  if(autorizVencida(o))return 'Subió el monto: se autorizó '+money(a.monto)+' y ahora son '+money(montoAutoriz(o))+' — hay que autorizar de nuevo';
+  return 'Falta la autorización de Jony o Brian — el cliente nos paga '+money(montoAutoriz(o))+' en el domicilio'}
+/* Marca la orden como pendiente cuando se guarda por encima del umbral sin autorización vigente */
+function revisarAutoriz(o){
+  if(!requiereAutoriz(o)){if(o.autoriz&&o.autoriz.estado==='pendiente')o.autoriz=null;return false}
+  if(autorizVigente(o))return false;
+  const prev=o.autoriz&&o.autoriz.estado==='rechazada'?o.autoriz:null;
+  if(prev&&prev.monto===montoAutoriz(o))return true;   /* rechazada y sin cambios: sigue rechazada */
+  o.autoriz={estado:'pendiente',monto:montoAutoriz(o),solicitadoPor:whoLabel(),ts:new Date().toISOString()};
+  return true}
+function abrirModalAutoriz(oid){
+  if(!esDireccion()){showToast('Solo Jony o Brian pueden autorizar una entrega de este monto.','error');return}
+  const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'autoriz',oid};renderModal()}
+function cuerpoAutoriz(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
+  const a=o.autoriz||{};
+  return `<h3>Autorizar la entrega</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p>
+  <div class="probnote" style="margin:10px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309">El chofer va a cobrar <b>${money(montoAutoriz(o))}</b> de mercadería en el domicilio. El tope sin autorización es ${money(UMBRAL_AUTORIZ)}.</div>
+  <div class="mp-row" style="white-space:normal"><b>Total:</b> ${money(o.total||0)} · <b>Ya pagó:</b> ${money(o.pagos||0)} · <b>Queda:</b> ${money(montoAutoriz(o))}</div>
+  <div class="mp-row" style="white-space:normal;margin-top:4px"><b>Entrega:</b> ${esc(fmt(o.fecha))} · ${esc(o.flete||'sin chofer')} · ${esc(o.direccion||'')} ${esc(o.localidad||'')}</div>
+  <div class="mp-row" style="white-space:normal;margin-top:4px"><b>Muebles:</b> ${esc(mueblesLinea(o))||'—'}</div>
+  ${a.solicitadoPor?`<p class="muted" style="margin-top:8px">La cargó ${esc(a.solicitadoPor)}${a.ts?' el '+new Date(a.ts).toLocaleDateString('es-AR'):''}.</p>`:''}
+  ${autorizVencida(o)?`<div class="probnote" style="margin:8px 0">Ya estaba autorizada por ${money(a.monto)} y el monto subió. Autorizar de nuevo la deja en ${money(montoAutoriz(o))}.</div>`:''}
+  <label class="lbl" style="display:block;margin:12px 0 4px">Si no la autorizás, contá por qué (lo va a ver Lucas)</label>
+  <textarea id="t_autoriz" placeholder="Ej.: que el vendedor le pida más seña antes de programarla"></textarea>
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button><button class="btn btn-danger" onclick="aplicarAutoriz(${o.id},false)">No autorizar</button><button class="btn btn-ok" onclick="aplicarAutoriz(${o.id},true)">✓ Autorizar ${money(montoAutoriz(o))}</button></div>`}
+function aplicarAutoriz(oid,ok){
+  const o=ordenes.find(x=>x.id===oid);if(!o)return;
+  if(!esDireccion()){showToast('Solo Jony o Brian pueden autorizar.','error');return}
+  const motivo=($('t_autoriz')&&$('t_autoriz').value.trim())||'';
+  if(!ok&&!motivo){showToast('Contá por qué no la autorizás, así Lucas sabe qué hacer.','error');return}
+  o.autoriz={estado:ok?'ok':'rechazada',monto:montoAutoriz(o),por:whoLabel(),rol:role,ts:new Date().toISOString(),motivo};
+  registrarAuditoria(ok?'Autorizar entrega':'Rechazar autorización',o,money(montoAutoriz(o))+(motivo?' · '+motivo:''));
+  modalActivo=null;
+  showToast(ok?('Autorizada por '+money(montoAutoriz(o))+' — ya puede salir.'):'Queda frizada. Lucas ve el motivo en la orden.','info',5000);
+  render()}
 function cobroRealOrden(o){return recibido(o)?(o.cobrado!=null?o.cobrado:cobroBH(o)):cobroBH(o)}
 function lePagamosBase(o){return costosPagados(o)}
 function lePagamosTotal(o){return recibido(o)?(o.bhPago||0):costosPagados(o)}
@@ -1466,6 +1532,7 @@ ${!capAbierta?'':`
     </div></div>
   <div class="card"><div class="cdtot">
       <div class="stat clik" onclick="irOrdenes({vend:true})" style="${pedVend?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${pedVend?'#b45309':'#8a94a3'}">👤 Cargadas por vendedores</div><div class="value" style="color:${pedVend?'#b45309':'#0f1a2a'}">${pedVend}</div></div>
+      ${esDireccion()?(()=>{const pa=pendientesAutoriz().length,ra=rechazadasAutoriz().length;return `<div class="stat clik" onclick="irOrdenes({autoriz:true})" style="${pa?'background:#fdecea':''}" title="Entregas donde el cliente nos paga más de ${money(UMBRAL_AUTORIZ)} en el domicilio"><div style="font-size:13px;font-weight:700;color:${pa?'#b42318':'#8a94a3'}">🔒 Esperando mi autorización</div><div class="value" style="color:${pa?'#b42318':'#0f1a2a'}">${pa}</div>${ra?`<div style="font-size:12px;color:#b45309">${ra} sin autorizar</div>`:''}</div>`})():''}
       <div class="stat clik" onclick="irOrdenes({refuerzo:true})" style="${refPend?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${refPend?'#b45309':'#8a94a3'}">💲 Refuerzos a confirmar</div><div class="value" style="color:${refPend?'#b45309':'#0f1a2a'}">${refPend}</div></div>
       <div class="stat clik" onclick="irOrdenes({cond:true})" style="${condicSem?'background:#fff7e6':''}"><div style="font-size:13px;font-weight:700;color:${condicSem?'#b45309':'#8a94a3'}">Condicionadas · semana</div><div class="value" style="color:${condicSem?'#b45309':'#0f1a2a'}">${condicSem}</div></div>
       <div class="stat clik" onclick="irOrdenes({flete:'__sin'})" style="${sinAsig?'background:#fdecea':''}"><div style="font-size:13px;font-weight:700;color:${sinAsig?'#b42318':'#8a94a3'}">Sin asignar</div><div class="value" style="color:${sinAsig?'#b42318':'#0f1a2a'}">${sinAsig}</div></div>
@@ -1622,7 +1689,7 @@ function guardarDraft(parcial){readStep();const t=draft.tipo;
   let habil=true,condMotivo='';
   if(!parcial){
     const saldo=draft.total-sum(draft.pagosList);
-    if(!esMI&&!esExp&&(saldo<0||saldo>500000)){if(!confirm('AUTORIZACIÓN\n\nEl saldo es '+money(saldo)+(saldo<0?' (NEGATIVO)':' (mayor a $500.000)')+'.\nRequiere autorización.\n\n¿Confirmás que está correcto?'))return}
+    if(!esMI&&!esExp&&saldo<0){if(!confirm('El saldo es '+money(saldo)+' (NEGATIVO). \u00bfConfirm\u00e1s que est\u00e1 correcto?'))return}
     if(esExp&&!draft.valorDeclarado){if(!confirm('No cargaste el valor declarado del expreso. ¿Guardar igual?'))return}
     if(esExp){const se=expSaldo();if(se!==0){condMotivo=prompt('El saldo del expreso no cierra en $0 (queda '+money(se)+'). Todo tiene que estar pago para sacarlo.\n\n¿Por qué lo autorizás igual? (queda registrado y la orden entra CONDICIONADA)');if(condMotivo===null)return;habil=false}}
   }
@@ -1657,15 +1724,18 @@ function guardarDraft(parcial){readStep();const t=draft.tipo;
     ordenes.push(nueva);
     if(nueva.esReclamo)registrarAuditoria('Generar reclamo',nueva,'sobre la entrega del '+fmt(nueva.reclamoDe?nueva.reclamoDe.fecha:'')+' · '+movimData(nueva)[1]);
     if(nueva.devolucionDe){const orig=ordenes.find(x=>x.id===nueva.devolucionDe);if(orig){orig.devolucionId=nueva.id;registrarAuditoria('Programar devolución',orig,'sale el '+fmt(nueva.fecha))}}}
+  const _og=editId?ordenes.find(x=>x.id===editId):ordenes[ordenes.length-1];
+  const _frizo=_og?revisarAutoriz(_og):false;
   const esR=!!draft.esReclamo;const esReg=draft.modoReclamo==='registro';const nroR=esR?('R'+draft.boleta+((draft.reclamoSeq||1)>1?'-'+draft.reclamoSeq:'')):'';
   draft=null;editId=null;setTab('ordenes');
   if(parcial)showToast('Orden guardada como incompleta (falta cargar Saldos) — quedó sin chofer asignado, cargada por '+whoLabel()+'.','info',6500);
   else if(esR&&esReg)showToast('Reclamo '+nroR+' registrado. Queda SIN PROGRAMAR hasta que se defina qué se va a hacer.','success',5600);
   else if(esR)showToast('Reclamo '+nroR+' guardado. Queda A CONFIRMAR en el tablero de Lucas.','success',5200);
+  else if(_frizo)showToast('Orden guardada, pero queda FRIZADA: el cliente nos paga '+money(montoAutoriz(_og))+' en el domicilio y hace falta la autorización de Jony o Brian.','error',7000);
   else showToast('Orden guardada. Mirá el Mapa y las Órdenes.','success')}
 
 /* ÓRDENES */
-let ordFil={q:'',estado:'',flete:''};
+let ordFil={q:'',estado:'',flete:''};let ordAutoriz=false;
 let ordVista='activas';
 let ordPag=1;const ORD_PAG=50;
 let cupoCerrado={}; /* capacidad de camioneta/retiro por día — NO toca estado de órdenes, es independiente de Rendición */
@@ -1673,7 +1743,24 @@ let cupoTarget={}; /* objetivo de viajes que Lucas fija POR ADELANTADO para un c
 let cupoActivo={}; /* chofer cargado para el día, sin cupo numérico todavía (aparece igual en el panel, con botón "Poner cupo") */
 let addChoferOpen=false;let addRetiroOpen=false;
 function cupoKey(dia,tipo,nombre){return dia+'|'+tipo+'|'+nombre}
-function toggleCupo(key){cupoCerrado[key]=!cupoCerrado[key];if(cupoCerrado[key])autoBloquearSiCorresponde(key.split('|')[0]);vOrdenes()}
+/* Los cupos y los días cerrados viven en la tabla `configuracion` junto con el resto
+   de los parámetros. Antes eran variables en memoria: Lucas cargaba el cupo, cerraba
+   el día, refrescaba y se perdía todo. Se podan las claves de más de 45 días para
+   atrás así el registro no crece para siempre. */
+function podarCupos(){
+  const corte=addDays(HOY,-45);
+  const limpiar=(obj)=>{for(const k of Object.keys(obj)){if((k.split('|')[0]||'')<corte)delete obj[k]}};
+  limpiar(cupoTarget);limpiar(cupoCerrado);limpiar(cupoActivo);
+  for(const k of Object.keys(diasCerrados)){if(k<corte)delete diasCerrados[k]}}
+function guardarCupos(){podarCupos();sbGuardarConfig()}
+function aplicarCuposDeConfig(c){
+  if(!c||!c.cupos)return;
+  const cu=c.cupos;
+  if(cu.t&&typeof cu.t==='object')cupoTarget=cu.t;
+  if(cu.c&&typeof cu.c==='object')cupoCerrado=cu.c;
+  if(cu.a&&typeof cu.a==='object')cupoActivo=cu.a;
+  if(cu.d&&typeof cu.d==='object')diasCerrados=cu.d}
+function toggleCupo(key){cupoCerrado[key]=!cupoCerrado[key];if(cupoCerrado[key])autoBloquearSiCorresponde(key.split('|')[0]);guardarCupos();vOrdenes()}
 function todosCuposCerrados(dia){
   const dayO=ordenes.filter(o=>o.fecha===dia&&o.estado!=='Cancelado'&&!o.archivada);
   const porF={};dayO.filter(o=>o.flete&&necesitaFlete(o)).forEach(o=>{porF[o.flete]=true});
@@ -1689,17 +1776,17 @@ function confirmarAgregarChofer(){const nombre=$('ach_sel').value;if(!nombre)ret
   const num=parseInt($('ach_cupo').value)||0;
   if(num>0)cupoTarget[cupoKey(selDay,'F',nombre)]=num;
   else cupoActivo[cupoKey(selDay,'F',nombre)]=true;
-  addChoferOpen=false;vOrdenes()}
+  addChoferOpen=false;guardarCupos();vOrdenes()}
 let ponerCupoOpen=null;
 function confirmarPonerCupo(key){const id='pc_sel_'+key.replace(/\W/g,'_');const num=parseInt($(id).value)||0;if(num<=0)return;
-  cupoTarget[key]=num;ponerCupoOpen=null;vOrdenes()}
+  cupoTarget[key]=num;ponerCupoOpen=null;guardarCupos();vOrdenes()}
 function confirmarAgregarRetiro(){const num=parseInt($('art_cupo').value)||0;if(num<=0){showToast('Poné un cupo mayor a 0 para el retiro.','error');const el=$('art_cupo');if(el){el.classList.add('field-error');el.focus()}return}
-  cupoTarget[cupoKey(selDay,'R','TODOS')]=num;addRetiroOpen=false;vOrdenes()}
-function ajustarCupo(key,delta){cupoTarget[key]=Math.max(1,(cupoTarget[key]||0)+delta);vOrdenes()}
+  cupoTarget[cupoKey(selDay,'R','TODOS')]=num;addRetiroOpen=false;guardarCupos();vOrdenes()}
+function ajustarCupo(key,delta){cupoTarget[key]=Math.max(1,(cupoTarget[key]||0)+delta);guardarCupos();vOrdenes()}
 let ordCond=false;let ordZona='';let ordProb=false;let ordRet='';let ordTipo='';let ordVend=false;let ordRefuerzo=false;let ordRecl=false;let ordGest=false;
 let ordSortCol='';let ordSortDir=1;
 function ordSortBy(col){if(ordSortCol===col)ordSortDir*=-1;else{ordSortCol=col;ordSortDir=1}vOrdenes()}
-function irOrdenes(o){o=o||{};selDay=o.day||HOY;weekRef=o.day||HOY;ordVista=o.vista||'activas';ordPag=1;ordFil={q:'',estado:o.estado||'',flete:o.flete||''};ordCond=!!o.cond;ordZona=o.zona||'';ordProb=!!o.prob;ordRet=o.ret||'';ordTipo=o.tipo||'';ordVend=!!o.vend;ordRefuerzo=!!o.refuerzo;ordRecl=!!o.recl;ordGest=!!o.fab;setTab('ordenes')}
+function irOrdenes(o){o=o||{};selDay=o.day||HOY;weekRef=o.day||HOY;ordVista=o.vista||'activas';ordPag=1;ordFil={q:'',estado:o.estado||'',flete:o.flete||''};ordCond=!!o.cond;ordZona=o.zona||'';ordProb=!!o.prob;ordRet=o.ret||'';ordTipo=o.tipo||'';ordVend=!!o.vend;ordRefuerzo=!!o.refuerzo;ordAutoriz=!!o.autoriz;ordRecl=!!o.recl;ordGest=!!o.fab;setTab('ordenes')}
 function selDia(iso){selDay=iso;ordFil={q:'',estado:'',flete:''};ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';vOrdenes()}
 let weekRef=HOY;
 let selDay=HOY;
@@ -1749,7 +1836,7 @@ function cerrarOrden(id){if(!puedeLiquidar()){showToast('Solo Logística, Jony o
   const o=ordenes.find(x=>x.id===id);const saldo=cobroBH(o);
   abrirModalCobro(id,'cerrar',saldo)}
 function reabrirOrden(id){const o=ordenes.find(x=>x.id===id);setEstado(o,o.estadoPrev||'Coordinada',{accion:'Reabrir'});o.rendido=false;o.reaperturaSolicitada=null;vOrdenes()}
-function toggleDiaCerrado(){if(diasCerrados[selDay])delete diasCerrados[selDay];else diasCerrados[selDay]=true;vOrdenes()}
+function toggleDiaCerrado(){if(diasCerrados[selDay])delete diasCerrados[selDay];else diasCerrados[selDay]=true;guardarCupos();vOrdenes()}
 /* Mapa del día: arma un link de Google Maps con un punto por cada entrega física del día,
    para que Lucas vea cómo se agrupan por zona antes de repartir los viajes.
    Envío → domicilio del cliente. Expreso (cuando BH lo lleva al depósito del transporte) → esa dirección.
@@ -1899,6 +1986,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
       } else {
         menu.push(menuItem('↩','Reabrir','reabrirOrden('+o.id+')'));
       }
+      if(frizada(o)&&esDireccion())inline.push(iconBtn('btn-ok','🔓','Autorizar la entrega de '+money(montoAutoriz(o)),'abrirModalAutoriz('+o.id+')'));
       if(o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado&&puedeConfirmarRefuerzo())inline.push(iconBtn('btn-ok','💲✓','Revisar refuerzo de '+money(o.refuerzo.monto)+' cargado por '+(o.refuerzo.por||'vendedor'),'abrirModalConfirmRefuerzo('+o.id+')'));
       if(!o.esReclamo){
         const abiertoYa=reclamosDeBoleta(o.boleta).filter(r=>r.estado!=='Cerrado'&&r.estado!=='Cancelado');
@@ -1926,7 +2014,7 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
     const dsc=diasSinCerrar(o);
     return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(reclamoNroDe(o))}</strong>${o.sinOrden?' <span class="badge e-cond" title="Reclamo sin orden vinculada: no hay entrega original en el sistema">sin orden</span>':''}${(o.esReclamo&&!o.sinOrden)?(sinProgramar(o)
       ? ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))}">🚩</span>`
-      : ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`):''}${o.verificado?' ✓':''}${sinProgramar(o)?'':` <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>`}${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td>${(o.esReclamo&&!(o.pagaConfirmadoPor))?'<span class="muted" title="Todavía no se definió quién se hace cargo">a definir</span>':`<b>${money(cobro)}</b>`}</td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${(o.confirmacion==='A confirmar'&&!sinProgramar(o)&&!o.esReclamo)?' <span class="badge e-cond">A confirmar</span>':''}${sinProgramar(o)?'':pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
+      : ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`):''}${o.verificado?' ✓':''}${sinProgramar(o)?'':` <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>`}${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td>${(o.esReclamo&&!(o.pagaConfirmadoPor))?'<span class="muted" title="Todavía no se definió quién se hace cargo">a definir</span>':`<b>${money(cobro)}</b>`}</td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${(o.confirmacion==='A confirmar'&&!sinProgramar(o)&&!o.esReclamo)?' <span class="badge e-cond">A confirmar</span>':''}${sinProgramar(o)?'':pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${frizada(o)?` <span class="badge e-prob" title="${esc(motivoFrizada(o))}">🔒 ${o.autoriz&&o.autoriz.estado==='rechazada'?'No autorizada':'Frizada · falta autorizar'}</span>`:''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
 function vOrdenes(){
   if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
   const dias=semanaDe(weekRef);
@@ -1984,7 +2072,7 @@ function vOrdenes(){
   const _sacarSinProgramar=arr=>arr.filter(o=>!sinProgramar(o));
   if(ordVista==='activas'){
     const scope=(ordVend||ordRefuerzo||ordRecl||ordGest)?null:(ordCond?semanaDe(weekRef):[selDay]);list=ordenes.filter(o=>(!scope||scope.includes(o.fecha))&&!o.archivada);
-    if(ordRecl)list=list.filter(o=>o.esReclamo);if(ordGest)list=list.filter(enGestion);if(ordVend)list=list.filter(esPedidoVendedor);if(ordRefuerzo)list=list.filter(o=>o.refuerzo&&!o.refuerzo.confirmado);if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
+    if(ordRecl)list=list.filter(o=>o.esReclamo);if(ordGest)list=list.filter(enGestion);if(ordVend)list=list.filter(esPedidoVendedor);if(ordRefuerzo)list=list.filter(o=>o.refuerzo&&!o.refuerzo.confirmado);if(ordAutoriz)list=list.filter(frizada);if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
     if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(esProceso)}
     list=_sacarSinProgramar(list);
   } else if(ordVista==='pendientes'){
@@ -2022,6 +2110,7 @@ function vOrdenes(){
 function puedeSalir(o){if(o.estado!=='Coordinada')return '';
   if(o.confirmacion==='A confirmar')return 'Falta que Logística confirme la entrega';
   if(o.habilitada===false)return 'El cliente todavía no pagó — Logística la tiene que habilitar';
+  if(frizada(o))return motivoFrizada(o);
   if((o.lineas||[]).some(l=>l.sep==='problema'))return 'El depósito marcó un problema con la mercadería';
   if(necesitaFlete(o)&&!o.flete)return 'Todavía no tiene chofer asignado';
   return 'ok'}
@@ -2043,7 +2132,7 @@ function salirATodo(fecha,flete,fn){const arr=ordenes.filter(o=>o.fecha===fecha&
 function btnSalirTodo(list,fn){const pend=list.filter(o=>o.estado==='Coordinada'&&puedeSalir(o)==='ok');
   if(pend.length<2)return '';const f=pend[0];
   return `<button class="btn btn-primary" style="width:100%;min-height:46px;justify-content:center" onclick="salirATodo('${f.fecha}','${esc(f.flete||'')}','${fn}')">Salí a repartir · ${pend.length} viajes</button>`}
-function despachar(oid){const o=ordenes.find(x=>x.id===oid);if(sinProgramar(o)){showToast('Este reclamo todavía no está programado. Cargale el viaje antes de despacharlo.','error');return}if(o.confirmacion==='A confirmar'){showToast('Esta entrega todavía está A CONFIRMAR. Confirmala antes de despachar.','error');return}if(o.habilitada===false){showToast('Esta orden está condicionada a pago. Habilitala antes de despachar.','error');return}if(necesitaFlete(o)&&!o.flete){showToast('Esta orden todavía no tiene chofer asignado. Asignalo antes de despachar.','error');return}o.estadoPrev='Coordinada';setEstado(o,'En viaje',{accion:'Despachar'});registrarAuditoria('Despachar',o);if(o.comentario){showToast('Recordatorio para '+(o.flete||'el flete')+': '+o.comentario,'info',7000)}else{render()}}
+function despachar(oid){const o=ordenes.find(x=>x.id===oid);if(sinProgramar(o)){showToast('Este reclamo todavía no está programado. Cargale el viaje antes de despacharlo.','error');return}if(o.confirmacion==='A confirmar'){showToast('Esta entrega todavía está A CONFIRMAR. Confirmala antes de despachar.','error');return}if(o.habilitada===false){showToast('Esta orden está condicionada a pago. Habilitala antes de despachar.','error');return}if(frizada(o)){showToast(motivoFrizada(o),'error',6000);return}if(necesitaFlete(o)&&!o.flete){showToast('Esta orden todavía no tiene chofer asignado. Asignalo antes de despachar.','error');return}o.estadoPrev='Coordinada';setEstado(o,'En viaje',{accion:'Despachar'});registrarAuditoria('Despachar',o);if(o.comentario){showToast('Recordatorio para '+(o.flete||'el flete')+': '+o.comentario,'info',7000)}else{render()}}
 function marcarConfirmacion(id,val){const o=ordenes.find(x=>x.id===id);o.confirmacion=val?'Confirmada':'A confirmar';vOrdenes()}
 let reclamoOpen=null;let reclamoFotoTmp='';
 let reaperturaOpen=null;let reaperturaErrorId=null;
@@ -2125,7 +2214,7 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='yaExiste')return cuerpoYaExiste(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='autoriz')return cuerpoAutoriz(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='yaExiste')return cuerpoYaExiste(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);return''}
 /* ===== Refuerzo de seña =====
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
@@ -2964,9 +3053,11 @@ function vConfig(){const chips=(arr,fn)=>arr.length?arr.map((v,i)=>`<span class=
   <div class="card"><h3>Tipos de envío</h3><div class="chips">${chips(TIPOS,'delTipo')}</div><div class="addrow"><input id="cfg_tipo" placeholder="Nuevo tipo de envío"><button class="btn btn-primary btn-sm" onclick="addCfg('tipo')">Agregar</button></div></div>
   <div class="card"><h3>Fletes</h3><p class="muted">El orden acá es el orden en que aparecen en el desplegable de asignar chofer — poné arriba a los que más usás.</p><div class="chips">${chips(FLETES,'delFlete')}</div><div class="addrow"><input id="cfg_flete" placeholder="Nuevo flete"><button class="btn btn-primary btn-sm" onclick="addCfg('flete')">Agregar</button></div></div>
   <div class="card"><h3>Subida por escalera</h3><p class="muted">Valor por defecto que se precarga en cada orden nueva (envío o retiro, por piso × bulto). Se puede modificar puntualmente en cada orden si se pactó otra cosa con el cliente.</p><div class="addrow"><input id="cfg_esc" inputmode="numeric" value="${moneyFmt(ESCALERA_DEF)}" oninput="moneyIn(this)"><button class="btn btn-primary btn-sm" onclick="setEscaleraDef()">Guardar</button></div></div>
+  <div class="card"><h3>Autorización de dirección</h3><p class="muted">Una entrega donde el cliente nos tiene que pagar más de este monto <b>de mercadería</b> en el domicilio queda frizada hasta que la autorice Jony o Brian. El flete y la instalación no cuentan: esa plata es del chofer. Corre para las entregas del ${esc(fmt(AUTORIZ_DESDE))} en adelante — las anteriores no se tocan.</p>${esDireccion()?`<div class="addrow"><input id="cfg_umbral" inputmode="numeric" value="${moneyFmt(UMBRAL_AUTORIZ)}" oninput="moneyIn(this)"><button class="btn btn-primary btn-sm" onclick="setUmbralAutoriz()">Guardar</button></div>`:`<p class="muted">Hoy el tope es <b>${money(UMBRAL_AUTORIZ)}</b>. Solo dirección lo puede cambiar.</p>`}</div>
   <div class="card"><h3>Locales de origen</h3><div class="chips">${chips(LOCALES,'delLocal')}</div><div class="addrow"><input id="cfg_local" placeholder="Nuevo local"><button class="btn btn-primary btn-sm" onclick="addCfg('local')">Agregar</button></div></div>
   <div class="card"><h3>Localidades</h3><p class="muted">Son ~170 (CABA + GBA), cada una con su zona. Las administramos en una pantalla aparte para no tocar el ruteo (próximo paso).</p></div>
   ${(()=>{const arch=ordenes.filter(o=>o.archivada).sort((a,b)=>(b.archivadaInfo&&b.archivadaInfo.fecha||'').localeCompare(a.archivadaInfo&&a.archivadaInfo.fecha||''));if(!arch.length)return '<div class="card"><h3>Viajes eliminados</h3><p class="muted">No hay viajes eliminados. Cuando elimines uno, va a aparecer acá y vas a poder recuperarlo.</p></div>';return `<div class="card"><h3>Viajes eliminados (${arch.length})</h3><p class="muted">Están fuera de todas las vistas y conteos. Podés recuperarlos si hizo falta.</p><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th>Cliente</th><th>Eliminado por</th><th>Motivo</th><th></th></tr></thead><tbody>${arch.map(o=>`<tr><td>${fmt(o.fecha)}</td><td><b>${esc(reclamoNroDe(o))}</b>${o.esReclamo?' <span class="badge e-reclamo">reclamo</span>':''}</td><td>${esc(o.cliente||'')}</td><td>${esc(o.archivadaInfo&&o.archivadaInfo.por||'—')}</td><td class="muted">${esc(o.archivadaInfo&&o.archivadaInfo.motivo||'—')}</td><td><button class="btn btn-ghost btn-sm" onclick="recuperarViaje(${o.id})">Recuperar</button></td></tr>`).join('')}</tbody></table></div></div>`})()}`}
+function setUmbralAutoriz(){if(!esDireccion()){showToast('Solo dirección puede cambiar el tope.','error');return}const v=moneyParse($('cfg_umbral').value);if(!v){showToast('Poné un monto.','error');return}const ant=UMBRAL_AUTORIZ;UMBRAL_AUTORIZ=v;registrarAuditoria('Cambiar tope de autorización',null,'de '+money(ant)+' a '+money(v));sbGuardarConfig();vConfig()}
 function setEscaleraDef(){const v=moneyParse($('cfg_esc').value);ESCALERA_DEF=v||0;sbGuardarConfig();vConfig()}
 function addCfg(k){const m={tipo:['cfg_tipo',TIPOS],flete:['cfg_flete',FLETES],local:['cfg_local',LOCALES]}[k];const v=$(m[0]).value.trim();if(v&&!m[1].includes(v))m[1].push(v);sbGuardarConfig();vConfig()}
 function delTipo(i){TIPOS.splice(i,1);sbGuardarConfig();vConfig()}
