@@ -260,6 +260,12 @@ tbody tr:hover{background:#f7f9fb}
 .vistatog.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .vistatog b{font-weight:700}
 .vistatog.on b{color:#fff}
+.fchipbar{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px}
+.fchip{border:1px solid var(--line);background:#fff;padding:4px 10px;font-size:12px;font-weight:600;color:var(--sec);cursor:pointer;border-radius:999px;line-height:1.5}
+.fchip:hover{border-color:var(--blue);color:var(--blue)}
+.fchip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.fchip b{font-weight:800;margin-left:4px}
+.fchip.on b{color:#fff}
 tr.sinasignar{background:#fef4f4}
 .e-cerrado{background:#e7f5ec;color:#0f5132}
 .e-porrendir{background:#eef2ff;color:#3730a3}
@@ -2073,18 +2079,22 @@ function vOrdenes(){
   if(ordVista==='activas'){
     const scope=(ordVend||ordRefuerzo||ordRecl||ordGest||ordAutoriz)?null:(ordCond?semanaDe(weekRef):[selDay]);list=ordenes.filter(o=>(!scope||scope.includes(o.fecha))&&!o.archivada);
     if(ordRecl)list=list.filter(o=>o.esReclamo);if(ordGest)list=list.filter(enGestion);if(ordVend)list=list.filter(esPedidoVendedor);if(ordRefuerzo)list=list.filter(o=>o.refuerzo&&!o.refuerzo.confirmado);if(ordAutoriz)list=list.filter(frizada);if(ordCond)list=list.filter(o=>o.habilitada===false);if(ordZona)list=list.filter(o=>o.zona===ordZona);if(ordProb)list=list.filter(o=>o.lineas.some(l=>l.sep==='problema'));if(ordRet)list=list.filter(o=>o.tipo==='Retiro'&&(ordRet==='ALL'||retLoc(o)===ordRet));if(ordTipo)list=list.filter(o=>o.tipo===ordTipo);
-    if(ordFil.estado){list=list.filter(o=>o.estado===ordFil.estado)}else{list=list.filter(esProceso)}
-    list=_sacarSinProgramar(list);
+    list=_sacarSinProgramar(list.filter(esProceso));
   } else if(ordVista==='pendientes'){
     list=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-    if(ordFil.estado)list=list.filter(o=>(esVendedor()?estadoVista(o):o.estado)===ordFil.estado);
   } else if(ordVista==='cerradas'){
     list=ordenes.filter(o=>(o.estado==='Cerrado'||o.estado==='Cancelado')&&!o.archivada).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);usaPag=true;
   } else { /* todas */
     list=ordenes.filter(o=>!o.archivada).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);usaPag=true;
   }
   if(ordFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(ordFil.q.toLowerCase()));
+  const _choferOpts=ordVista==='activas'?[...nombresF].sort():[...new Set(list.map(o=>o.flete).filter(Boolean))].sort();
   if(ordFil.flete)list=list.filter(o=>ordFil.flete==='__sin'?(necesitaFlete(o)&&!o.flete):(o.flete===ordFil.flete||(ordFil.flete==='Retiro'&&o.tipo==='Retiro')));
+  list=_sacarSinProgramar(list);
+  const _estKey=o=>(esVendedor()?estadoVista(o):o.estado);
+  const _estCount={};list.forEach(o=>{const k=_estKey(o);_estCount[k]=(_estCount[k]||0)+1});
+  const _estBase=list.length;
+  if(ordFil.estado)list=list.filter(o=>_estKey(o)===ordFil.estado);
   if(ordSortCol){list=[...list].sort((a,b)=>{const va=ordSortCol==='zona'?(a.zona||''):(a.flete||'');const vb=ordSortCol==='zona'?(b.zona||''):(b.flete||'');return va.localeCompare(vb)*ordSortDir})}
   totalSinPag=list.length;
   if(usaPag)list=list.slice(0,ordPag*ORD_PAG);
@@ -2096,13 +2106,18 @@ function vOrdenes(){
   const conmutador=`<div class="vistabar">${vistaBtn('activas','Activas')}${vistaBtn('pendientes','Pendientes',nPend||null)}${vistaBtn('cerradas','Cerradas')}${vistaBtn('todas','Todas')}</div>`;
   const esActivas=ordVista==='activas';
   const estadoOpts=esVendedor()?(ordVista==='cerradas'?['Entregada']:['Sin salir','En viaje','Entregada']):((ordVista==='cerradas')?['Cerrado','Cancelado']:(ordVista==='pendientes'?['Entregada','Por rendir']:ESTADOS_ACTIVOS));
+  const _mostrarChips=ordVista!=='cerradas';
+  const _chipLbl=e=>ordVista==='pendientes'?(e==='Entregada'?'Entregada · falta recibir':(e==='Por rendir'?'Por rendir · falta firmar':e)):e;
+  const _estKeys=[...new Set([...ESTADOS.filter(e=>_estCount[e]),...Object.keys(_estCount)])];
+  const estadoChipBar=_mostrarChips?`<div class="fchipbar"><button class="fchip${ordFil.estado===''?' on':''}" onclick="ordFil.estado='';ordPag=1;reOrd()">Todas <b>${_estBase}</b></button>${_estKeys.map(e=>`<button class="fchip${ordFil.estado===e?' on':''}" onclick="ordFil.estado='${e}';ordPag=1;reOrd()">${esc(_chipLbl(e))} <b>${_estCount[e]}</b></button>`).join('')}</div>`:'';
   $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Órdenes</h2><div class="row-actions">${(puedeCargar()&&!esVendedor())?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${esAdmin()?'<button class="btn btn-ghost btn-sm" onclick="exportarOrdenes()">Descargar CSV</button><button class="btn btn-ghost btn-sm" onclick=\'$(&quot;impFile&quot;).click()\'>Importar CSV</button><button class="btn btn-ghost btn-sm" onclick="plantillaCSV()">Plantilla</button><input type="file" id="impFile" accept=".csv" style="display:none" onchange="importarArchivo(this)">':''}</div></div>
     ${conmutador}
     ${esActivas?`<div class="daytabs"><button class="weeknav" title="Semana anterior" onclick="weekRef=addDays(weekRef,-7);vOrdenes()">‹</button>${tabsH}<button class="weeknav" title="Semana siguiente" onclick="weekRef=addDays(weekRef,7);vOrdenes()">›</button></div>`:''}</div>
     ${(esActivas&&!esVendedor())?`<div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}${(()=>{const cf=[...nombresF].filter(f=>cupoTarget[cupoKey(selDay,'F',f)]!=null);const cr=cupoTarget[cupoKey(selDay,'R','TODOS')]!=null?1:0;if(!cf.length&&!cr)return'';const retTotal=Object.values(porRet).reduce((a,b)=>a+b,0);const sumCupo=cf.reduce((a,f)=>a+cupoTarget[cupoKey(selDay,'F',f)],0)+(cr?cupoTarget[cupoKey(selDay,'R','TODOS')]:0);const sumAct=cf.reduce((a,f)=>a+(porF[f]||0),0)+retTotal;return ` <span class="cupototal">${sumAct}/${sumCupo}</span>`;})()}</h3><div class="row-actions"><button class="btn btn-ghost btn-sm" title="Abre Google Maps con un punto por cada envío/expreso del día, para repartir por zona" onclick="abrirMapaDelDia('${selDay}')">📍 Ver mapa del día</button><button class="btn btn-ghost btn-sm" title="Bloquea el día para que no se agenden más entregas." onclick="toggleDiaCerrado()">${cerrado?'🔓 Desbloquear el día':'🔒 Bloquear el día'}</button></div></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy, su cupo, y las zonas sin cubrir. ${cerrado?'<b style="color:#b42318">Día bloqueado — no se aceptan más cargas.</b>':'Si cerrás el cupo de todos, el día se bloquea solo.'}</p>
     <div class="cupo-grid">${cupoCards}</div></div>`:''}
     <div class="card">${ordVista==='pendientes'?'<p class="muted" style="margin:0 0 10px">Órdenes trabadas de días anteriores: entregadas que el chofer no rindió, o que esperan la firma de Jony. Ordenadas de la más vieja a la más nueva.</p>':(esActivas?'<p class="muted" style="margin:0 0 10px">Lo que tenés para trabajar del día seleccionado. Movete con las flechas de arriba, o mirá otras vistas con los botones.</p>':'')}
-    <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)"><select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${estadoOpts.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select><select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${hayRetiro?`<option value="Retiro" ${ordFil.flete==='Retiro'?'selected':''}>Retiro</option>`:''}${[...nombresF].sort().map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>
+    <div class="ordfilters"><input id="of_q" placeholder="Buscar N° de orden…" value="${esc(ordFil.q)}" oninput="ordFil.q=this.value;reOrd(true)">${_mostrarChips?'':`<select onchange="ordFil.estado=this.value;reOrd()"><option value="">Todos los estados</option>${estadoOpts.map(e=>`<option ${ordFil.estado===e?'selected':''}>${esc(e)}</option>`).join('')}</select>`}<select onchange="ordFil.flete=this.value;reOrd()"><option value="">Todos los fletes</option><option value="__sin" ${ordFil.flete==='__sin'?'selected':''}>Sin asignar</option>${hayRetiro?`<option value="Retiro" ${ordFil.flete==='Retiro'?'selected':''}>Retiro</option>`:''}${_choferOpts.map(f=>`<option ${ordFil.flete===f?'selected':''}>${esc(f)}</option>`).join('')}</select></div>
+    ${estadoChipBar}
     ${(esActivas&&(ordCond||ordZona||ordProb||ordRet||ordTipo||ordVend||ordRecl||ordGest||ordAutoriz||ordRefuerzo))?`<div class="actfil">Filtros activos: ${ordAutoriz?'<span class="afchip">🔒 Esperando mi autorización <button onclick="ordAutoriz=false;vOrdenes()">×</button></span>':''}${ordRefuerzo?'<span class="afchip">💲 Refuerzos a confirmar <button onclick="ordRefuerzo=false;vOrdenes()">×</button></span>':''}${ordRecl?'<span class="afchip">🚩 Reclamos abiertos <button onclick="ordRecl=false;vOrdenes()">×</button></span>':''}${ordGest?'<span class="afchip">⏳ En gestión <button onclick="ordGest=false;vOrdenes()">×</button></span>':''}${ordVend?'<span class="afchip">👤 Cargadas por vendedores · a confirmar <button onclick="ordVend=false;vOrdenes()">×</button></span>':''}${ordCond?'<span class="afchip">Condicionadas · semana <button onclick="ordCond=false;vOrdenes()">×</button></span>':''}${ordZona?`<span class="afchip">Zona: ${esc(ordZona)} <button onclick="ordZona='';vOrdenes()">×</button></span>`:''}${ordProb?'<span class="afchip">Con problema <button onclick="ordProb=false;vOrdenes()">×</button></span>':''}${ordRet?`<span class="afchip">Retiro: ${esc(ordRet==='ALL'?'todos':ordRet)} <button onclick="ordRet='';vOrdenes()">×</button></span>`:''}${ordTipo?`<span class="afchip">Tipo: ${esc(ordTipo)} <button onclick="ordTipo='';vOrdenes()">×</button></span>`:''} <button class="btn btn-ghost btn-sm" onclick="ordCond=false;ordZona='';ordProb=false;ordRet='';ordTipo='';ordVend=false;ordRecl=false;ordGest=false;ordAutoriz=false;ordRefuerzo=false;vOrdenes()">Limpiar</button></div>`:''}
     ${(!esActivas)?`<p class="muted" style="margin:0 0 10px;font-size:12.5px">${totalSinPag} orden${totalSinPag===1?'':'es'}${usaPag&&quedanOrd>0?` · mostrando ${list.length}`:''}</p>`:''}
     ${list.length?`<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>N° orden</th><th class="thsort" onclick="ordSortBy('zona')">Zona${ordSortCol==='zona'?(ordSortDir>0?' ▲':' ▼'):''}</th><th>Muebles</th><th class="thsort" onclick="ordSortBy('flete')">Flete${ordSortCol==='flete'?(ordSortDir>0?' ▲':' ▼'):''}</th>${esVendedor()?'':'<th>Cobranza</th>'}<th>Estado</th><th style="text-align:center">Refuerzo</th>${esVendedor()?'':'<th></th>'}</tr></thead><tbody>${rows}</tbody></table></div>${(usaPag&&quedanOrd>0)?`<div style="text-align:center;margin-top:12px"><button class="btn btn-ghost" onclick="ordPag++;vOrdenes()">Mostrar ${Math.min(quedanOrd,ORD_PAG)} más (quedan ${quedanOrd})</button></div>`:''}`:'<div class="empty">No hay órdenes con esos filtros.</div>'}</div>`}
