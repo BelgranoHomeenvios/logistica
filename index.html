@@ -391,6 +391,10 @@ tr.rprob{background:#fef4f4}
 .avisoVend{background:#fff7e6;border:1px solid #f3d19b;color:#b45309;border-radius:8px;padding:10px 13px;font-size:13.5px;margin-bottom:16px;line-height:1.5}
 .navdia{align-items:center;gap:5px}.navdia .btn.on{background:var(--navy);color:#fff}
 .btn-recorrido{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;font-size:14px;text-decoration:none}
+.ruta-acciones{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.ruta-acciones .btn{flex:0 0 auto;width:auto;min-height:36px;padding:6px 12px;font-size:12.5px}
+.ruta-acciones .btn-recorrido{width:auto;min-height:36px;display:inline-flex}
+.ruta-acciones .maps-extra{flex-basis:100%;margin-top:0}
 .paradahead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .paradanum{background:#eef1f5;color:#5b6675;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700}
 .paradanum.first{background:#e7effc;color:#1e5fce}
@@ -1895,7 +1899,7 @@ function linkRecorrido(list){const ps=paradasRuta(list);if(!ps.length)return '';
   return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)+'&waypoints='+wp.map(encodeURIComponent).join('%7C')+'&travelmode=driving'}
 function btnRecorrido(list){const ps=paradasRuta(list);if(ps.length<2)return '';
   const extra=ps.length>10?ps.length-10:0;
-  return `<a class="btn btn-primary btn-recorrido" href="${linkRecorrido(list)}" target="_blank">Ver recorrido en Maps · ${ps.length>10?10:ps.length} parada${(ps.length>10?10:ps.length)===1?'':'s'}</a>${extra?`<div class="muted" style="font-size:11.5px;margin-top:6px">Maps admite hasta 10 paradas por recorrido. Quedaron ${extra} afuera — hacelas después con el botón Maps de cada viaje.</div>`:''}`}
+  return `<a class="btn btn-primary btn-recorrido" href="${linkRecorrido(list)}" target="_blank">Ver recorrido en Maps · ${ps.length>10?10:ps.length} parada${(ps.length>10?10:ps.length)===1?'':'s'}</a>${extra?`<div class="muted maps-extra" style="font-size:11.5px;margin-top:6px">Maps admite hasta 10 paradas por recorrido. Quedaron ${extra} afuera — hacelas después con el botón Maps de cada viaje.</div>`:''}`}
 function abrirMapaOrden(id){const o=ordenes.find(x=>x.id===id);if(!o)return;const dir=direccionParaMapa(o);
   if(!dir){showToast(o.confirmacion==='A confirmar'?'Todavía está "A confirmar" — falta la dirección definitiva para poder ubicarla en el mapa.':'Este tipo de orden no tiene un punto de entrega para mapear.','info');return}
   window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(dir),'_blank')}
@@ -3018,24 +3022,141 @@ function diaCardFlete(flete,iso,fn){
       <h3 style="margin:0">${abierto?'▾':'▸'} ${etiquetaDia(iso)} · ${ddmm(iso)}</h3>
       <span class="muted">${list.length} viaje${list.length===1?'':'s'}</span></div>
     ${abierto?tablaViajesDia(list,fn):''}
-    <div class="row-actions" style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copiarDiaWA('${iso}','${fn}')">📋 Copiar para WhatsApp</button></div></div>`}
+    <div class="row-actions" style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copiarDiaWA('${iso}','${fn}')">📋 Copiar para WhatsApp</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();imprimirRutaDia('${iso}','${fn}')">🖨 Imprimir hoja de ruta</button></div></div>`}
+
+/* ===================== RETIRO CLIENTE (verificación de depósito) =====================
+   Las órdenes tipo 'Retiro' no llevan flete (necesitaFlete=false), así que no aparecen en la
+   ruta del chofer. Pero igual SALEN muebles del depósito: el cliente los retira. Esta vista
+   las junta "como si fuera una ruta" (sin mapa, son retiros en depósito) para que Seguridad
+   verifique mueble por mueble antes de que salgan, con planilla imprimible 1×1. */
+function retirosDeDia(iso){return ordenes.filter(o=>o.fecha===iso&&o.tipo==='Retiro'&&o.estado!=='Cancelado'&&!o.archivada)}
+function piezasDe(o){return (o.lineas||[]).reduce((s,l)=>s+(+l.cant||0),0)}
+function tablaRetiroDia(list){
+  const filas=list.map((o,idx)=>{const mu=mueblesLinea(o);
+    return `<tr>
+      <td style="font-weight:700">${idx+1}</td>
+      <td class="rf-cli">${esc(o.cliente||'(sin nombre)')}<br><span class="muted">Orden ${esc(o.boleta||'—')}</span></td>
+      <td>${esc(retLoc(o))}</td>
+      <td class="rf-hor">${esc(o.horario||'')}</td>
+      <td class="rf-mue">${mu?esc(mu):'<span class="muted">— sin muebles cargados</span>'}</td>
+    </tr>`}).join('');
+  const piezas=list.reduce((a,o)=>a+piezasDe(o),0);
+  return `<div class="table-wrap"><table class="rutatab"><thead><tr><th>#</th><th>Cliente</th><th>Retira de</th><th>Horario</th><th>Muebles</th></tr></thead><tbody>${filas}</tbody></table></div>
+    <div class="rf-tot">Piezas a verificar en el día: <b>${piezas}</b></div>`}
+function diaCardRetiro(iso){
+  const _l=retirosDeDia(iso);if(!_l.length)return'';
+  const list=ordenAutoRuta(_l);
+  const key='ret_'+iso;
+  if(semanaOpen[key]===undefined)semanaOpen[key]=(iso===HOY||iso===addDays(HOY,1));
+  const abierto=!!semanaOpen[key];
+  return `<div class="card"><div class="section-title sem-head" onclick="toggleSemanaDia('${key}','vRutaFlete')">
+      <h3 style="margin:0">${abierto?'▾':'▸'} ${etiquetaDia(iso)} · ${ddmm(iso)}</h3>
+      <span class="muted">${list.length} retiro${list.length===1?'':'s'}</span></div>
+    ${abierto?tablaRetiroDia(list):''}
+    <div class="row-actions" style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copiarRetiroWA('${iso}')">📋 Copiar para WhatsApp</button><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();imprimirRetiroDia('${iso}')">🖨 Imprimir planilla de verificación</button></div></div>`}
+function textoRetiroWA(iso){
+  const list=ordenAutoRuta(retirosDeDia(iso));if(!list.length)return'';
+  let n=0;
+  const items=list.map(o=>{n++;const mu=mueblesLinea(o);
+    return `${n}) ${o.cliente||'(sin nombre)'} · Retira de ${retLoc(o)} · ${o.horario||''}`+(mu?`\n   ${mu}`:'')}).join('\n\n');
+  return `🏬 Retiro cliente · ${etiquetaDiaLarga(iso)} ${ddmm(iso)} · ${list.length} retiro${list.length===1?'':'s'}\n\n${items}`}
+function copiarRetiroWA(iso){const txt=textoRetiroWA(iso);
+  if(!txt){showToast('No hay retiros para copiar ese día.','info');return}
+  copiarTexto(txt,'Copiado — listado de retiros de '+etiquetaDiaLarga(iso).toLowerCase())}
+
+/* Planilla imprimible A4 — hoja de ruta del chofer (con casillero para tildar cada parada) */
+function imprimirRutaDia(iso,fn){
+  const flete=fleteDeVista(fn);
+  const list=rutaOrdenada(viajesDeDia(flete,iso));
+  if(!list.length){showToast('No hay viajes para imprimir ese día.','info');return}
+  const cobroDe=o=>recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);
+  const filas=list.map((o,idx)=>{const mu=mueblesLinea(o);const av=[];
+    if(o.esReclamo)av.push('🚩 '+reclamoNroDe(o));if(horarioEspecial(o))av.push('⏰ '+o.horario);if(o.comentario)av.push('⚠ '+o.comentario);
+    return `<tr>
+      <td style="text-align:center;padding:8px 6px;border-bottom:1px solid #eef0f2"><div style="width:15px;height:15px;border:1.5px solid #14181f;border-radius:3px;margin:0 auto"></div></td>
+      <td style="text-align:center;font-weight:800;padding:8px 6px;border-bottom:1px solid #eef0f2">${idx+1}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eef0f2"><b>${esc(o.cliente||'(sin nombre)')}</b>${av.length?`<div style="font-size:10px;color:#b42318;margin-top:2px">${esc(av.join(' · '))}</div>`:''}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eef0f2">${esc(dirCompleta(o))}<div style="font-size:10px;color:#5b6472">${esc(o.localidad||'')}</div></td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eef0f2">${esc(o.horario||'')}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eef0f2;font-size:12px">${mu?esc(mu):'—'}</td>
+      <td style="text-align:right;font-weight:700;padding:8px 6px;border-bottom:1px solid #eef0f2">${money(cobroDe(o))}</td>
+    </tr>`}).join('');
+  const total=list.reduce((a,o)=>a+cobroDe(o),0);
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Hoja de ruta ${esc(flete||'')} ${ddmm(iso)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif;color:#14181f}@page{size:A4 landscape;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}}</style></head><body>
+  <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div class="no-print" style="width:277mm;max-width:100%;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Hoja de ruta — se imprime en A4 apaisado</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
+    <div class="sheet" style="width:277mm;max-width:100%;background:#fff;padding:10mm;box-shadow:0 8px 30px rgba(0,0,0,.12);border:1.5px solid #14181f">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px">
+        <div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:11px;color:#5b6472;margin-top:2px;letter-spacing:1px;font-weight:600">HOJA DE RUTA DEL FLETE</div></div>
+        <div style="text-align:right"><div style="font-size:20px;font-weight:800;color:#0f766e">${esc(flete||'—')}</div><div style="font-size:13px;color:#5b6472">${fechaLarga(iso)} · ${list.length} viaje${list.length===1?'':'s'}</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:14px"><thead><tr style="color:#5b6472;font-size:10px;letter-spacing:.5px;text-transform:uppercase"><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;width:34px">✓</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;width:34px">#</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;text-align:left">Cliente</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;text-align:left">Domicilio</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;text-align:left">Horario</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;text-align:left">Muebles</th><th style="padding:6px;border-bottom:1.5px solid #d7dbe0;text-align:right">A cobrar</th></tr></thead><tbody>${filas}</tbody></table>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;font-size:14px"><div>Total a cobrar del día: <b>${money(total)}</b></div></div>
+      <div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:52px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">FIRMA DEL CHOFER</div></div><div style="text-align:center"><div style="height:52px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">FIRMA DE DEPÓSITO</div></div></div>
+    </div></div></body></html>`;
+  const w=window.open('','_blank');w.document.write(H);w.document.close()}
+
+/* Planilla imprimible A4 — verificación de RETIRO CLIENTE, mueble por mueble (Seguridad tilda 1×1) */
+function imprimirRetiroDia(iso){
+  const list=ordenAutoRuta(retirosDeDia(iso));
+  if(!list.length){showToast('No hay retiros para imprimir ese día.','info');return}
+  const bloques=list.map((o,idx)=>{
+    const lineas=(o.lineas||[]).filter(l=>l.desc);
+    const rows=lineas.length?lineas.map(l=>`<tr><td style="text-align:center;width:38px;padding:7px 8px;border-bottom:1px solid #eef0f2"><div style="width:17px;height:17px;border:1.5px solid #14181f;border-radius:3px;margin:0 auto"></div></td><td style="width:56px;text-align:center;font-weight:800;padding:7px 8px;border-bottom:1px solid #eef0f2">${l.cant}</td><td style="padding:7px 8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</td></tr>`).join(''):`<tr><td></td><td></td><td style="padding:7px 8px;color:#9aa2ad">— sin muebles cargados —</td></tr>`;
+    return `<div style="margin-top:14px;border:1.5px solid #d7dbe0;border-radius:8px;overflow:hidden;page-break-inside:avoid">
+      <div style="background:#f4f6f8;padding:8px 12px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #d7dbe0;gap:12px">
+        <div style="font-weight:800;font-size:15px">${idx+1}. ${esc(o.cliente||'(sin nombre)')}</div>
+        <div style="font-size:11.5px;color:#5b6472">Orden ${esc(o.boleta||'—')} · Retira de ${esc(retLoc(o))} · ${esc(o.horario||'')} · ${piezasDe(o)} pieza${piezasDe(o)===1?'':'s'}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px"><thead><tr style="color:#5b6472;font-size:10px;letter-spacing:.5px"><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #eef0f2">✓</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #eef0f2">CANT</th><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #eef0f2">MUEBLE</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`}).join('');
+  const piezas=list.reduce((a,o)=>a+piezasDe(o),0);
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Verificación retiros ${ddmm(iso)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif;color:#14181f}@page{size:A4;margin:11mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}}</style></head><body>
+  <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div class="no-print" style="width:190mm;max-width:100%;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Planilla de verificación — Seguridad tilda mueble por mueble</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
+    <div class="sheet" style="width:190mm;max-width:100%;background:#fff;padding:11mm;box-shadow:0 8px 30px rgba(0,0,0,.12);border:1.5px solid #14181f">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px">
+        <div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:11px;color:#5b6472;margin-top:2px;letter-spacing:1px;font-weight:600">VERIFICACIÓN DE RETIROS · SEGURIDAD</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:#0f766e">${fechaLarga(iso)}</div><div style="font-size:13px;color:#5b6472">${list.length} retiro${list.length===1?'':'s'} · ${piezas} pieza${piezas===1?'':'s'}</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#5b6472">Tildá cada mueble a medida que lo verificás antes de que salga del depósito. Un retiro solo se entrega con todas sus piezas tildadas.</div>
+      ${bloques}
+      <div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:52px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">FIRMA SEGURIDAD</div></div><div style="text-align:center"><div style="height:52px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">ACLARACIÓN</div></div></div>
+    </div></div></body></html>`;
+  const w=window.open('','_blank');w.document.write(H);w.document.close()}
 
 function vRutaFlete(){
+  const RET='__RETIRO__';
   const choferesConViajes=[...new Set(ordenes.filter(o=>o.fecha===HOY&&o.flete&&necesitaFlete(o)&&o.estado!=='Cancelado'&&!o.archivada).map(o=>o.flete))].sort();
   const todos=[...new Set([...FLETES,...choferesConViajes])];
   if(!rutaFleteSel&&choferesConViajes.length)rutaFleteSel=choferesConViajes[0];
+  const esRetiroVista=rutaFleteSel===RET;
+  const hayRetiroHoy=retirosDeDia(HOY).length;
+  const optRet=`<option value="${RET}" ${esRetiroVista?'selected':''}>🏬 Retiro cliente — verificación de depósito${hayRetiroHoy?' ('+hayRetiroHoy+' hoy)':''}</option>`;
   const opts=todos.map(f=>`<option ${rutaFleteSel===f?'selected':''}>${esc(f)}</option>`).join('');
+  const selectHTML=`<select style="max-width:340px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${optRet}${opts}</select>`;
+  /* Vista de retiros de cliente: como una ruta pero sin mapa (son retiros en depósito). */
+  if(esRetiroVista){
+    const retHoy=retirosDeDia(HOY);
+    const dias=proxDias(HOY,7).map(iso=>diaCardRetiro(iso)).join('')
+      || '<div class="card"><div class="empty">No hay retiros de cliente agendados en los próximos días.</div></div>';
+    $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Retiro cliente · ${fmt(HOY)}</h2><span class="muted">${retHoy.length} retiro${retHoy.length===1?'':'s'} hoy</span></div>
+      <label class="lbl" style="display:block;margin:6px 0 4px">Ver la ruta de:</label>
+      ${selectHTML}
+      <div class="muted" style="margin-top:10px;font-size:12.5px;line-height:1.5">Muebles que salen del depósito por retiro del cliente. Sin mapa: se retiran en el local. Imprimí la planilla para que Seguridad verifique mueble por mueble antes de que salgan.</div></div>${dias}`;
+    return;
+  }
   const _lf=ordenes.filter(o=>o.fecha===HOY&&o.flete===rutaFleteSel&&o.estado!=='Cancelado'&&!o.archivada);autoOrdenarSiHaceFalta(_lf);const list=rutaOrdenada(_lf);
   const MAN=addDays(HOY,1);
   const hayMan=rutaFleteSel?viajesDeDia(rutaFleteSel,MAN).length:0;
   /* La ruta se manda SIEMPRE con un día de anticipación: el botón grande es el de mañana. */
-  const btnMan=hayMan?`<div style="margin-top:12px"><button class="btn btn-primary" style="width:100%;justify-content:center" onclick="copiarDiaWA('${MAN}','vRutaFlete')">📋 Copiar la ruta de MAÑANA ${ddmm(MAN)} para ${esc(rutaFleteSel)} · ${hayMan} viaje${hayMan===1?'':'s'}</button></div>`:'';
+  const btnMan=hayMan?`<button class="btn btn-primary btn-sm" onclick="copiarDiaWA('${MAN}','vRutaFlete')">📋 Copiar la ruta de MAÑANA ${ddmm(MAN)} para ${esc(rutaFleteSel)} · ${hayMan} viaje${hayMan===1?'':'s'}</button>`:'';
   const dias=!rutaFleteSel?'<div class="card"><div class="empty">Elegí un chofer para ver su ruta.</div></div>'
     :(proxDias(HOY,7).map(iso=>diaCardFlete(rutaFleteSel,iso,'vRutaFlete')).join('')
       || `<div class="card"><div class="empty">${esc(rutaFleteSel)} no tiene viajes en los próximos días.</div></div>`);
   $('view').innerHTML=`<div class="card"><div class="section-title"><h2>Ruta del flete · ${fmt(HOY)}</h2><span class="muted">${list.length} viaje${list.length===1?'':'s'} hoy</span></div>
     <label class="lbl" style="display:block;margin:6px 0 4px">Ver la ruta de:</label>
-    <select style="max-width:280px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${opts}</select>${btnMan}${btnRecorrido(list)?`<div style="margin-top:12px">${btnRecorrido(list)}</div>`:''}${btnOrdenHorario(list,'vRutaFlete')?`<div style="margin-top:8px">${btnOrdenHorario(list,'vRutaFlete')}</div>`:''}</div>${dias}`}
+    ${selectHTML}${(btnMan||btnRecorrido(list)||btnOrdenHorario(list,'vRutaFlete'))?`<div class="ruta-acciones">${btnMan}${btnRecorrido(list)}${btnOrdenHorario(list,'vRutaFlete')}</div>`:''}</div>${dias}`}
 /* Bloque de un costo adicional (envío/instalación/escalera) con su selector de estado de pago — orden fijo: A cobrar, Pagado, Sin costo, default A cobrar */
 function costosTabla(){
   const est_flete=estadoCosto(draft,'costo_flete');
