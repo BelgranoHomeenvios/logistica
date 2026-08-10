@@ -1481,19 +1481,11 @@ function vVendedorLog(){
   vOrdenes();
   const htmlOrdenes=$('view').innerHTML;
   _vendLogRender=false;
-  $('view').innerHTML=htmlTablero+htmlOrdenes;
+  $('view').innerHTML=htmlTablero+htmlOrdenes+matrizCapacidad();
 }
 let _vendLogRender=false;
-function vTablero(){
-  if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
-  const dias=semanaDe(tbDia);const diasNav=proxDias(tbWeek,6);const esHoyTb=tbDia===HOY;
-  const dayO=ordenes.filter(o=>o.fecha===tbDia&&o.estado!=='Cancelado'&&!o.archivada);
-  const c=e=>dayO.filter(o=>o.estado===e).length;
-  const sinAsig=dayO.filter(o=>necesitaFlete(o)&&!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const condicSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado!=='Cancelado'&&!o.archivada&&o.habilitada===false).length;
-  const enViaje=c('En viaje');const entreg=c('Entregada')+c('Por rendir')+c('Cerrado');const faltan=dayO.length-enViaje-entreg;const reclamos=reclamosAbiertos().length;const enGest=listaEnGestion();const pedVend=ordenes.filter(esPedidoVendedor).length;const refPend=refuerzosPend();
-  const entregadaChofer=c('Entregada');const porRendir=c('Por rendir');const cerradasHoy=c('Cerrado');
-  const pendAcum=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
-  const probs=ordenes.filter(o=>o.estado!=='Cancelado'&&!o.archivada&&o.lineas.some(l=>l.sep==='problema'));
+function matrizCapacidad(){
+  const diasNav=proxDias(tbWeek,6);
   const contarFlags=o=>{let ins=0;(o.lineas||[]).forEach(l=>{if(l.instala)ins++});return{ins}};
   const matFletes=new Set();
   const matDatos={};diasNav.forEach(iso=>{
@@ -1528,7 +1520,19 @@ function vTablero(){
   const matriz=`<div class="card"><div class="section-title"><h3 class="clik" onclick="toggleCapacidad()" style="user-select:none">${capAbierta?'▾':'▸'} Capacidad por chofer</h3><div class="row-actions" style="${capAbierta?'':'display:none'}"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${!capAbierta?`<p class="muted clik" onclick="toggleCapacidad()" style="margin:-2px 0 0;user-select:none">${resumenCapacidad()}</p>`:''}${!capAbierta?'':esVendedor()?'<p class="muted" style="margin:-2px 0 10px">Ocupación de cada chofer por día.</p>':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
 ${!capAbierta?'':`
     <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${esVendedor()?'':filaSin+filaTotal+filaCupoTotal}</tbody></table></div>`}</div>`;
-  const _p0=diasNav[0].split('-'),_p5=diasNav[5].split('-');const semLabel='Del '+(+_p0[2])+'/'+(+_p0[1])+' al '+(+_p5[2])+'/'+(+_p5[1])+(diasNav[0]===HOY?' · desde hoy':'');
+  return matriz;
+}
+function vTablero(){
+  if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
+  const dias=semanaDe(tbDia);const esHoyTb=tbDia===HOY;
+  const dayO=ordenes.filter(o=>o.fecha===tbDia&&o.estado!=='Cancelado'&&!o.archivada);
+  const c=e=>dayO.filter(o=>o.estado===e).length;
+  const sinAsig=dayO.filter(o=>necesitaFlete(o)&&!o.flete).length;const condic=dayO.filter(o=>o.habilitada===false).length;const condicSem=ordenes.filter(o=>dias.includes(o.fecha)&&o.estado!=='Cancelado'&&!o.archivada&&o.habilitada===false).length;
+  const enViaje=c('En viaje');const entreg=c('Entregada')+c('Por rendir')+c('Cerrado');const faltan=dayO.length-enViaje-entreg;const reclamos=reclamosAbiertos().length;const enGest=listaEnGestion();const pedVend=ordenes.filter(esPedidoVendedor).length;const refPend=refuerzosPend();
+  const entregadaChofer=c('Entregada');const porRendir=c('Por rendir');const cerradasHoy=c('Cerrado');
+  const pendAcum=ordenes.filter(o=>!o.archivada&&diasSinCerrar(o)).length;
+  const probs=ordenes.filter(o=>o.estado!=='Cancelado'&&!o.archivada&&o.lineas.some(l=>l.sep==='problema'));
+  const matriz=esVendedor()?'':matrizCapacidad();
   
   $('view').innerHTML=`
   ${esVendedor()?'':`<div class="card"><div class="section-title"><h2>Tablero · ${fmt(tbDia)}${esHoyTb?'':' <span class="badge e-cond" style="vertical-align:middle">'+(diaRel(tbDia)||'otro día')+'</span>'}</h2><div class="row-actions" style="gap:10px;flex-wrap:wrap">${navDia('tbDia','vTablero')}${puedeCargar()?'<button class="btn-cargar-viaje" onclick="nuevaOrden()"><span style="font-size:15px;line-height:1">＋</span> Cargar viaje</button><button class="btn-cargar-viaje btn-reclamo" onclick="abrirBuscarReclamo()"><span style="font-size:15px;line-height:1">＋</span> Cargar reclamo</button>':''}${puedeCargarRefuerzo()?'<button class="btn-cargar-viaje btn-refuerzo" onclick="abrirBuscarRefuerzo()"><span style="font-size:15px;line-height:1">＋</span> Cargar refuerzo</button>':''}</div></div>
