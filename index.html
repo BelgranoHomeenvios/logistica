@@ -3132,7 +3132,7 @@ function vRutaFlete(){
   if(!rutaFleteSel&&choferesConViajes.length)rutaFleteSel=choferesConViajes[0];
   const esRetiroVista=rutaFleteSel===RET;
   const hayRetiroHoy=retirosDeDia(HOY).length;
-  const optRet=`<option value="${RET}" ${esRetiroVista?'selected':''}>🏬 Retiro cliente — verificación de depósito${hayRetiroHoy?' ('+hayRetiroHoy+' hoy)':''}</option>`;
+  const optRet=`<option value="${RET}" ${esRetiroVista?'selected':''}>🏬 Retiro cliente${hayRetiroHoy?' ('+hayRetiroHoy+' hoy)':''}</option>`;
   const opts=todos.map(f=>`<option ${rutaFleteSel===f?'selected':''}>${esc(f)}</option>`).join('');
   const selectHTML=`<select style="max-width:340px;height:40px" onchange="rutaFleteSel=this.value;vRutaFlete()"><option value="">Elegí un chofer…</option>${optRet}${opts}</select>`;
   /* Vista de retiros de cliente: como una ruta pero sin mapa (son retiros en depósito). */
