@@ -1481,7 +1481,7 @@ function vVendedorLog(){
   vOrdenes();
   const htmlOrdenes=$('view').innerHTML;
   _vendLogRender=false;
-  $('view').innerHTML=htmlTablero+htmlOrdenes+matrizCapacidad();
+  $('view').innerHTML=htmlTablero+matrizCapacidad()+panelCapacidadDia()+htmlOrdenes;
 }
 let _vendLogRender=false;
 function matrizCapacidad(){
@@ -1517,10 +1517,32 @@ function matrizCapacidad(){
     const sumAct=cf.reduce((a,f)=>a+(matDatos[iso].porCh[f]?matDatos[iso].porCh[f].n:0),0)+ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&o.tipo==='Retiro').length;
     return `<td class="matcell clik" onclick="irOrdenes({day:'${iso}'})"><b class="cupototal" style="margin:0">${sumAct}/${sumCupo}</b></td>`;
   }).join('')}</tr>`;
-  const matriz=`<div class="card"><div class="section-title"><h3 class="clik" onclick="toggleCapacidad()" style="user-select:none">${capAbierta?'▾':'▸'} Capacidad por chofer</h3><div class="row-actions" style="${capAbierta?'':'display:none'}"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${!capAbierta?`<p class="muted clik" onclick="toggleCapacidad()" style="margin:-2px 0 0;user-select:none">${resumenCapacidad()}</p>`:''}${!capAbierta?'':esVendedor()?'<p class="muted" style="margin:-2px 0 10px">Ocupación de cada chofer por día.</p>':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
+  const matriz=`<div class="card"><div class="section-title"><h3 class="clik" onclick="toggleCapacidad()" style="user-select:none">${capAbierta?'▾':'▸'} Capacidad por chofer</h3><div class="row-actions" style="${capAbierta?'':'display:none'}"><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,-7);vTablero()">‹ Semana</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=HOY;vTablero()">Hoy</button><button class="btn btn-ghost btn-sm" onclick="tbWeek=addDays(tbWeek,7);vTablero()">Semana ›</button></div></div>${!capAbierta?`<p class="muted clik" onclick="toggleCapacidad()" style="margin:-2px 0 0;user-select:none">${resumenCapacidad()}</p>`:''}${!capAbierta?'':`<p class="muted" style="margin:-2px 0 10px">🚫 día bloqueado · 🔒 cupo cerrado · ✓ verde llegó justo · ⚠ rojo superó el cupo · 🔧 instalación (el número de al lado es cuántos, no se suma aparte al total) · 🚩 tiene un reclamo activo. Tocá un nombre para ver sus zonas; tocá un número para ver el detalle.</p>`}
 ${!capAbierta?'':`
-    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${esVendedor()?'':filaSin+filaTotal+filaCupoTotal}</tbody></table></div>`}</div>`;
+    <div class="table-wrap"><table class="mattable"><thead><tr><th></th>${diasNav.map(iso=>`<th>${diaLbl(iso)}${diasCerrados[iso]?' 🚫':''}</th>`).join('')}</tr></thead><tbody>${filasChofer}${filaRetiro}${filaSin}${filaTotal}${filaCupoTotal}</tbody></table></div>`}</div>`;
   return matriz;
+}
+/* Panel "Capacidad del día" en modo SOLO LECTURA para el vendedor: ve quién trabaja
+   y su cupo (disponibilidad), pero SIN los botones operativos (cerrar cupo, +1/+2,
+   bloquear día, agregar chofer). Esos controles son decisión de Logística, no de ventas. */
+function panelCapacidadDia(){
+  const dayO=ordenes.filter(o=>o.fecha===selDay&&o.estado!=='Cancelado'&&!o.archivada);
+  const porF={};dayO.filter(o=>o.flete&&necesitaFlete(o)).forEach(o=>{porF[o.flete]=(porF[o.flete]||0)+1});
+  const porRet={};dayO.filter(o=>o.tipo==='Retiro').forEach(o=>{const k=retLoc(o);porRet[k]=(porRet[k]||0)+1});
+  const nombresF=new Set(Object.keys(porF));FLETES.forEach(f=>{if(cupoTarget[cupoKey(selDay,'F',f)]!=null||cupoActivo[cupoKey(selDay,'F',f)])nombresF.add(f)});
+  const nombresR=(Object.keys(porRet).length||cupoTarget[cupoKey(selDay,'R','TODOS')]!=null)?new Set(['TODOS']):new Set();
+  if(!nombresF.size&&!nombresR.size)return '';
+  const card=(tipo,nombre,n,label)=>{const key=cupoKey(selDay,tipo,nombre);const target=cupoTarget[key];const cerrado=!!cupoCerrado[key];
+    const est=cerrado?'closed':estadoCupo(n,target);
+    const claseEst=est==='closed'?'cc-closed':(est==='over'?'cc-over':(est==='full'?'cc-full':''));
+    const marca=cerrado?' · cerrado':(est==='over'?' · superó':(est==='full'?' · completo':''));
+    const cont=target!=null?`${n}/${target}`:`${n}`;
+    const desglose=(tipo==='R'&&Object.keys(porRet).length>1)?'<br><span class="muted" style="font-size:11px">'+Object.entries(porRet).sort((a,b)=>b[1]-a[1]).map(([l,c])=>esc(l)+'·'+c).join(' · ')+'</span>':'';
+    return `<div class="cupo-card ${claseEst}"><div class="cc-top"><span class="cc-name">${esc(label)}</span></div><div class="cc-sub">${cont} viaje${n===1?'':'s'} hoy${marca}${desglose}</div></div>`;};
+  const fleteCards=[...nombresF].sort((a,b)=>(porF[b]||0)-(porF[a]||0)).map(f=>card('F',f,porF[f]||0,f)).join('');
+  const retCards=[...nombresR].map(()=>card('R','TODOS',Object.values(porRet).reduce((a,b)=>a+b,0),'Retiro cliente')).join('');
+  const cerrado=diasCerrados[selDay];
+  return `<div class="card"><div class="section-title"><h3 style="margin:0">Capacidad del día · ${fmt(selDay)}</h3></div><p class="muted" style="margin:0 0 10px">Quién trabaja hoy y su cupo${cerrado?' · <b style="color:#b42318">día bloqueado</b>':''}.</p><div class="cupo-grid">${fleteCards}${retCards}</div></div>`;
 }
 function vTablero(){
   if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
