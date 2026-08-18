@@ -452,9 +452,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v18.08-17:05</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v18.08-18:15</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v18.08-17:05</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v18.08-18:15</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -763,7 +763,8 @@ function fleteAutoLabel(o){if(o.tipo==='Retiro')return 'Retira cliente';if(o.tip
 const MOVIM_RECLAMO=[
   ['traemos','Traemos el mueble','Retiramos mercadería del cliente — sale constancia de retiro'],
   ['llevamos','Le llevamos algo','Salimos con mercadería para el cliente — sale remito'],
-  ['ambas','Cambio en el acto','Llevamos el nuevo y nos traemos el fallado — salen los dos papeles']
+  ['ambas','Cambio en el acto','Llevamos el nuevo y nos traemos el fallado — salen los dos papeles'],
+  ['ajuste','Ajustes en domicilio','Se resuelve en el lugar y no se mueve mercadería — sale constancia de visita']
 ];
 function esOrdenReclamo(o){return !!(o&&o.esReclamo)}
 /* Un reclamo recién registrado no tiene fecha, ni tipo de envío, ni solución:
@@ -1174,6 +1175,8 @@ LOCALIDADES.sort((a,b)=>a.n.localeCompare(b.n,'es'));
 function estadoVista(o){
   /* Si el chofer fue a RETIRAR, "Entregada" no describe lo que pasó: se trajo el mueble. */
   if(esOrdenReclamo(o)&&o.movim==='traemos'&&o.estado==='Entregada')return 'Retirado';
+  /* En un ajuste no se entrega nada: el chofer fue, lo resolvió en el lugar y volvió. */
+  if(esOrdenReclamo(o)&&o.movim==='ajuste'&&o.estado==='Entregada')return 'Ajustado';
   if(!esVendedor())return o.estado;
   if(o.estado==='Por rendir'||o.estado==='Cerrado')return 'Entregada';
   if(o.estado==='Coordinada')return 'Sin salir';
@@ -2560,9 +2563,9 @@ function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
     <div class="sheet" style="width:190mm; min-height:277mm; background:#fff; padding:11mm 11mm 9mm; box-shadow:0 8px 30px rgba(0,0,0,0.12); color:#14181f; display:flex; flex-direction:column; border:1.5px solid #14181f;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #14181f; padding-bottom:10px;">
         <div><div style="font-size:24px; font-weight:800; letter-spacing:0.5px;">BELGRANO HOME</div><div style="font-size:10px; color:#5b6472; margin-top:3px; max-width:110mm; line-height:1.4;">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div></div>
-        <div style="text-align:right;"><div style="font-size:12px; font-weight:600; color:#5b6472; letter-spacing:1px;">${esR?(mv==='traemos'?'CONSTANCIA DE RETIRO':'REMITO DE RECLAMO'):'REMITO DE ENTREGA'}</div><div style="font-size:26px; font-weight:800; color:${esR?'#b42318':'#0f766e'};">${esR?'R':''}Nº ${esc(o.boleta)}${esR&&(o.reclamoSeq||1)>1?'-'+o.reclamoSeq:''}</div><div style="font-size:14px; color:#5b6472; margin-top:2px;">${fechaLarga(o.fecha)}</div></div>
+        <div style="text-align:right;"><div style="font-size:12px; font-weight:600; color:#5b6472; letter-spacing:1px;">${esR?(mv==='traemos'?'CONSTANCIA DE RETIRO':(mv==='ajuste'?'CONSTANCIA DE VISITA':'REMITO DE RECLAMO')):'REMITO DE ENTREGA'}</div><div style="font-size:26px; font-weight:800; color:${esR?'#b42318':'#0f766e'};">${esR?'R':''}Nº ${esc(o.boleta)}${esR&&(o.reclamoSeq||1)>1?'-'+o.reclamoSeq:''}</div><div style="font-size:14px; color:#5b6472; margin-top:2px;">${fechaLarga(o.fecha)}</div></div>
       </div>
-      ${esR?`<div style="margin-top:16px;border:2px solid #b42318;border-radius:8px;padding:10px 14px;background:#fdf2f0;"><div style="font-size:13px;font-weight:800;color:#b42318;">${mv==='traemos'?'RETIRO POR RECLAMO':'RECLAMO'} · sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))}${o.reclamoDe&&o.reclamoDe.flete?' — entregó '+esc(o.reclamoDe.flete):''}</div>${o.solucionNota?`<div style="font-size:13px;margin-top:4px;">${esc(o.solucionNota)}</div>`:''}<div style="font-size:14px;font-weight:800;margin-top:6px;color:${(reclamoSinCargo(o)||cobroDestino(o)<=0)?'#15803d':'#b42318'};">${(reclamoSinCargo(o)||cobroDestino(o)<=0)?'SIN COSTO PARA EL CLIENTE':'A COBRAR EN DESTINO: '+m2(cobroDestino(o))}</div>${mv==='traemos'?'<div style="font-size:12px;margin-top:8px;color:#5b6472;">Belgrano Home recibe la mercadería detallada. Este comprobante acredita el retiro.</div>':''}</div>`:''}
+      ${esR?`<div style="margin-top:16px;border:2px solid #b42318;border-radius:8px;padding:10px 14px;background:#fdf2f0;"><div style="font-size:13px;font-weight:800;color:#b42318;">${mv==='traemos'?'RETIRO POR RECLAMO':(mv==='ajuste'?'AJUSTE EN DOMICILIO':'RECLAMO')} · sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))}${o.reclamoDe&&o.reclamoDe.flete?' — entregó '+esc(o.reclamoDe.flete):''}</div>${o.solucionNota?`<div style="font-size:13px;margin-top:4px;">${esc(o.solucionNota)}</div>`:''}<div style="font-size:14px;font-weight:800;margin-top:6px;color:${(reclamoSinCargo(o)||cobroDestino(o)<=0)?'#15803d':'#b42318'};">${(reclamoSinCargo(o)||cobroDestino(o)<=0)?'SIN COSTO PARA EL CLIENTE':'A COBRAR EN DESTINO: '+m2(cobroDestino(o))}</div>${mv==='traemos'?'<div style="font-size:12px;margin-top:8px;color:#5b6472;">Belgrano Home recibe la mercadería detallada. Este comprobante acredita el retiro.</div>':''}</div>`:''}
       <div style="margin-top:22px;"><div style="font-size:12px; font-weight:700; letter-spacing:1px; color:#0f766e; margin-bottom:10px;">DATOS DE ENTREGA</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 24px; font-size:14.5px;"><div><span style="color:#5b6472;">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472;">Teléfono:</span> <b>${tel}</b></div><div><span style="color:#5b6472;">Domicilio:</span> <b>${dom}</b></div><div><span style="color:#5b6472;">Localidad:</span> <b>${loc}</b></div><div><span style="color:#5b6472;">Chofer:</span> <b>${esc(o.flete||'—')}</b></div><div><span style="color:#5b6472;">Horario:</span> <b>${esc(o.horario||'—')}</b></div></div>
         <div style="margin-top:10px; font-size:14.5px;"><span style="color:#5b6472;">Comentarios:</span> <b>${esc(o.observaciones||'—')}</b></div></div>
@@ -2885,21 +2888,16 @@ function filaRend(o){const yaRecibido=recibido(o);
   else if(o.estado==='En reclamo')accion='<span class="muted">⚠ Resolver en Órdenes</span>';
   else accion='<span class="muted">Todavía en ruta</span>';
   return `<tr class="${o.estado==='En reclamo'?'rprob':''}"><td>${esc(o.boleta)} <span class="muted" style="font-size:11.5px">${fmtDiaSem(o.fecha)}</span><br><span class="muted">${esc(o.cliente||'')}</span></td><td>${esc(grupoRend(o))}</td><td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></td><td>${cobTxt}</td><td>${pag?money(pag):'—'}</td><td>${adicTxt}</td><td><b>${money(neto)}</b></td><td style="text-align:right;position:relative">${accion}</td></tr>`}
-/* Tabla del modo "Pendientes de firmar": ignora rendDay a propósito y junta el arrastre
-   de todos los días, agrupado por chofer — que es como Jony cuenta la plata de verdad.
-   Devuelve la misma forma que rendTabla() para que el bloque de netos siga sirviendo. */
-let _pendGrupos=[];
-/* Firma en lote del arrastre. i = índice del grupo dibujado, o -1 para todo.
-   Trabaja sobre listaPendFirma(), no sobre rendDay: por eso cruza días. */
-function pendDelGrupo(i){const src=listaPendFirma().filter(pendFirmable);
-  if(i<0)return src;
-  const g=_pendGrupos[i];return g?src.filter(o=>grupoRend(o)===g):[]}
-function firmarLotePend(i){
+/* Firma en lote del arrastre. Trabaja sobre listaPendFirma() y no sobre rendDay: por eso
+   cruza días. Respeta el chip de chofer si hay uno elegido — esa es la ÚNICA forma de
+   separar por chofer acá; la lista no se agrupa sola. */
+function pendParaFirmar(){return listaPendFirma().filter(pendFirmable)}
+function firmarLotePend(){
   if(!puedeCerrar()){showToast('Solo Jony (o el administrador) puede firmar la rendición.','error');return}
-  const arr=pendDelGrupo(i);
-  if(!arr.length){showToast('No quedó nada para firmar en ese grupo.','info');return}
-  modalActivo={tipo:'firmarlotepend',i,n:arr.length,neto:arr.reduce((a,o)=>a+netoOrdenBH(o),0),
-    quien:i<0?'todos los choferes':(_pendGrupos[i]||''),
+  const arr=pendParaFirmar();
+  if(!arr.length){showToast('No quedó nada para firmar.','info');return}
+  modalActivo={tipo:'firmarlotepend',n:arr.length,neto:arr.reduce((a,o)=>a+netoOrdenBH(o),0),
+    quien:rendChoferFil||'todos los choferes',
     desde:arr.reduce((m,o)=>m&&m<o.fecha?m:o.fecha,''),hasta:arr.reduce((m,o)=>o.fecha>m?o.fecha:m,'')};
   renderModal()}
 function cuerpoFirmarLotePend(m){
@@ -2908,37 +2906,29 @@ function cuerpoFirmarLotePend(m){
   <p class="muted" style="margin:8px 0 0;font-size:12.5px">Firmá solo si ya contaste esa plata. Lo que todavía no recibiste del chofer no entra en este lote.</p>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-ok" onclick="confirmarFirmarLotePend()">Firmar ${m.n}</button></div>`}
 function confirmarFirmarLotePend(){
-  const m=modalActivo;const arr=pendDelGrupo(m.i);
+  const m=modalActivo;const arr=pendParaFirmar();
   arr.forEach(o=>{o.rendido=true;o.rendResult='Recibí OK';if(o.estado!=='Cerrado')setEstado(o,'Cerrado',{accion:'Firmar rendición pendiente en lote'})});
   registrarAuditoria('Firmar rendición pendiente en lote ('+arr.length+' viajes · '+money(m.neto)+')',null,m.quien);
   cerrarModal();showToast(arr.length+' rendición'+(arr.length===1?'':'es')+' firmada'+(arr.length===1?'':'s')+'.','success');vRendicion()}
+/* Tabla del modo "Pendientes de firmar": ignora rendDay a propósito y junta el arrastre
+   de todos los días en UNA sola lista, del MÁS VIEJO al más nuevo — la antigüedad es la
+   prioridad real. NO se agrupa por chofer: esa separación sale únicamente de los chips,
+   si Brian elige uno. El chofer se ve igual en la columna de cada fila.
+   Devuelve la misma forma que rendTabla() para que el bloque de netos siga sirviendo. */
 function rendTablaPend(){
-  const src=listaPendFirma();
-  _pendGrupos=[];
-  if(!src.length)return {html:'<div class="empty" style="padding:6px 0 2px">No hay nada pendiente de firmar. Todo al día.</div>',sesp:0,sreal:0,spag:0,sadic:0};
+  const src=listaPendFirma().slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)||grupoRend(a).localeCompare(grupoRend(b))||a.id-b.id);
+  if(!src.length)return {html:`<div class="empty" style="padding:6px 0 2px">No hay nada pendiente de firmar${rendChoferFil?' de '+esc(rendChoferFil):''}. Todo al día.</div>`,sesp:0,sreal:0,spag:0,sadic:0};
   let sesp=0,sreal=0,spag=0,sadic=0;
   src.forEach(o=>{sesp+=cobroBH(o);sreal+=cobroRealOrden(o);spag+=lePagamosBase(o);sadic+=adicionalPagado(o)});
-  const grupos={};
-  src.forEach(o=>{const g=grupoRend(o);(grupos[g]=grupos[g]||[]).push(o)});
-  const nombres=Object.keys(grupos).sort((a,b)=>a.indexOf('Retiro')===0?1:(b.indexOf('Retiro')===0?-1:a.localeCompare(b)));
-  _pendGrupos=nombres;
-  const bloques=nombres.map((g,i)=>{
-    const arr=grupos[g];
-    const firmables=arr.filter(pendFirmable);
-    const neto=firmables.reduce((a,o)=>a+netoOrdenBH(o),0);
-    const viejo=arr.reduce((m,o)=>Math.max(m,pendienteFirma(o).dias),0);
-    const trabados=arr.length-firmables.length;
-    const btn=(puedeCerrar()&&firmables.length)?`<button class="btn btn-ok btn-sm" onclick="firmarLotePend(${i})">Recibí OK todo lo de ${esc(g)} (${firmables.length})</button>`:'';
-    const detalle=[firmables.length?firmables.length+' para firmar · '+money(neto):'',trabados?trabados+' sin recibir todavía':'','el más viejo hace '+viejo+' d'].filter(Boolean).join(' · ');
-    return `<div class="card" style="margin-bottom:12px;padding:14px 16px">
-      <div class="section-title" style="margin-bottom:8px"><div><h3 style="margin:0">${esc(g)} · ${arr.length} viaje${arr.length===1?'':'s'}</h3><span class="muted" style="font-size:12px">${detalle}</span></div><div class="row-actions">${btn}</div></div>
-      <div class="table-wrap"><table class="cdflat"><thead><tr><th>Boleta</th><th>Chofer</th><th>Estado</th><th>Cobró</th><th>Le pagamos</th><th>Adicional</th><th>Neto</th><th></th></tr></thead><tbody>${arr.map(filaRend).join('')}</tbody></table></div>
-    </div>`}).join('');
-  const totFirm=src.filter(pendFirmable).length;
-  const netoTot=src.filter(pendFirmable).reduce((a,o)=>a+netoOrdenBH(o),0);
-  const cabecera=`<p class="muted" style="margin:0 0 12px">Todo lo que quedó sin firmar de ${DIAS_PENDIENTE_FIRMA} días o más para atrás — en viaje, entregado sin recibir, o esperando tu firma. No es del día que estás mirando: son todos los días juntos.</p>
-    ${(puedeCerrar()&&totFirm>1)?`<div class="row-actions" style="margin:0 0 14px"><button class="btn btn-ok" onclick="firmarLotePend(-1)">Recibí OK todo lo pendiente (${totFirm}) · ${money(netoTot)}</button></div>`:''}`;
-  return {html:cabecera+bloques,sesp,sreal,spag,sadic}}
+  const firmables=src.filter(pendFirmable);
+  const neto=firmables.reduce((a,o)=>a+netoOrdenBH(o),0);
+  const viejo=src.reduce((m,o)=>Math.max(m,pendienteFirma(o).dias),0);
+  const trabados=src.length-firmables.length;
+  const resumen=[src.length+' viaje'+(src.length===1?'':'s'),firmables.length?firmables.length+' para firmar · '+money(neto):'nada para firmar todavía',trabados?trabados+' sin recibir todavía':'','el más viejo hace '+viejo+' d'].filter(Boolean).join(' · ');
+  const btn=(puedeCerrar()&&firmables.length)?`<div class="row-actions" style="margin:0 0 14px"><button class="btn btn-ok" onclick="firmarLotePend()">Recibí OK todo lo pendiente${rendChoferFil?' de '+esc(rendChoferFil):''} (${firmables.length}) · ${money(neto)}</button></div>`:'';
+  const cabecera=`<p class="muted" style="margin:0 0 4px">Todo lo que quedó sin firmar de ${DIAS_PENDIENTE_FIRMA} días o más para atrás — en viaje, entregado sin recibir, o esperando tu firma. No es del día que estás mirando: son todos los días juntos, del más viejo al más nuevo.</p>
+    <p class="muted" style="margin:0 0 12px;font-weight:700">${resumen}</p>${btn}`;
+  return {html:cabecera+`<div class="table-wrap"><table class="cdflat"><thead><tr><th>Boleta</th><th>Chofer</th><th>Estado</th><th>Cobró</th><th>Le pagamos</th><th>Adicional</th><th>Neto</th><th></th></tr></thead><tbody>${src.map(filaRend).join('')}</tbody></table></div>`,sesp,sreal,spag,sadic}}
 function rendTabla(iso){const src=ordenes.filter(o=>o.fecha===iso&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));
   if(!src.length)return {html:'<div class="empty" style="padding:6px 0 2px">No hay viajes con ese filtro.</div>',sesp:0,sreal:0,spag:0,sadic:0};
   src.sort((a,b)=>grupoRend(a).localeCompare(grupoRend(b)));
