@@ -452,9 +452,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v18.08-18:15</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v21.08-14:00</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v18.08-18:15</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v21.08-14:00</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -574,6 +574,14 @@ function sbSuscribirRealtime(){
         delete _sbSnap[payload.old.id];
       }else{
         const nueva=payload.new.data;
+        /* FIX 21/8/2026 — parte 1 del bug de los ids duplicados. El contador `id` se
+           sincronizaba UNA sola vez, en la carga inicial. Con la pestaña abierta todo el
+           día, cada orden que cargaba otro usuario llegaba por acá sin mover el contador,
+           que quedaba atrasado; la próxima orden o reclamo creado en esta sesión repetía
+           un id ya usado. Consecuencia real: el reclamo de la 4189 se pisó y Cintia lo
+           tuvo que generar 3 veces (19, 20 y 21/8). Ahora todo registro que llega empuja
+           el contador por encima del id más alto conocido. */
+        if(+nueva.id >= id) id = +nueva.id + 1;
         const idx=ordenes.findIndex(o=>o.id===nueva.id);
         if(idx>-1) ordenes[idx]=nueva; else ordenes.push(nueva);
         _sbSnap[nueva.id]=_sbJson(nueva);
@@ -733,7 +741,13 @@ function mostrarPantallaLogin(msgError){
 }
 /* ===================== FIN LOGIN ===================== */
 
-let id=12; const nid=()=>id++;
+/* FIX 21/8/2026 — parte 2 del bug de los ids duplicados: pase lo que pase con el
+   contador, nid() NUNCA entrega un id que ya esté usado en el array. Es el candado de
+   fondo: aunque el contador quede atrasado por cualquier motivo, salta los ocupados.
+   Sin esto, dos registros compartían id, `find` devolvía el equivocado, y al guardar
+   una orden pisaba a la otra en la base. */
+let id=12;
+const nid=()=>{ while(ordenes.some(o=>+o.id===id)) id++; return id++; };
 let LOCALES=['2020','2299','Zavaleta','2160','Fábrica'];
 const PROVINCIAS=['CABA','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba','Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán'];
 let FLETES=['Juan Fredes','Ivan','Fabian Ramirez','Juan Berrina','OTROS'];
@@ -841,7 +855,13 @@ function draftReclamo(o){
 }
 /* Segundo momento: ya se definió la solución en el CRM y ahora sí hay viaje. */
 function programarReclamo(id){
-  const o=ordenes.find(x=>x.id===id); if(!o)return;
+  /* FIX 21/8/2026 — guardia: si por un id duplicado que quedó de antes el `find` trae
+     otra orden en lugar del reclamo, NO se abre el formulario con datos ajenos (era el
+     bug del video: entrar por R4189 y que cargue la 5738). Recargar limpia el array,
+     porque en la base el id es único. */
+  const o=ordenes.find(x=>x.id===id && x.esReclamo) || ordenes.find(x=>x.id===id);
+  if(!o)return;
+  if(!o.esReclamo){showToast('No se pudo abrir el reclamo (datos desactualizados en esta pestaña). Recargá la página con F5 y volvé a intentar.','error',7000);return}
   if(!puedeCargar()){showToast('No tenés permiso para programar reclamos.','error');return}
   editId=id; draft=draftFromOrden(o);
   draft.modoReclamo='programar'; draft.paso=1;
