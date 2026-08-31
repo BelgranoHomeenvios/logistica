@@ -452,9 +452,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v21.08-14:00</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-16:20</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v21.08-14:00</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-16:20</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -2545,18 +2545,99 @@ function verImprimir(oid){const o=ordenes.find(x=>x.id===oid);o.verificado=true;
 function fechaLarga(iso){try{const d=new Date(iso+'T00:00');const s=d.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});return s}catch(e){return fmt(iso)}}
 function imprimirExpreso(o){
   const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');
+  const nBultos=Math.max(1,+o.bultos||1); const rot=rotulosHTML(o);
   const rows=(o.lineas||[]).map((l,i)=>`<div style="display:grid;grid-template-columns:34px 56px 1fr;grid-column:1/-1"><div style="padding:8px;border-bottom:1px solid #eef0f2">${i+1}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${l.cant}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</div></div>`).join('');
-  const muebTable=`<div style="margin-top:18px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:6px">DETALLE DE MERCADERÍA</div><div style="display:grid;grid-template-columns:34px 56px 1fr;font-size:12.5px"><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">#</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">CANT</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">MUEBLE</div>${rows}</div></div>`;
-  const bultosVal=`<div style="margin-top:16px;display:flex;gap:28px;font-size:13.5px"><div><span style="color:#5b6472">Bultos:</span> <b>${o.bultos||1}</b></div><div><span style="color:#5b6472">Valor declarado:</span> <b>${m2(o.valorDeclarado)}</b></div></div>`;
+  const muebTable=`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:6px">DETALLE DE MERCADERÍA</div><div style="display:grid;grid-template-columns:34px 56px 1fr;font-size:12.5px"><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">#</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">CANT</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">MUEBLE</div>${rows}</div></div>`;
+  const bultosVal=`<div style="margin-top:10px;display:flex;gap:28px;font-size:13.5px"><div><span style="color:#5b6472">Bultos:</span> <b>${o.bultos||1}</b></div><div><span style="color:#5b6472">Valor declarado:</span> <b>${m2(o.valorDeclarado)}</b></div></div>`;
   const head=(titulo,sub)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px"><div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:10px;color:#5b6472;margin-top:3px">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div><div style="font-size:10px;color:#5b6472;margin-top:2px;font-weight:600">DC Amoblamientos SRL - CUIT 30-71222702-4</div></div><div style="text-align:right"><div style="font-size:11px;font-weight:600;color:#5b6472;letter-spacing:1px">${titulo}</div><div style="font-size:24px;font-weight:800;color:#0f766e">Nº ${esc(o.boleta)}</div><div style="font-size:12px;color:#5b6472">${fechaLarga(o.fecha)}${sub?' · '+sub:''}</div></div></div>`;
-  const firma=(a,b)=>`<div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:56px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${a}</div></div><div style="text-align:center"><div style="height:56px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${b}</div></div></div>`;
-  const half=(inner)=>`<div class="sheet" style="width:190mm;min-height:128mm;background:#fff;padding:9mm 11mm;box-shadow:0 4px 16px rgba(0,0,0,.1);color:#14181f;border:1.5px solid #14181f">${inner}</div>`;const pg=(a,b)=>`<div style="page-break-after:always;display:flex;flex-direction:column;gap:6mm">${a}${b}</div>`;
+  const firma=(a,b)=>`<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:34px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${a}</div></div><div style="text-align:center"><div style="height:34px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${b}</div></div></div>`;
+  const half=(inner)=>`<div class="sheet" style="width:190mm;min-height:128mm;background:#fff;padding:7mm 10mm;box-shadow:0 4px 16px rgba(0,0,0,.1);color:#14181f;border:1.5px solid #14181f">${inner}</div>`;const pg=(a,b)=>`<div class="pgbox" style="page-break-after:always;display:flex;flex-direction:column;align-items:center;gap:4mm">${a}${b}</div>`;
   const transDest=o.expresoModo==='retira'?('Retira de local '+(o.retiroLocal||'')):(o.transDom||'—');
-  const r1=half(head('REMITO DE DESPACHO A TRANSPORTE','')+`<div style="margin-top:20px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">TRANSPORTE</div><div style="font-size:14px;line-height:1.7"><div><span style="color:#5b6472">Transporte:</span> <b>${esc(o.transNombre||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.transTel||'—')}</b></div><div><span style="color:#5b6472">${o.expresoModo==='retira'?'Retira de:':'Domicilio:'}</span> <b>${esc(transDest)}</b></div></div></div>`+muebTable+bultosVal+firma('FIRMA DEL TRANSPORTE','ACLARACIÓN')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Comprobante de despacho — no válido como factura</div>`);
-  const clienteBlock=`<div style="margin-top:20px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">CLIENTE DESTINATARIO</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px"><div><span style="color:#5b6472">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.tel1||'—')}</b></div><div><span style="color:#5b6472">Provincia:</span> <b>${esc(o.provincia||'—')}</b></div><div><span style="color:#5b6472">Localidad:</span> <b>${esc(o.localidad||'—')}</b></div><div style="grid-column:1/-1"><span style="color:#5b6472">Domicilio:</span> <b>${esc(o.direccion||'—')}</b></div><div><span style="color:#5b6472">DNI / CUIT:</span> <b>${esc(o.dniCuit||'—')}</b></div></div></div>`;
+  const r1=half(head('REMITO DE DESPACHO A TRANSPORTE','')+`<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">TRANSPORTE</div><div style="font-size:14px;line-height:1.7"><div><span style="color:#5b6472">Transporte:</span> <b>${esc(o.transNombre||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.transTel||'—')}</b></div><div><span style="color:#5b6472">${o.expresoModo==='retira'?'Retira de:':'Domicilio:'}</span> <b>${esc(transDest)}</b></div></div></div>`+muebTable+bultosVal+firma('FIRMA DEL TRANSPORTE','ACLARACIÓN')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Comprobante de despacho — no válido como factura</div>`);
+  const clienteBlock=`<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">CLIENTE DESTINATARIO</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px"><div><span style="color:#5b6472">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.tel1||'—')}</b></div><div><span style="color:#5b6472">Provincia:</span> <b>${esc(o.provincia||'—')}</b></div><div><span style="color:#5b6472">Localidad:</span> <b>${esc(o.localidad||'—')}</b></div><div style="grid-column:1/-1"><span style="color:#5b6472">Domicilio:</span> <b>${esc(o.direccion||'—')}</b></div><div><span style="color:#5b6472">DNI / CUIT:</span> <b>${esc(o.dniCuit||'—')}</b></div></div></div>`;
   const r2=(n)=>half(head('GUÍA AL CLIENTE','Copia '+n+'/3')+clienteBlock+muebTable+bultosVal+firma('FIRMA DEL CLIENTE','ACLARACIÓN / DNI')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Documento no válido como factura</div>`);
-  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remitos Expreso ${esc(o.boleta)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}}</style></head><body><div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="no-print" style="width:190mm;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Expreso — 2 remitos por hoja: despacho + copias del cliente</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>${pg(r1,r2(1))}${pg(r2(2),r2(3))}</div></body></html>`;
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remitos y rótulos · Expreso ${esc(o.boleta)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}.rot{border-width:2px}
+  /* El contenedor flex con padding y gap empujaba el contenido fuera de la hoja y metía
+     páginas sobrantes. En papel va en bloque, sin espaciados de pantalla. */
+  .wrap{display:block!important;padding:0!important;gap:0!important}
+  .pgbox{align-items:center}
+  /* Par que no entra en una hoja: se separa en dos, una hoja cada uno. Preferimos
+     dejar espacio en blanco antes que achicar la letra o cortar el remito. */
+  .pgbox.split>.sheet:first-child{page-break-after:always}}${ROTULOS_CSS}</style></head><body><div class="wrap" style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="no-print" style="width:190mm;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Expreso ${esc(o.boleta)} — 4 remitos (despacho + 3 copias del cliente) y ${nBultos} rótulo${nBultos===1?'':'s'} para el embalaje</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>${pg(r1,r2(1))}${pg(r2(2),r2(3))}${rot}</div><script>${ROTULOS_JS}
+  /* Los dos remitos por hoja tienen que entrar en los 277mm útiles de un A4 con margen
+     de 10mm. Con una orden de muchos muebles la tabla crece y no entran: en ese caso
+     NO se achica la letra — se manda uno por hoja. Regla de Brian, 31/8/2026: antes
+     espacio en blanco que algo cortado o ilegible. */
+  (function(){var MM=96/25.4, MAX=277*MM, GAP=4*MM;
+    document.querySelectorAll('.pgbox').forEach(function(b){
+      var hojas=[].slice.call(b.querySelectorAll('.sheet'));
+      var total=hojas.reduce(function(a,s){return a+s.getBoundingClientRect().height},0)+GAP*(hojas.length-1);
+      if(total<=MAX) return;
+      b.classList.add('split');
+      /* Último recurso, casi imposible: un remito solo que no entra ni en una hoja entera. */
+      hojas.forEach(function(s){var z=1;
+        while(s.getBoundingClientRect().height>MAX&&z>0.5){z-=0.03;s.style.zoom=z.toFixed(2);}});
+    });
+  })();<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(H);w.document.close();
+}
+
+
+/* ===== RÓTULOS DE EXPRESO =====
+   Etiquetas que se pegan sobre el embalaje, una por bulto y una hoja A4 cada una.
+   Salen al final de la MISMA impresión que los remitos (el 🖨 de la fila), porque
+   Lucas imprime todo junto y lo deja en el mueble. Decisión de Brian, 31/8/2026.
+   NO llevan detalle de muebles: el expreso solo necesita identificar el envío
+   y saber cuántos bultos son. */
+const ROTULOS_CSS = `
+  .rot{width:190mm;height:277mm;background:#fff;border:3px solid #000;padding:9mm;color:#000;
+       display:flex;flex-direction:column;margin:0 auto;page-break-after:always}
+  .rot:last-child{page-break-after:auto}
+  .rt-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6mm;border-bottom:4px solid #000;padding-bottom:5mm;overflow:hidden}
+  .rt-marca{font-size:26px;font-weight:900;letter-spacing:1px;white-space:nowrap;padding-top:4px}
+  .rt-bulto{font-size:calc(92px * var(--fsb,1));font-weight:900;line-height:.9;white-space:nowrap}
+  .rt-de{font-size:calc(52px * var(--fsb,1));font-weight:800}
+  .rt-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:space-evenly;gap:3mm;padding:5mm 0}
+  .rt-l{display:flex;flex-direction:column;gap:1mm}
+  .rt-k{font-size:calc(17px * var(--fs,1));font-weight:700;letter-spacing:2px;color:#444}
+  .rt-v{font-size:calc(56px * var(--fs,1));font-weight:800;line-height:1.05;word-break:break-word}
+  .rt-l.dir .rt-v{font-size:calc(44px * var(--fs,1))}
+  .rt-fragil{color:#000;text-align:center;font-size:78px;font-weight:900;letter-spacing:10px;padding:4mm 0;border-top:4px solid #000}
+`;
+/* El largo de los datos es variable (un nombre de tres apellidos, una dirección de dos
+   renglones). Los tamaños de arriba son el MÁXIMO: si no entra, la hoja se achica sola
+   hasta que entra, así nada se corta y las etiquetas cortas siguen saliendo enormes. */
+const ROTULOS_JS = `(function(){document.querySelectorAll('.rot').forEach(function(r){
+  var t=r.querySelector('.rt-top'),g=1;
+  while(t.scrollWidth>t.clientWidth+1&&g>0.5){g-=0.04;r.style.setProperty('--fsb',g.toFixed(2));}
+  var b=r.querySelector('.rt-body'),f=1;
+  while(b.scrollHeight>b.clientHeight+1&&f>0.3){f-=0.03;r.style.setProperty('--fs',f.toFixed(2));}
+});})();`;
+
+function rotulosHTML(o){
+  const n=Math.max(1,+o.bultos||1);
+  if(n>40) return '';   // cantidad claramente mal cargada: no le mando 400 hojas a la impresora
+  const dom=[o.direccion,o.pisodepto].filter(Boolean).join(' · ');
+  const zona=[o.localidad,o.provincia].filter(Boolean).join(' - ');
+  /* Cada dato sale solo si lo tenemos: una etiqueta que dice "DNI: —" hace dudar al
+     del expreso sobre si le falta algo. */
+  const linea=(lbl,val,cls)=>val?`<div class="rt-l ${cls||''}"><span class="rt-k">${esc(lbl)}</span><span class="rt-v">${esc(val)}</span></div>`:'';
+  const hoja=(i)=>`<div class="rot">
+    <div class="rt-top">
+      <div class="rt-marca">BELGRANO HOME</div>
+      <div class="rt-bulto">BULTO ${i}<span class="rt-de">/${n}</span></div>
+    </div>
+    <div class="rt-body">
+      ${linea('ORDEN',o.boleta)}
+      ${linea('NOMBRE',o.cliente)}
+      ${linea('CEL',o.tel1||o.tel2)}
+      ${linea('DNI',o.dniCuit)}
+      ${linea('DIRECCIÓN',dom,'dir')}
+      ${linea('LOCALIDAD',zona,'dir')}
+    </div>
+    <div class="rt-fragil">FRÁGIL</div>
+  </div>`;
+  return Array.from({length:n},(_,k)=>hoja(k+1)).join('');
 }
 
 /* ============ REMITOS ============ */
