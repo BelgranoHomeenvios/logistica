@@ -488,9 +488,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-20:15</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-20:40</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-20:15</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-20:40</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -1503,6 +1503,10 @@ function imprimirArreglos(){
   const list=arrOrdenados(arrPendientes());
   if(!list.length){showToast('No hay arreglos pendientes para imprimir.','info');return}
   const hoyN=list.filter(a=>arrSalida(a)===HOY).length;
+  /* Una sola impresión con las dos cosas: la hoja de control para Lucas y, atrás, un
+     vale por tarea para el que repara. Antes eran dos botones y dos impresiones, y
+     había que acordarse de apretar los dos. */
+  const vales=valesArreglosHTML(list);
   const filas=list.map(a=>{
     const sale=arrSalida(a), urg=sale===HOY;
     return `<tr${urg?' style="background:#eaf7fb"':''}>
@@ -1517,15 +1521,16 @@ function imprimirArreglos(){
   const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Arreglos ${ddmm(HOY)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif;color:#14181f}
-  @page{size:A4;margin:11mm}
+  @page{size:A4;margin:10mm}
   @media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}
     .wrap{display:block!important;padding:0!important;gap:0!important}
     thead{display:table-header-group}   /* si aun achicado no entra, el encabezado se repite */
     tr{page-break-inside:avoid}}
+  ${VALES_CSS}
   </style></head><body>
   <div class="wrap" style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px">
     <div class="no-print" style="width:190mm;max-width:100%;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:13px;color:#5b6472">Arreglos pendientes — para el que repara</div>
+      <div style="font-size:13px;color:#5b6472">Hoja 1: planilla de control para vos. Después, ${list.length} orden${list.length===1?'':'es'} de trabajo (2 por hoja, se corta por la línea punteada) para el que repara.</div>
       <button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
     <div class="sheet" style="width:190mm;max-width:100%;background:#fff;padding:11mm;box-shadow:0 8px 30px rgba(0,0,0,.12);border:1.5px solid #14181f">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px">
@@ -1548,7 +1553,9 @@ function imprimirArreglos(){
         <div style="text-align:center"><div style="height:46px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">FIRMA DE QUIEN REPARA</div></div>
         <div style="text-align:center"><div style="height:46px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">ACLARACIÓN</div></div>
       </div>
-    </div></div>
+    </div>
+    ${vales}
+  </div>
   <script>
   /* La planilla tiene que entrar en UNA hoja: Lucas la lleva en la mano y recorre el
      depósito con ella. Si hay muchos arreglos, se compacta lo justo antes de partir
@@ -1566,28 +1573,60 @@ function imprimirArreglos(){
       t.querySelectorAll('td,th').forEach(function(c){c.style.paddingTop=(9*f).toFixed(1)+'px';c.style.paddingBottom=(9*f).toFixed(1)+'px'});
     }
   })();
+  ${VALES_JS}
   <\/script></body></html>`;
   const w=window.open('','_blank'); if(!w){showToast('El navegador bloqueó la ventana de impresión.','info');return}
   w.document.write(H); w.document.close();
 }
 
-/* ===== ÓRDENES DE TRABAJO (A5) =====
-   La A4 de arriba es de CONTROL: la usa Lucas para recorrer el depósito al final del
-   día y marcar lo hecho. Esto es otra cosa y va a otra persona: un pedido por tarea,
-   redactado como una instrucción, para que el que repara agarre uno y sepa qué hacer
-   sin leer una planilla entera. Dos por hoja A4: se corta al medio.
-   Ordenadas por responsable, así se reparten en pilas. Pedido de Brian, 31/8/2026. */
-function imprimirOrdenesTrabajo(){
-  const list=arrPendientes().slice().sort((a,b)=>{
+/* ===== VALES DE TRABAJO (A5) =====
+   Salen en la MISMA impresión que la planilla de control, pero son otra cosa y van a
+   otra persona. La planilla es de control: la usa Lucas para recorrer el depósito al
+   final del día. El vale es un pedido por tarea, para que el que repara agarre uno y
+   sepa qué hacer sin leer una planilla entera. Dos por hoja A4: se corta al medio. */
+const VALES_CSS = `
+  .pgA4{width:190mm;display:flex;flex-direction:column;page-break-before:always}
+  .vale{height:138mm;border:2px dashed #9aa2ad;padding:9mm 11mm;display:flex;flex-direction:column;background:#fff}
+  .vale.vacio{border-color:transparent;background:none}
+  .v-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:4mm}
+  .v-marca{font-size:17px;font-weight:900}
+  .v-sub{font-size:10px;letter-spacing:1.5px;color:#5b6472;font-weight:700;margin-top:1px}
+  .v-num{font-size:17px;font-weight:800;color:#0f766e}
+  .v-fec{font-size:11px;color:#5b6472}
+  .v-lbl{font-size:9.5px;font-weight:800;letter-spacing:1.5px;color:#7b8492}
+  .v-para{margin-top:5mm;display:flex;align-items:baseline;gap:8px}
+  .v-nom{font-size:30px;font-weight:900;line-height:1}
+  .v-pedido{flex:1;min-height:0;overflow:hidden;padding-top:5mm}
+  .v-tarea{font-size:21px;font-weight:800;line-height:1.15;margin-top:1mm}
+  .v-mueble{font-size:17px;font-weight:700;line-height:1.2;margin-top:1mm}
+  .v-cant{color:#0f766e}
+  .v-pie{display:flex;gap:9mm;border-top:1px solid #d7dbe0;padding-top:3mm;font-size:12px}
+  .v-dato .v-lbl{display:block}
+  .v-urg{color:#b42318}
+  .v-firma{margin-top:4mm;text-align:right}
+  .v-fl{border-top:1px solid #14181f;width:62mm;margin-left:auto}
+  .v-firma span{font-size:9px;color:#7b8492;letter-spacing:.5px}
+`;
+/* La tarea es texto libre: si alguien escribe un párrafo, el vale se achica lo justo
+   para que entre en vez de cortarse. */
+const VALES_JS = `(function(){document.querySelectorAll('.vale').forEach(function(v){
+  var b=v.querySelector('.v-pedido'); if(!b) return; var f=1;
+  while(b.scrollHeight>b.clientHeight+1&&f>0.45){f-=0.04;
+    var t=v.querySelector('.v-tarea'), m=v.querySelector('.v-mueble');
+    if(t) t.style.fontSize=(21*f).toFixed(1)+'px';
+    if(m) m.style.fontSize=(17*f).toFixed(1)+'px';}
+});})();`;
+
+function valesArreglosHTML(list){
+  /* "1× MUEBLE DE TV TASOS 180" → la cantidad va aparte, no pegada al nombre. */
+  const soloNombre=m=>String(m||'').replace(/^\s*\d+\s*[x×]\s*/i,'').trim();
+  const cantDe=m=>{const q=String(m||'').match(/^\s*(\d+)\s*[x×]/i); return q?+q[1]:1};
+  /* Ordenadas por responsable, así se reparten en pilas: todo lo de Andrés junto. */
+  const orden=list.slice().sort((a,b)=>{
     const ra=(a.responsable||'zzz').toLowerCase(), rb=(b.responsable||'zzz').toLowerCase();
     if(ra!==rb) return ra<rb?-1:1;
     return (arrSalida(a)||'9999')<(arrSalida(b)||'9999')?-1:1;
   });
-  if(!list.length){showToast('No hay arreglos pendientes para generar órdenes.','info');return}
-  /* "1× MUEBLE DE TV TASOS 180" → "MUEBLE DE TV TASOS 180": en la instrucción la
-     cantidad va aparte, no pegada al nombre. */
-  const soloNombre=m=>String(m||'').replace(/^\s*\d+\s*[x×]\s*/i,'').trim();
-  const cantDe=m=>{const q=String(m||'').match(/^\s*(\d+)\s*[x×]/i); return q?+q[1]:1};
   const vale=(a,i)=>{
     const sale=arrSalida(a), urg=sale===HOY, n=cantDe(a.mueble), nom=soloNombre(a.mueble);
     return `<div class="vale">
@@ -1609,57 +1648,10 @@ function imprimirOrdenesTrabajo(){
       </div>
       <div class="v-firma"><div class="v-fl"></div><span>HECHO — FIRMA</span></div>
     </div>`};
-  const pares=[];
-  for(let i=0;i<list.length;i+=2) pares.push(`<div class="pgA4">${vale(list[i],i)}${list[i+1]?vale(list[i+1],i+1):'<div class="vale vacio"></div>'}</div>`);
-  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Órdenes de trabajo ${ddmm(HOY)}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <style>*{box-sizing:border-box;margin:0;padding:0}
-  body{background:#e9ebee;font-family:'Archivo',Arial,sans-serif;color:#14181f}
-  @page{size:A4 portrait;margin:8mm}
-  .wrap{padding:18px 12px;display:flex;flex-direction:column;align-items:center;gap:12px}
-  .pgA4{width:194mm;display:flex;flex-direction:column;gap:0;page-break-after:always}
-  .pgA4:last-child{page-break-after:auto}
-  .vale{height:140mm;border:2px dashed #9aa2ad;padding:10mm 11mm;display:flex;flex-direction:column;background:#fff}
-  .vale.vacio{border-color:transparent;background:none}
-  .v-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:4mm}
-  .v-marca{font-size:17px;font-weight:900}
-  .v-sub{font-size:10px;letter-spacing:1.5px;color:#5b6472;font-weight:700;margin-top:1px}
-  .v-num{font-size:17px;font-weight:800;color:#0f766e}
-  .v-fec{font-size:11px;color:#5b6472}
-  .v-lbl{font-size:9.5px;font-weight:800;letter-spacing:1.5px;color:#7b8492}
-  .v-para{margin-top:5mm;display:flex;align-items:baseline;gap:8px}
-  .v-nom{font-size:30px;font-weight:900;line-height:1}
-  .v-pedido{flex:1;min-height:0;overflow:hidden;padding-top:5mm}
-  .v-tarea{font-size:21px;font-weight:800;line-height:1.15;margin-top:1mm}
-  .v-mueble{font-size:17px;font-weight:700;line-height:1.2;margin-top:1mm}
-  .v-cant{color:#0f766e}
-  .v-pie{display:flex;gap:9mm;border-top:1px solid #d7dbe0;padding-top:3mm;font-size:12px}
-  .v-dato .v-lbl{display:block}
-  .v-urg{color:#b42318}
-  .v-firma{margin-top:4mm;text-align:right}
-  .v-fl{border-top:1px solid #14181f;width:62mm;margin-left:auto}
-  .v-firma span{font-size:9px;color:#7b8492;letter-spacing:.5px}
-  @media print{body{background:#fff}.no-print{display:none!important}.wrap{display:block!important;padding:0!important;gap:0!important}}
-  </style></head><body>
-  <div class="wrap">
-    <div class="no-print" style="width:194mm;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:13px;color:#5b6472">${list.length} orden${list.length===1?'':'es'} de trabajo — 2 por hoja A4, se corta por la línea punteada</div>
-      <button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
-    ${pares.join('')}
-  </div>
-  <script>
-  /* La tarea es texto libre: si alguien escribe un párrafo, se achica lo justo para
-     que entre en el vale en vez de cortarse. */
-  (function(){document.querySelectorAll('.vale').forEach(function(v){
-    var b=v.querySelector('.v-pedido'); if(!b) return; var f=1;
-    while(b.scrollHeight>b.clientHeight+1&&f>0.45){f-=0.04;
-      var t=v.querySelector('.v-tarea'), m=v.querySelector('.v-mueble');
-      if(t) t.style.fontSize=(21*f).toFixed(1)+'px';
-      if(m) m.style.fontSize=(17*f).toFixed(1)+'px';}
-  });})();
-  <\/script></body></html>`;
-  const w=window.open('','_blank'); if(!w){showToast('El navegador bloqueó la ventana de impresión.','info');return}
-  w.document.write(H); w.document.close();
+  let out='';
+  for(let i=0;i<orden.length;i+=2)
+    out+=`<div class="pgA4">${vale(orden[i],i)}${orden[i+1]?vale(orden[i+1],i+1):'<div class="vale vacio"></div>'}</div>`;
+  return out;
 }
 
 function vArreglos(){
@@ -1683,7 +1675,6 @@ function vArreglos(){
       <div class="row-actions">
         <button class="btn btn-primary" onclick="abrirModalArreglo()">+ Cargar arreglo</button>
         <button class="btn btn-ghost btn-sm" onclick="imprimirArreglos()">🖨 Planilla de control</button>
-        <button class="btn btn-ghost btn-sm" onclick="imprimirOrdenesTrabajo()">🏭 Órdenes de trabajo</button>
       </div></div>
     <p class="muted" style="margin-top:0">Muebles que salen con un detalle para arreglar antes de entregar. La fecha de salida sale de la orden: si se reprograma, acá se actualiza sola.${hoyN?` <b>${hoyN} sale${hoyN===1?'':'n'} hoy.</b>`:''}</p>
     <div class="macrotog" style="margin-bottom:12px">
