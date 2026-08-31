@@ -438,6 +438,34 @@ tr.rprob{background:#fef4f4}
 .rf-av{display:block;font-size:12.5px;border-radius:6px;padding:5px 9px;margin-top:4px}
 .rf-recl{background:#fdf2f0;border-left:4px solid #b42318;color:#7a1d13}
 .rf-com,.rf-hora{background:#fff7e6;border:1px solid #f3d19b;color:#b45309}
+/* ===== Arreglos =====
+   El módulo se había subido sin sus estilos: los candidatos de orden salían como
+   texto plano, sin cursor ni hover, así que no parecían clickeables — y el botón
+   Guardar se veía azul aunque estuviera deshabilitado. Los dos juntos daban la
+   sensación de que no se podía guardar. */
+.field-lbl{font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:#5b6472;margin:14px 0 5px}
+.arr-inp{width:100%;padding:10px 11px;border:1px solid #d0d7e2;border-radius:8px;font:inherit;background:#fff}
+.arr-inp:focus{outline:none;border-color:#1e5fce;box-shadow:0 0 0 3px rgba(30,95,206,.12)}
+.arr-cands{margin-top:6px;border:1px solid #e3e8ef;border-radius:8px;overflow:hidden}
+.arr-cand{padding:10px 12px;cursor:pointer;border-bottom:1px solid #eef0f2;font-size:14px}
+.arr-cand:last-child{border-bottom:none}
+.arr-cand:hover{background:#eef4fb}
+.arr-cand::after{content:'Elegir';float:right;font-size:11px;font-weight:800;color:#1e5fce;letter-spacing:.4px}
+.arr-sel{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#eef4fb;border:1px solid #cddffa;border-radius:8px;padding:10px 12px;font-size:13.5px;margin-top:6px;line-height:1.4}
+.arr-sel .vis-x{margin-left:auto}
+.arr-op{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #e3e8ef;border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:14px}
+.arr-op:hover{background:#f6f9fd}
+/* Los inputs de la app son width:100% por defecto: sin esto el radio se estira
+   a todo el ancho y queda como un círculo gigante arriba del texto. */
+.arr-op input[type=radio]{margin:0;cursor:pointer;width:17px;min-width:17px;height:17px;flex:0 0 auto;accent-color:#1e5fce}
+.arr-op:has(input:checked){border-color:#1e5fce;background:#eef4fb;font-weight:700}
+/* Un botón deshabilitado tiene que PARECER deshabilitado, si no el usuario cree que la app se rompió. */
+.modal-actions .btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+/* Tabla de arreglos */
+.arr-hoy{background:#eaf7fb}
+.arr-ok{opacity:.55}
+.arr-chip{font-size:9px;font-weight:800;letter-spacing:.4px;background:#0f766e;color:#fff;padding:2px 5px;border-radius:4px;vertical-align:middle}
+
 /* Visitas del día: lista dentro de la tarjeta de retiros y del popup. */
 .vis-box{margin-top:12px;border:1px solid #e3e8ef;border-radius:8px;padding:10px 12px;background:#fafbfc}
 .vis-tit{font-size:11px;font-weight:800;letter-spacing:.5px;color:#5b6472;margin-bottom:6px}
@@ -460,9 +488,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-19:45</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-20:15</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-19:45</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-20:15</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -1713,6 +1741,7 @@ function cuerpoArreglo(m){
     <input id="arr_resp" list="arr_resps" value="${esc(m.responsable||'')}" placeholder="Ej: Andrés" oninput="arrSet('responsable',this.value)" class="arr-inp">
     <datalist id="arr_resps">${resp.map(r=>`<option value="${esc(r)}">`).join('')}</datalist>`:''}
   ${m.err?`<div class="field-error-msg" style="display:block">${esc(m.err)}</div>`:''}
+  ${(o||m.sinOrden)?'':'<p class="muted" style="font-size:12.5px;margin:12px 0 0">Elegí una orden de la lista para poder guardar, o cargalo sin orden.</p>'}
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
     <button class="btn btn-primary" ${(o||m.sinOrden)?'':'disabled'} onclick="guardarArreglo()">Guardar arreglo</button></div>`;
 }
