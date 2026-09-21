@@ -488,9 +488,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v31.08-20:40</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v21.09-15:10</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v31.08-20:40</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v21.09-15:10</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -532,7 +532,7 @@ function registrarAuditoria(accion,o,detalle){
     rol: role,
     accion: accion,
     orden_id: o?o.id:null,
-    orden_boleta: o?o.boleta:null,
+    orden_boleta: o?reclamoNroDe(o):null,
     detalle: detalle||null
   };
   sb.from('auditoria').insert(fila).then(({error})=>{ if(error) console.error('auditoria',error); });
@@ -548,20 +548,52 @@ function _sbDetectarCambios(){
   if(_sbCola.size) _sbFlush();
 }
 
-let _sbFlushTimer=null;
-function _sbFlush(){
+/* FIX 21/9/2026 — "firmo Recibí OK, me voy y no quedó guardado".
+   Se sube UNA tanda por vez (_sbEnVuelo): si dos subidas de la misma orden viajaran a la
+   vez, la vieja podría llegar última y pisar a la nueva. Mientras hay algo pendiente o
+   viajando, el cartel de abajo dice "Guardando…"; recién vuelve a "En la nube" cuando
+   la base confirmó. Si falla, queda en rojo y reintenta solo cada 3 segundos. */
+let _sbFlushTimer=null, _sbEnVuelo=0;
+function _sbFlush(inmediato){
   clearTimeout(_sbFlushTimer);
-  _sbFlushTimer=setTimeout(async ()=>{
-    if(!sbListo||!_sbCola.size) return;
-    const ids=[..._sbCola]; _sbCola.clear();
-    const filas=ids.map(id=>{const o=ordenes.find(x=>x.id===id); return o?{id:o.id,data:o}:null}).filter(Boolean);
-    if(!filas.length) return;
-    try{
-      const {error}=await sb.from('ordenes').upsert(filas,{onConflict:'id'});
-      if(error){ console.error('Supabase upsert',error); showToast('No se pudo guardar en la nube (reintentá).','error',6000); ids.forEach(id=>_sbCola.add(id)); setTimeout(_sbFlush,3000); }
-    }catch(e){ console.error(e); ids.forEach(id=>_sbCola.add(id)); setTimeout(_sbFlush,3000); }
-  },400);
+  if(sbListo&&_sbCola.size) pintarEstadoNube('guardando…');
+  _sbFlushTimer=setTimeout(_sbSubir, inmediato?0:400);
 }
+async function _sbSubir(){
+  _sbFlushTimer=null;
+  if(!sbListo||!_sbCola.size) return;
+  if(_sbEnVuelo){ _sbFlush(); return; }
+  const ids=[..._sbCola]; _sbCola.clear();
+  const filas=ids.map(id=>{const o=ordenes.find(x=>x.id===id); return o?{id:o.id,data:o}:null}).filter(Boolean);
+  if(!filas.length){ if(!_sbCola.size) pintarEstadoNube('ok'); return; }
+  _sbEnVuelo++;
+  let ok=false;
+  try{
+    const {error}=await sb.from('ordenes').upsert(filas,{onConflict:'id'});
+    if(error){ console.error('Supabase upsert',error); showToast('No se pudo guardar en la nube. Reintentando…','error',6000); }
+    else ok=true;
+  }catch(e){ console.error(e); }
+  finally{ _sbEnVuelo--; }
+  if(!ok){
+    ids.forEach(id=>_sbCola.add(id));
+    pintarEstadoNube('reintentando');
+    clearTimeout(_sbFlushTimer); _sbFlushTimer=setTimeout(_sbSubir,3000);
+    return;
+  }
+  if(_sbCola.size) _sbFlush(); else pintarEstadoNube('ok');
+}
+/* Guardar hay que pedirlo DESPUÉS de cada acción, no solo cuando se redibuja todo.
+   Antes el diff corría únicamente dentro de render(): las acciones que refrescaban solo
+   su pantalla (Recibí OK → vRendicion, confirmar entrega → vOrdenes, etc.) dejaban el
+   cambio en memoria, y si uno salía al CRM, recargaba o cerraba, se perdía. Se agenda
+   con setTimeout 0 para que corra una sola vez aunque la pidan varias cosas juntas. */
+let _sbDetectarProg=false;
+function _sbPedirDeteccion(){
+  if(_sbDetectarProg) return;
+  _sbDetectarProg=true;
+  setTimeout(()=>{ _sbDetectarProg=false; _sbDetectarCambios(); },0);
+}
+function _sbHayPendiente(){ return _sbCola.size>0||_sbEnVuelo>0||_sbFlushTimer!==null; }
 
 /* Carga inicial: trae todas las órdenes desde la base y reemplaza el array local. */
 async function sbCargarInicial(){
@@ -620,6 +652,11 @@ function sbSuscribirRealtime(){
            tuvo que generar 3 veces (19, 20 y 21/8). Ahora todo registro que llega empuja
            el contador por encima del id más alto conocido. */
         if(+nueva.id >= id) id = +nueva.id + 1;
+        /* FIX 21/9/2026 — si esta pestaña tiene un cambio propio de esa orden todavía sin
+           subir (está en la cola), lo que llega de afuera NO lo pisa: el nuestro es más
+           nuevo y sale en la próxima subida. Antes, el eco de un guardado anterior podía
+           borrar en silencio una firma recién hecha. */
+        if(_sbCola.has(nueva.id)){ _sbSuspender=false; return; }
         const idx=ordenes.findIndex(o=>o.id===nueva.id);
         if(idx>-1) ordenes[idx]=nueva; else ordenes.push(nueva);
         _sbSnap[nueva.id]=_sbJson(nueva);
@@ -631,7 +668,7 @@ function sbSuscribirRealtime(){
 }
 
 function pintarEstadoNube(estado){
-  const map={'cargando…':['#eef2ff','#3730a3','Sincronizando…'],'ok':['#e7f5ec','#15803d','En la nube'],'error':['#fdecea','#b42318','Sin nube (revisá)'],'sin conexión':['#fdecea','#b42318','Sin conexión'] };
+  const map={'cargando…':['#eef2ff','#3730a3','Sincronizando…'],'ok':['#e7f5ec','#15803d','En la nube'],'guardando…':['#fff7e6','#b45309','Guardando…'],'reintentando':['#fdecea','#b42318','No se guardó · reintentando'],'error':['#fdecea','#b42318','Sin nube (revisá)'],'sin conexión':['#fdecea','#b42318','Sin conexión'] };
   const c=map[estado]||map['cargando…'];
   let el=document.getElementById('nubeEstado');
   if(!el){ el=document.createElement('div'); el.id='nubeEstado'; el.style.cssText='position:fixed;bottom:10px;right:12px;z-index:940;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px'; document.body.appendChild(el); }
@@ -846,7 +883,7 @@ function horarioEspecial(o){
   return String(o.horario).trim()!==estandar;
 }
 function horaEmoji(o){const esp=horarioEspecial(o);const emo=esp?'⏳':'⏱️';const txt=(o.horario&&o.horario!=='Estándar')?o.horario:('Estándar ('+horaDef(o.tipo)[0]+' a '+horaDef(o.tipo)[1]+'hs)');
-  return `<button class="btn btn-ghost icon-btn-xs" title="${esp?'Horario especial':'Horario estándar'}" onclick="toggleComentVer(${o.id},'hora',event)">${emo}</button>${comentVerOpen===o.id+'_hora'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Horario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(txt)}</div></div>`:''}`}
+  return `<button class="btn btn-ghost icon-btn-xs" title="${esp?'Horario especial':'Horario estándar'}" onclick="toggleComentVer(${o.id},'hora',event)">${emo}</button>${comentVerOpen===o.id+'_hora'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Horario · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(txt)}</div></div>`:''}`}
 function retLoc(o){return o.retiroLocal||(o.lineas&&o.lineas[0]?o.lineas[0].local:'local')}
 function necesitaFlete(o){return !(o.tipo==='Retiro'||(o.tipo==='Expreso'&&o.expresoModo==='retira'))}
 function fleteAutoLabel(o){if(o.tipo==='Retiro')return 'Retira cliente';if(o.tipo==='Expreso'&&o.expresoModo==='retira')return 'Retira transporte';return ''}
@@ -985,7 +1022,7 @@ function cuerpoYaExiste(m){
     const nm=sum((o.lineas||[]).map(l=>l.cant));
     const saldo=cobroBH(o);
     return `<div class="bsr-row" style="cursor:default">
-      <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')} <span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div>
+      <div class="bsr-main"><b>${esc(reclamoNroDe(o))}</b> · ${esc(o.cliente||'sin cliente')} <span class="badge ${estClass(o.estado)}">${esc(o.estado)}</span></div>
       <div style="font-size:13px;margin-top:2px">${esc(queLePasoA(o))}</div>
       <div class="muted" style="font-size:12.5px">${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''} · ${esc(o.flete||'sin chofer')} · ${nm} mueble${nm===1?'':'s'}${saldo>0?' · debe '+money(saldo):''}</div>
     </div>`;
@@ -1007,13 +1044,13 @@ function verLaQueExiste(id){
   cerrarModal(); draft=null; editId=null;
   const o=ordenes.find(x=>x.id===id);
   irOrdenes(o?{day:o.fecha}:{});
-  if(o)showToast('Esta es la orden '+esc(o.boleta)+' que ya estaba cargada.','info',5000);
+  if(o)showToast('Esta es la orden '+esc(reclamoNroDe(o))+' que ya estaba cargada.','info',5000);
 }
 function reclamoCtxHTML(){
   const r=draft.reclamoDe; if(!r)return'';
   return `<div class="sub-h">Entrega original <span class="hint">(queda de registro — no se edita)</span></div>
   <div class="reclamo-ctx">
-    <div><b>Orden</b><span>${esc(r.boleta)}</span></div>
+    <div><b>Orden</b><span>${esc(reclamoNroDe(r))}</span></div>
     <div><b>Se entregó</b><span>${esc(fmtDiaSem(r.fecha))}</span></div>
     <div><b>Tipo</b><span>${esc(r.tipo)}</span></div>
     <div><b>Entregó</b><span>${esc(r.flete||'—')}</span></div>
@@ -1136,7 +1173,7 @@ function cuerpoBuscarRefuerzo(m){
   const filas=res.map(o=>{
     const pend=o.refuerzo&&!o.refuerzo.confirmado&&!o.refuerzo.rechazado;
     return `<div class="bsr-row" onclick="${pend?`abrirModalConfirmRefuerzo(${o.id})`:`abrirModalRefuerzo(${o.id})`}">
-      <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')}
+      <div class="bsr-main"><b>${esc(reclamoNroDe(o))}</b> · ${esc(o.cliente||'sin cliente')}
         ${pend?`<span class="badge e-cond" title="Ya tiene un refuerzo esperando confirmación">💲 ya tiene refuerzo</span>`:''}
         ${o.estado==='Cerrado'?'<span class="badge e-prob" title="La rendición de esta orden ya se firmó — cargar un refuerzo acá la reabre">⚠ ya cerrada</span>':''}</div>
       <div class="muted" style="font-size:12.5px">${esc(fmtDiaSem(o.fecha))} · ${esc(o.direccion||'')}${o.localidad?' · '+esc(o.localidad):''}</div>
@@ -1201,7 +1238,7 @@ function cuerpoBuscarReclamo(m){
     const nm=sum(o.lineas.map(l=>l.cant));
     const mu=o.lineas.map(l=>l.cant+'× '+l.desc).join(' · ');
     return `<div class="bsr-row" onclick="${ab.length?`elegirReclamoExistente(${ab[0].id})`:`generarReclamo(${o.id});cerrarModal()`}">
-      <div class="bsr-main"><b>${esc(o.boleta)}</b> · ${esc(o.cliente||'sin cliente')}
+      <div class="bsr-main"><b>${esc(reclamoNroDe(o))}</b> · ${esc(o.cliente||'sin cliente')}
         ${(o._match&&o._match.r===0)?'<span class="badge e-entreg">coincidencia exacta</span>':''}
         ${(o._match&&o._match.txt)?`<span class="muted" style="font-size:11.5px">· ${esc(o._match.txt)}</span>`:''}
         ${ab.length?`<span class="badge e-prob" title="Ya tiene un reclamo abierto">🚩 ya tiene reclamo</span>`:''}</div>
@@ -1350,7 +1387,7 @@ function abrirModalAutoriz(oid){
   const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'autoriz',oid};renderModal()}
 function cuerpoAutoriz(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   const a=o.autoriz||{};
-  return `<h3>Autorizar la entrega</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p>
+  return `<h3>Autorizar la entrega</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} · ${esc(o.cliente||'')}</p>
   <div class="probnote" style="margin:10px 0;background:#fff7e6;border-color:#f3d19b;color:#b45309">El chofer va a cobrar <b>${money(montoAutoriz(o))}</b> de mercadería en el domicilio. El tope sin autorización es ${money(UMBRAL_AUTORIZ)}.</div>
   <div class="mp-row" style="white-space:normal"><b>Total:</b> ${money(o.total||0)} · <b>Ya pagó:</b> ${money(o.pagos||0)} · <b>Queda:</b> ${money(montoAutoriz(o))}</div>
   <div class="mp-row" style="white-space:normal;margin-top:4px"><b>Entrega:</b> ${esc(fmt(o.fecha))} · ${esc(o.flete||'sin chofer')} · ${esc(o.direccion||'')} ${esc(o.localidad||'')}</div>
@@ -1480,7 +1517,7 @@ function ordenDeArreglo(a){ return a.ordenId!=null ? ordenes.find(o=>o.id===a.or
 function arrSalida(a){ const o=ordenDeArreglo(a); return o?o.fecha:(a.fechaSalida||''); }
 function arrFlete(a){ const o=ordenDeArreglo(a); if(!o) return a.flete||'—';
   return o.tipo==='Retiro' ? 'Retiro' : (o.tipo==='Expreso' ? 'Expreso' : (o.flete||'Sin asignar')); }
-function arrBoleta(a){ const o=ordenDeArreglo(a); return o?o.boleta:(a.boleta||''); }
+function arrBoleta(a){ const o=ordenDeArreglo(a); return o?reclamoNroDe(o):(a.boleta||''); }
 function arrPendientes(){ return arreglos.filter(a=>a.estado!=='resuelto'); }
 /* Los nombres de quién arregla se acumulan solos de lo ya cargado: no hace falta
    configurarlos en ningún lado y la lista se arma con el uso real. */
@@ -1713,13 +1750,13 @@ function cuerpoArreglo(m){
        <div class="field-lbl">FECHA DE SALIDA <span class="muted" style="font-weight:400">(si la sabés)</span></div>
        <input type="date" id="arr_fecha" value="${esc(m.fechaSalida||'')}" oninput="arrSet('fechaSalida',this.value)" class="arr-inp">`
     : o
-      ? `<div class="arr-sel"><b>Orden ${esc(o.boleta)}</b> · ${esc(o.cliente||'')} · sale ${esc(ddmm(o.fecha))} · ${esc(o.tipo==='Retiro'?'Retiro':(o.flete||'sin chofer'))}
+      ? `<div class="arr-sel"><b>Orden ${esc(reclamoNroDe(o))}</b> · ${esc(o.cliente||'')} · sale ${esc(ddmm(o.fecha))} · ${esc(o.tipo==='Retiro'?'Retiro':(o.flete||'sin chofer'))}
            <span class="vis-x" onclick="arrBuscarOrden('')">&times;</span></div>
          <div class="field-lbl">¿QUÉ MUEBLE?</div>
          ${(o.lineas||[]).filter(l=>l.desc).map(l=>`<label class="arr-op"><input type="radio" name="arrmue" ${m.mueble===(l.cant+'× '+l.desc)?'checked':''} onchange="arrSet('mueble','${esc((l.cant+'× '+l.desc)).replace(/'/g,"\\'")}')"> ${l.cant}× ${esc(l.desc)}</label>`).join('')||'<p class="muted">Esta orden no tiene muebles cargados.</p>'}`
       : `<div class="field-lbl">N° DE ORDEN</div>
          <input id="arr_busq" value="${esc(q)}" placeholder="Escribí el número…" oninput="arrBuscarOrden(this.value)" class="arr-inp">
-         ${q?(cands.length?`<div class="arr-cands">${cands.map(c=>`<div class="arr-cand" onclick="arrElegirOrden(${c.id})"><b>${esc(c.boleta)}</b> · ${esc(c.cliente||'')} <span class="muted">· sale ${esc(ddmm(c.fecha))}</span></div>`).join('')}</div>`:'<p class="muted" style="font-size:13px;margin:8px 0 0">No encontré ninguna orden con ese número.</p>'):''}
+         ${q?(cands.length?`<div class="arr-cands">${cands.map(c=>`<div class="arr-cand" onclick="arrElegirOrden(${c.id})"><b>${esc(reclamoNroDe(c))}</b> · ${esc(c.cliente||'')} <span class="muted">· sale ${esc(ddmm(c.fecha))}</span></div>`).join('')}</div>`:'<p class="muted" style="font-size:13px;margin:8px 0 0">No encontré ninguna orden con ese número.</p>'):''}
          <div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="arrSinOrden()">No tiene orden (stock / movimiento interno)</button></div>`;
 
   return `<h3>Cargar arreglo</h3>
@@ -1783,7 +1820,7 @@ function toCSV(labels,rows){return [labels.map(csvCell).join(';')].concat(rows.m
 function descargarCSV(nombre,contenido){const blob=new Blob(['\ufeff'+contenido],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nombre;a.click();URL.revokeObjectURL(url)}
 function exportarOrdenes(){const src=(_ordList&&_ordList.length)?_ordList:ordenes;descargarCSV('ordenes_'+HOY+'.csv',toCSV(COLS_ORD.map(c=>c[1]),src.map(ordenToRow)))}
 function plantillaCSV(){descargarCSV('plantilla_ordenes.csv',toCSV(COLS_ORD.map(c=>c[1]),[]))}
-function exportarRendicion(){const arr=rendFil==='pendfirma'?listaPendFirma():ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));const cols=['Boleta','Cliente','Chofer','Estado','Cobró esperado','Cobró real','Le pagamos','Adicional','Neto','Motivo diferencia cobro','Motivo adicional','Resultado'];const rows=arr.map(o=>[o.boleta,o.cliente||'',grupoRend(o),o.estado,cobroBH(o),cobroRealOrden(o),lePagamosBase(o),adicionalPagado(o),netoOrdenBH(o),o.cobradoDiffMotivo||'',o.bhPagoMotivo||'',o.rendResult||'']);if(!rows.length){showToast('No hay rendiciones en esta vista para exportar.','info');return}descargarCSV('rendicion_'+rendDay+'.csv',toCSV(cols,rows))}
+function exportarRendicion(){const arr=rendFil==='pendfirma'?listaPendFirma():ordenes.filter(o=>o.fecha===rendDay&&o.estado!=='Cancelado'&&!o.archivada&&(o.flete||o.tipo==='Retiro')&&rendMatch(o));const cols=['Boleta','Cliente','Chofer','Estado','Cobró esperado','Cobró real','Le pagamos','Adicional','Neto','Motivo diferencia cobro','Motivo adicional','Resultado'];const rows=arr.map(o=>[reclamoNroDe(o),o.cliente||'',grupoRend(o),o.estado,cobroBH(o),cobroRealOrden(o),lePagamosBase(o),adicionalPagado(o),netoOrdenBH(o),o.cobradoDiffMotivo||'',o.bhPagoMotivo||'',o.rendResult||'']);if(!rows.length){showToast('No hay rendiciones en esta vista para exportar.','info');return}descargarCSV('rendicion_'+rendDay+'.csv',toCSV(cols,rows))}
 function parseCSV(text){const rows=[];let i=0,field='',row=[],inq=false;text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   while(i<text.length){const c=text[i];
     if(inq){if(c==='"'){if(text[i+1]==='"'){field+='"';i++}else inq=false}else field+=c}
@@ -2316,7 +2353,7 @@ function asignarSinAsignar(){const pend=ordenes.filter(o=>o.fecha===selDay&&o.es
   const tabla=document.querySelector('.table-wrap');if(tabla){try{tabla.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){}}}
 function reasignarFlete(id){modalActivo={tipo:'reasignar',oid:id,nuevo:ordenes.find(x=>x.id===id).flete||'',motivo:''};renderModal()}
 function cuerpoReasignar(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Reasignar chofer</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · Salió a nombre de <b>${esc(o.flete||'sin asignar')}</b></p>
+  return `<h3>Reasignar chofer</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} · Salió a nombre de <b>${esc(o.flete||'sin asignar')}</b></p>
   <p style="margin:4px 0 12px">Este viaje ya salió. Reasignar ahora corrige el registro histórico — afecta a quién le corresponde cobrar este viaje en Rendición.</p>
   <label>Chofer correcto</label><select onchange="modalActivo.nuevo=this.value;renderModal()">${FLETES.map(f=>`<option ${f===m.nuevo?'selected':''}>${esc(f)}</option>`).join('')}</select>
   <label>¿Por qué se corrige?</label><textarea id="mr_motivo" class="${m.motivoError&&!(m.motivo||'').trim()?'field-error':''}" oninput="modalActivo.motivo=this.value;this.classList.remove('field-error');const em=document.getElementById('mr_motivo_err');if(em)em.style.display='none'" placeholder="Ej: se cargó mal, lo cambiaron a último momento">${esc(m.motivo)}</textarea>
@@ -2435,11 +2472,11 @@ function dibujarMapaDelDia(){
       pendientes--;
       if(status==='OK'&&res[0]){
         const pos=res[0].geometry.location;
-        const marker=new google.maps.Marker({position:pos,map,label:{text:String(o.boleta).slice(-3),color:'#fff',fontSize:'11px',fontWeight:'700'},title:o.boleta+' · '+(o.cliente||''),icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:col,fillOpacity:1,strokeColor:'#fff',strokeWeight:2,labelOrigin:new google.maps.Point(0,0)}});
-        const iw=new google.maps.InfoWindow({content:'<div style="font:14px/1.4 sans-serif;padding:2px 4px"><b>Orden '+esc(o.boleta)+'</b><br>'+esc(o.cliente||'')+'<br><span style="color:#5b6675">'+esc(zonaLimpia(o.zona))+' · '+esc(o.flete||'Sin asignar')+'</span><br><span style="color:#8a94a3;font-size:12px">'+esc(dir)+'</span></div>'});
+        const marker=new google.maps.Marker({position:pos,map,label:{text:(esOrdenReclamo(o)?'R':'')+String(o.boleta).slice(-3),color:'#fff',fontSize:esOrdenReclamo(o)?'9.5px':'11px',fontWeight:'700'},title:reclamoNroDe(o)+' · '+(o.cliente||''),icon:{path:google.maps.SymbolPath.CIRCLE,scale:13,fillColor:col,fillOpacity:1,strokeColor:'#fff',strokeWeight:2,labelOrigin:new google.maps.Point(0,0)}});
+        const iw=new google.maps.InfoWindow({content:'<div style="font:14px/1.4 sans-serif;padding:2px 4px"><b>Orden '+esc(reclamoNroDe(o))+'</b><br>'+esc(o.cliente||'')+'<br><span style="color:#5b6675">'+esc(zonaLimpia(o.zona))+' · '+esc(o.flete||'Sin asignar')+'</span><br><span style="color:#8a94a3;font-size:12px">'+esc(dir)+'</span></div>'});
         marker.addListener('click',()=>iw.open(map,marker));
         bounds.extend(pos);map.fitBounds(bounds);
-      } else {fallidos.push(o.boleta)}
+      } else {fallidos.push(reclamoNroDe(o))}
       if(pendientes===0)setMapaDiaEstado(fallidos.length?('No se pudo ubicar: orden(es) '+fallidos.join(', ')):'')
     })})}
 function marcarHabil(id,val){const o=ordenes.find(x=>x.id===id);if(val){const pg=prompt('El cliente vino a pagar. ¿Cuánto pagó ahora? (0 = solo habilitar)',0);if(pg===null)return;const pn=moneyParse(pg);if(pn>0){o.pagosList=(o.pagosList||[]).concat(pn);o.pagos=(o.pagos||0)+pn}o.habilitada=true}else{o.habilitada=false}vOrdenes()}
@@ -2502,14 +2539,14 @@ function filaOrden(o,activo){const nm=sum(o.lineas.map(l=>l.cant));const prob=o.
         if(!o.eliminSolicitada)menu.push(menuItem('🗑',o.esReclamo?'Solicitar eliminación del reclamo':'Solicitar eliminación a Dirección','solicitarEliminar('+o.id+')',true));
       }
     }
-    if(o.estado==='En reclamo'&&!esVendedor())inline.push(iconBtn('btn-ghost','🚩','Ver reclamo','verReclamo('+o.id+',event)')+(reclamoVerOpen===o.id&&reclamoVerPos?`<div class="mueble-pop" style="position:fixed;top:${reclamoVerPos.top}px;left:${reclamoVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Reclamo · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal"><b>Chofer:</b> ${esc(o.flete||'—')}</div><div class="mp-row" style="white-space:normal;margin-top:4px">${esc(o.reclamoNota||'(sin nota)')}</div>${o.reclamoFoto?`<img src="${o.reclamoFoto}" style="max-width:100%;border-radius:6px;margin-top:8px">`:''}</div>`:''));
+    if(o.estado==='En reclamo'&&!esVendedor())inline.push(iconBtn('btn-ghost','🚩','Ver reclamo','verReclamo('+o.id+',event)')+(reclamoVerOpen===o.id&&reclamoVerPos?`<div class="mueble-pop" style="position:fixed;top:${reclamoVerPos.top}px;left:${reclamoVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Reclamo · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal"><b>Chofer:</b> ${esc(o.flete||'—')}</div><div class="mp-row" style="white-space:normal;margin-top:4px">${esc(o.reclamoNota||'(sin nota)')}</div>${o.reclamoFoto?`<img src="${o.reclamoFoto}" style="max-width:100%;border-radius:6px;margin-top:8px">`:''}</div>`:''));
     const kebab=menu.length?`<button class="btn btn-ghost icon-btn" title="Más acciones" onclick="toggleOrdMenu(${o.id},event)">⋮</button>${ordMenuOpen===o.id&&ordMenuPos?`<div class="ord-menu" style="position:fixed;${ordMenuPos.bottom!=null?'bottom:'+ordMenuPos.bottom+'px':'top:'+ordMenuPos.top+'px'};left:${ordMenuPos.left}px" onclick="event.stopPropagation()">${menu.join('')}</div>`:''}`:'';
     const acc=[`<div class="ord-actions">${inline.join('')}${kebab}</div>`];
     const cobro=recibido(o)?(o.cobrado!=null?o.cobrado:cobroDestino(o)):cobroDestino(o);
     const dsc=diasSinCerrar(o);
     return `<tr class="${(!o.flete&&necesitaFlete(o))?'sinasignar':''}"><td style="white-space:nowrap"><span class="muted">${fmtDiaSem(o.fecha)}</span> ${horaEmoji(o)}</td><td style="white-space:nowrap"><strong>${esc(reclamoNroDe(o))}</strong>${o.sinOrden?' <span class="badge e-cond" title="Reclamo sin orden vinculada: no hay entrega original en el sistema">sin orden</span>':''}${(o.esReclamo&&!o.sinOrden)?(sinProgramar(o)
       ? ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))}">🚩</span>`
-      : ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`):''}${o.verificado?' ✓':''}${sinProgramar(o)?'':` <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>`}${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(o.boleta)}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td>${(o.esReclamo&&!(o.pagaConfirmadoPor))?'<span class="muted" title="Todavía no se definió quién se hace cargo">a definir</span>':`<b>${money(cobro)}</b>`}</td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${(o.confirmacion==='A confirmar'&&!sinProgramar(o)&&!o.esReclamo)?' <span class="badge e-cond">A confirmar</span>':''}${sinProgramar(o)?'':pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${frizada(o)?` <span class="badge e-prob" title="${esc(motivoFrizada(o))}">🔒 ${o.autoriz&&o.autoriz.estado==='rechazada'?'No autorizada':'Frizada · falta autorizar'}</span>`:''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
+      : ` <span class="badge e-reclamo" title="Reclamo sobre la entrega del ${esc(fmt(o.reclamoDe?o.reclamoDe.fecha:''))} — ${esc(movimData(o)[1])}">🚩 ${esc(movimData(o)[1])}</span>`):''}${o.verificado?' ✓':''}${sinProgramar(o)?'':` <button class="btn btn-ghost icon-btn-xs" title="Remito" onclick="verImprimir(${o.id})">🖨</button>`}${o.comentario?` <button class="btn btn-ghost icon-btn-xs" title="Ver comentario" onclick="toggleComentVer(${o.id},'coment',event)">💬</button>${comentVerOpen===o.id+'_coment'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Comentario · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.comentario)}</div></div>`:''}`:''}${o.quePaso?` <button class="btn btn-ghost icon-btn-xs" title="Ver qué pasó" onclick="toggleComentVer(${o.id},'quepaso',event)">🚩</button>${comentVerOpen===o.id+'_quepaso'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Qué pasó · ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.quePaso)}</div></div>`:''}`:''}${o.notaEntrega?` <button class="btn btn-ghost icon-btn-xs" title="Ver nota de entrega" onclick="toggleComentVer(${o.id},'nota',event)">📝</button>${comentVerOpen===o.id+'_nota'&&comentVerPos?`<div class="mueble-pop" style="position:fixed;top:${comentVerPos.top}px;left:${comentVerPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Nota de entrega · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.notaEntrega)}</div></div>`:''}`:''}</td><td><strong>${esc(zonaLimpia(o.zona))}</strong>${aplicaMapa?(dirMapa?` <button class="btn btn-ghost icon-btn-xs" title="Ver en el mapa" onclick="abrirMapaOrden(${o.id})">📍</button>`:` <span class="icon-btn-xs" style="opacity:.3;cursor:default" title="Todavía no tiene dirección para el mapa (falta confirmar)">📍</span>`):''}${o.localidad?`<br><span class="muted">${esc(o.localidad)}</span>`:''}</td><td style="text-align:center"><button class="btn btn-ghost icon-btn-xs" title="Ver muebles a entregar" onclick="toggleMuebles(${o.id},event)">🛋</button> ${nm}${muebleOpen===o.id&&mueblePos?`<div class="mueble-pop" style="position:fixed;top:${mueblePos.top}px;left:${mueblePos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Orden ${esc(reclamoNroDe(o))}</div>${o.lineas.map(l=>`<div class="mp-row"><b>${l.cant}×</b> ${esc(l.desc)}</div>`).join('')}</div>`:''}</td><td>${!necesitaFlete(o)?`<span class="muted">${o.tipo==='Retiro'?'Retiro':esc(o.flete||'—')}</span>`:(esVendedor()||o.estado!=='Coordinada'?`${esc(o.flete||'Sin asignar')}${o.estado!=='Coordinada'?' 🔒':''}`:(()=>{const fletesDia=fletesDelDia(o.fecha);if(o.flete&&!fletesDia.includes(o.flete))fletesDia.push(o.flete);const fopts=['<option value="">Sin asignar</option>'].concat(fletesDia.map(f=>`<option ${o.flete===f?'selected':''}>${esc(f)}</option>`)).join('');return `<select class="fletesel" onchange="asignarFlete(${o.id},this.value)">${fopts}</select>`})())}</td>${esVendedor()?'':`<td>${(o.esReclamo&&!(o.pagaConfirmadoPor))?'<span class="muted" title="Todavía no se definió quién se hace cargo">a definir</span>':`<b>${money(cobro)}</b>`}</td>`}<td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span>${(o.confirmacion==='A confirmar'&&!sinProgramar(o)&&!o.esReclamo)?' <span class="badge e-cond">A confirmar</span>':''}${sinProgramar(o)?'':pagaChip(o)}${esperaIngreso(o)?' <span class="badge e-cond" title="El chofer lo retiró pero todavía no entró al depósito">📦 esperando ingreso</span>':''}${enGestion(o)?` <span class="badge e-cond" title="Recibido por ${esc(o.recibidoEn.por)}${o.recibidoEn.cond==='peor'?' · LLEGÓ PEOR':''}">⏳ en gestión ${diasEnGestion(o)}d</span>`:''}${prob?' <span class="badge e-prob">Revisar depósito</span>':''}${o.habilitada===false?' <span class="badge e-cond">Condicionada a pago</span>':''}${frizada(o)?` <span class="badge e-prob" title="${esc(motivoFrizada(o))}">🔒 ${o.autoriz&&o.autoriz.estado==='rechazada'?'No autorizada':'Frizada · falta autorizar'}</span>`:''}${dsc?` <span class="badge e-prob" title="${dsc.fase==='recibir'?'Entregada hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Lucas todavía no recibió al chofer':'Por rendir hace '+dsc.dias+' día'+(dsc.dias===1?'':'s')+' y Jony todavía no la firmó'}">⏳ ${dsc.dias}d ${dsc.fase==='recibir'?'sin recibir':'sin firmar'}</span>`:''}${o.reaperturaSolicitada?` <span class="badge e-cond" title="${esc(o.reaperturaSolicitada.motivo)}">📩 ${esc(o.reaperturaSolicitada.chofer||'')} pidió reabrir</span>`:''}${o.eliminSolicitada?` <span class="badge e-prob" title="${esc(o.eliminSolicitada.motivo)}">🗑 ${esc(o.eliminSolicitada.por)} pidió eliminar</span>`:''}${o.estado==='Por completar'&&o.cargadoPor?` <span class="badge e-cond" title="Cargada el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''} — falta completar Saldos">👤 ${esc(o.cargadoPor)}</span>`:(o.cargadoRol==='vendedor'&&o.cargadoPor?` <span class="badge e-cond" title="Pedido cargado por un vendedor el ${o.cargadoFecha?new Date(o.cargadoFecha).toLocaleDateString('es-AR'):''}">👤 ${esc(o.cargadoPor)}</span>`:'')}</td><td class="refcol">${refuerzoCell(o)}</td>${esVendedor()?'':`<td>${acc.join('')}</td>`}</tr>`}
 function vOrdenes(){
   if(tab==='vlog'&&!_vendLogRender){vVendedorLog();return}
   const dias=semanaDe(weekRef);
@@ -2576,7 +2613,7 @@ function vOrdenes(){
   } else { /* todas */
     list=ordenes.filter(o=>!o.archivada).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id);usaPag=true;
   }
-  if(ordFil.q)list=list.filter(o=>String(o.boleta).toLowerCase().includes(ordFil.q.toLowerCase()));
+  if(ordFil.q)list=list.filter(o=>(String(o.boleta)+' '+reclamoNroDe(o)).toLowerCase().includes(ordFil.q.toLowerCase()));
   const _fleteMatch=o=>ordFil.flete==='__sin'?(necesitaFlete(o)&&!o.flete):(o.flete===ordFil.flete||(ordFil.flete==='Retiro'&&o.tipo==='Retiro'));
   list=_sacarSinProgramar(list);
   const _base=list;
@@ -2658,7 +2695,7 @@ function solicitarReapertura(id){reaperturaOpen=id;render()}
 function autoSalida(id){const o=ordenes.find(x=>x.id===id);if(o&&o.estado==='Coordinada'&&puedeSalir(o)==='ok'){o.estadoPrev='Coordinada';setEstado(o,'En viaje',{accion:'Despacho automático al marcar'});registrarAuditoria('Despachar',o)}}
 function marcarEntregada(id){autoSalida(id);modalActivo={tipo:'entregar',oid:id};renderModal()}
 function cuerpoEntregar(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Confirmar entrega</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · Chofer: ${esc(o.flete||'—')}</p>
+  return `<h3>Confirmar entrega</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} · Chofer: ${esc(o.flete||'—')}</p>
   <p style="margin:4px 0 0">¿Confirmás que <b>${esc(o.cliente||'el cliente')}</b> recibió el pedido?</p>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-ok" onclick="confirmarEntrega()">Confirmar entrega</button></div>`}
 function confirmarEntrega(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);o.estadoPrev='En viaje';setEstado(o,'Entregada',{accion:'Marcar entregada'});registrarAuditoria('Marcar entregada',o);cerrarModal();render()}
@@ -2703,7 +2740,7 @@ function abiertoPorChofer(o){return esOrdenReclamo(o)&&o.abiertoPor==='chofer'}
 function onReclamoFoto(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{reclamoFotoTmp=r.result;const pv=$('fotoPrev');if(pv)pv.innerHTML='<img src="'+reclamoFotoTmp+'" style="max-width:120px;border-radius:6px;margin-left:8px;vertical-align:middle">'};r.readAsDataURL(f)}
 function enviarReclamo(id){const o=ordenes.find(x=>x.id===id);o.reclamoNota=$('t_reclamo')?$('t_reclamo').value.trim():'';if(reclamoFotoTmp)o.reclamoFoto=reclamoFotoTmp;o.estadoPrev=o.estado;setEstado(o,'En reclamo',{accion:'Problema en la entrega',motivo:o.reclamoNota||''});reclamoOpen=null;reclamoFotoTmp='';render()}
 function editarComentario(id){const o=ordenes.find(x=>x.id===id);const actual=o.comentario||'';const nuevo=prompt('Comentario para el flete (dejalo vacío para borrarlo):',actual);if(nuevo===null)return;const limpio=nuevo.trim();if(limpio===actual)return;o.comentarioHist=o.comentarioHist||[];o.comentarioHist.push({texto:actual||'(vacío)',fecha:new Date().toISOString()});o.comentario=limpio;render()}
-function verComentarioHist(id){const o=ordenes.find(x=>x.id===id);const hist=o.comentarioHist||[];const w=window.open('','_blank');const filas=hist.map(h=>'<div style="margin-bottom:10px"><div class="muted" style="font-size:11px">'+new Date(h.fecha).toLocaleString('es-AR')+'</div><div>'+esc(h.texto)+'</div></div>').join('')||'<p class="muted">Sin historial todavía.</p>';w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historial de comentario '+esc(o.boleta)+'</title><style>body{font-family:Arial;max-width:480px;margin:24px auto;padding:0 18px;color:#0f1a2a}h2{color:#16324f;margin:0 0 4px}.muted{color:#8a94a3}</style></head><body><h2>Historial · Orden '+esc(o.boleta)+'</h2><div style="margin:14px 0"><b>Actual:</b><br>'+esc(o.comentario||'(vacío)')+'</div><hr>'+filas+'</body></html>');w.document.close()}
+function verComentarioHist(id){const o=ordenes.find(x=>x.id===id);const hist=o.comentarioHist||[];const w=window.open('','_blank');const filas=hist.map(h=>'<div style="margin-bottom:10px"><div class="muted" style="font-size:11px">'+new Date(h.fecha).toLocaleString('es-AR')+'</div><div>'+esc(h.texto)+'</div></div>').join('')||'<p class="muted">Sin historial todavía.</p>';w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historial de comentario '+esc(reclamoNroDe(o))+'</title><style>body{font-family:Arial;max-width:480px;margin:24px auto;padding:0 18px;color:#0f1a2a}h2{color:#16324f;margin:0 0 4px}.muted{color:#8a94a3}</style></head><body><h2>Historial · Orden '+esc(reclamoNroDe(o))+'</h2><div style="margin:14px 0"><b>Actual:</b><br>'+esc(o.comentario||'(vacío)')+'</div><hr>'+filas+'</body></html>');w.document.close()}
 let reclamoVerOpen=null;let reclamoVerPos=null;
 function verReclamo(id,ev){if(reclamoVerOpen===id){reclamoVerOpen=null;reclamoVerPos=null;render();return}
   const r=ev&&ev.currentTarget&&ev.currentTarget.getBoundingClientRect?ev.currentTarget.getBoundingClientRect():{bottom:0,left:0};
@@ -2739,7 +2776,7 @@ function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoC
 function abrirModalRefuerzo(oid){const o=ordenes.find(x=>x.id===oid);if(!o)return;modalActivo={tipo:'refuerzo',oid,monto:'',nota:''};renderModal()}
 function cuerpoRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o)return'';
   const saldo=cobroBH(o);const queda=Math.max(0,saldo-(+m.monto||0));const costos=cobroDestino(o)-saldo;
-  return `<h3>Cargar refuerzo</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}${o.direccion?' · '+esc(o.direccion):''}</p>
+  return `<h3>Cargar refuerzo</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))}${o.cliente?' · '+esc(o.cliente):''}${o.direccion?' · '+esc(o.direccion):''}</p>
   <div class="reclamo-ctx" style="background:#f4f6f9;border-color:#dbe1e8">
     <div><b>Total</b><span>${money(o.total||0)}</span></div>
     <div><b>Pagado</b><span>${money(o.pagos||0)}</span></div>
@@ -2769,7 +2806,7 @@ function guardarRefuerzo(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.
 function abrirModalConfirmRefuerzo(oid){if(!puedeConfirmarRefuerzo()){showToast('Solo Lucas o dirección pueden confirmar un refuerzo.','error');return}const o=ordenes.find(x=>x.id===oid);if(!o||!o.refuerzo)return;modalActivo={tipo:'confirmarRefuerzo',oid};renderModal()}
 function cuerpoConfirmRefuerzo(m){const o=ordenes.find(x=>x.id===m.oid);if(!o||!o.refuerzo)return'';const r=o.refuerzo;
   const saldoAntes=cobroBH(o);const nuevo=saldoAntes-(+r.monto||0);const cargDia=r.ts?new Date(r.ts).toLocaleDateString('es-AR'):'';
-  return `<h3>💲 Revisar refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}</p>
+  return `<h3>💲 Revisar refuerzo de seña</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))}${o.cliente?' · '+esc(o.cliente):''}</p>
   <div class="badge e-cond" style="margin-bottom:12px;white-space:normal">Cargado por ${esc(r.por||'')}${cargDia?' el '+cargDia:''}${r.nota?' · '+esc(r.nota):''}</div>
   <div class="modal-saldo"><span>Saldo actual</span><b>${money(saldoAntes)}</b></div>
   <div class="modal-saldo"><span>Refuerzo que pagó</span><b>− ${money(+r.monto||0)}</b></div>
@@ -2833,9 +2870,9 @@ function cuerpoEliminar(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';c
     <p style="font-size:14px;color:#5b6472;line-height:1.5"><b>Queda recuperable</b> desde Configuración por si te arrepentís.</p>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar el reclamo</button></div>`;
   }
-  return `<h3>Eliminar viaje</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472;line-height:1.5">El viaje se saca de todas las vistas, conteos y estadísticas. <b>Queda recuperable</b> desde Configuración por si te arrepentís.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar viaje</button></div>`}
+  return `<h3>Eliminar viaje</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472;line-height:1.5">El viaje se saca de todas las vistas, conteos y estadísticas. <b>Queda recuperable</b> desde Configuración por si te arrepentís.</p><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar viaje</button></div>`}
 function cuerpoSolicitarElim(m){const o=ordenes.find(x=>x.id===m.id);if(!o)return'';const _r=esOrdenReclamo(o);
-  return `<h3>Solicitar eliminación${_r?' del reclamo':''}</h3><p class="modal-sub">${_r?('Reclamo '+esc(reclamoNroDe(o))+(o.reclamoDe?' · la entrega '+esc(o.reclamoDe.boleta)+' no se toca':'')):('Orden N° '+esc(o.boleta))} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472">Contá por qué habría que eliminarla. Dirección la revisa y decide.</p><textarea id="t_solelim" placeholder="Ej: la cargué por error / está duplicada / me equivoqué de cliente" style="width:100%;min-height:80px;padding:10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit"></textarea><div id="t_solelim_err" class="field-error-msg" style="display:none">Escribí el motivo así Dirección entiende por qué.</div><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarSolicitarEliminar()">Enviar solicitud</button></div>`}
+  return `<h3>Solicitar eliminación${_r?' del reclamo':''}</h3><p class="modal-sub">${_r?('Reclamo '+esc(reclamoNroDe(o))+(o.reclamoDe?' · la entrega '+esc(o.reclamoDe.boleta)+' no se toca':'')):('Orden N° '+esc(reclamoNroDe(o)))} · ${esc(o.cliente||'')}</p><p style="font-size:14px;color:#5b6472">Contá por qué habría que eliminarla. Dirección la revisa y decide.</p><textarea id="t_solelim" placeholder="Ej: la cargué por error / está duplicada / me equivoqué de cliente" style="width:100%;min-height:80px;padding:10px;border:1px solid #d0d7e2;border-radius:8px;font:inherit"></textarea><div id="t_solelim_err" class="field-error-msg" style="display:none">Escribí el motivo así Dirección entiende por qué.</div><div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-primary" onclick="confirmarSolicitarEliminar()">Enviar solicitud</button></div>`}
 function cuerpoImprimirSemana(m){
   const todos=m.sel.size===m.choferes.length;
   return `<h3>Imprimir separación de la semana</h3><p class="modal-sub">Elegí qué choferes querés imprimir. Se arma una hoja por día, con los muebles que Sebas tiene que separar para cada uno.</p>
@@ -2847,7 +2884,7 @@ function cuerpoImprimirSemana(m){
 
 function abrirModalCancelar(oid){modalActivo={tipo:'cancelar',oid,motivo:MOTIVOS_CANCEL[0],otro:''};renderModal()}
 function cuerpoCancelar(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Cancelar viaje</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} — ${esc(o.cliente||'')}</p>
+  return `<h3>Cancelar viaje</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} — ${esc(o.cliente||'')}</p>
   <label>Motivo</label><select onchange="modalActivo.motivo=this.value;modalActivo.motivoError=false;renderModal()">${MOTIVOS_CANCEL.map(x=>`<option ${x===m.motivo?'selected':''}>${esc(x)}</option>`).join('')}</select>
   ${m.motivo==='Otros'?`<label>Detalle</label><textarea id="mc_otro" class="${m.motivoError&&!(m.otro||'').trim()?'field-error':''}" oninput="modalActivo.otro=this.value;this.classList.remove('field-error');const em=document.getElementById('mc_otro_err');if(em)em.style.display='none'" placeholder="Contá qué pasó">${esc(m.otro)}</textarea><div id="mc_otro_err" class="field-error-msg" style="${m.motivoError&&!(m.otro||'').trim()?'':'display:none'}">Contá qué pasó.</div>`:''}
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarCancelar()">Cancelar viaje</button></div>`}
@@ -2857,7 +2894,7 @@ function confirmarCancelar(){const m=modalActivo;const o=ordenes.find(x=>x.id===
 
 function abrirModalReprogramar(oid){const o=ordenes.find(x=>x.id===oid);modalActivo={tipo:'reprogramar',oid,fecha:o.fecha,motivo:MOTIVOS_REPROG[0],otro:''};renderModal()}
 function cuerpoReprogramar(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Reprogramar fecha</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} — fecha actual: ${fmt(o.fecha)}</p>
+  return `<h3>Reprogramar fecha</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} — fecha actual: ${fmt(o.fecha)}</p>
   <label>Nueva fecha</label><input type="date" id="mr_fecha" class="${m.fechaError?'field-error':''}" value="${m.fecha}" onchange="modalActivo.fecha=this.value;modalActivo.fechaError=false;renderModal()">
   ${m.fechaError?`<div class="field-error-msg">${m.fechaErrorMsg||'Elegí una fecha.'}</div>`:''}
   <label>Motivo</label><select onchange="modalActivo.motivo=this.value;modalActivo.motivoError=false;renderModal()">${MOTIVOS_REPROG.map(x=>`<option ${x===m.motivo?'selected':''}>${esc(x)}</option>`).join('')}</select>
@@ -2872,7 +2909,7 @@ function confirmarReprogramar(){const m=modalActivo;const o=ordenes.find(x=>x.id
 const TODOS_ESTADOS=['Coordinada','En viaje','Entregada','Por rendir','Cerrado','Cancelado'];
 function abrirModalEstado(oid){const o=ordenes.find(x=>x.id===oid);modalActivo={tipo:'estado',oid,nuevo:o.estado,motivo:''};renderModal()}
 function cuerpoEstado(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Cambiar estado</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} — estado actual: <b>${esc(o.estado)}</b></p>
+  return `<h3>Cambiar estado</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} — estado actual: <b>${esc(o.estado)}</b></p>
   <p class="muted" style="font-size:12.5px;margin-top:-8px">Esto es una corrección excepcional, no el flujo normal — usalo para reabrir o retroceder una orden por algo que pasó después (un reclamo, un error). Queda registrado con motivo.</p>
   <label>Nuevo estado</label><select id="me_estado" class="${m.estadoError?'field-error':''}" onchange="modalActivo.nuevo=this.value;modalActivo.estadoError=false;renderModal()">${TODOS_ESTADOS.map(e=>`<option ${e===m.nuevo?'selected':''}>${esc(e)}</option>`).join('')}</select>
   ${m.estadoError?`<div class="field-error-msg">Elegí un estado distinto al actual.</div>`:''}
@@ -2903,14 +2940,14 @@ function cuerpoEstadoHist(m){const o=ordenes.find(x=>x.id===m.oid);const hist=[.
     </div>`).join(''):'<p class="muted">Todavía no se registró ningún movimiento de esta orden.</p>';
   return `<h3>Historial de estado</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))}${o.esReclamo?' · reclamo':''} · hoy está en <b>${esc(o.estado)}</b></p>${filas}<div class="modal-actions"><button class="btn btn-primary" onclick="cerrarModal()">Cerrar</button></div>`}
 function cuerpoProblema(m){const o=ordenes.find(x=>x.id===m.oid);const l=o.lineas[m.li];
-  return `<h3>Reportar problema</h3><p class="modal-sub">${esc(l.desc)} · Orden N° ${esc(o.boleta)}</p>
+  return `<h3>Reportar problema</h3><p class="modal-sub">${esc(l.desc)} · Orden N° ${esc(reclamoNroDe(o))}</p>
   <label>¿Qué pasó?</label><select onchange="modalActivo.motivo=this.value;modalActivo.motivoError=false;renderModal()">${MOTIVOS_PROBLEMA.map(x=>`<option ${x===m.motivo?'selected':''}>${esc(x)}</option>`).join('')}</select>
   ${m.motivo==='Otros'?`<label>Detalle</label><textarea id="mp_otro" class="${m.motivoError&&!(m.otro||'').trim()?'field-error':''}" oninput="modalActivo.otro=this.value;this.classList.remove('field-error');const em=document.getElementById('mp_otro_err');if(em)em.style.display='none'" placeholder="Contá qué pasó">${esc(m.otro)}</textarea><div id="mp_otro_err" class="field-error-msg" style="${m.motivoError&&!(m.otro||'').trim()?'':'display:none'}">Contá qué pasó.</div>`:''}
   <label>Foto <span class="hint">(opcional)</span></label><br><label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-block;margin-top:4px">📷 Adjuntar foto<input type="file" accept="image/*" capture="environment" style="display:none" onchange="onProblemaFoto(this)"></label>
   ${m.foto?`<div style="margin-top:8px"><img src="${m.foto}" style="max-width:160px;border-radius:8px"></div>`:''}
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarProblema()">Reportar problema</button></div>`}
 function cuerpoVerProblema(m){const o=ordenes.find(x=>x.id===m.oid);const l=o.lineas[m.li];
-  return `<h3>Problema reportado</h3><p class="modal-sub">${esc(l.desc)} · Orden N° ${esc(o.boleta)}${o.cliente?' · '+esc(o.cliente):''}${o.flete?' · Flete: '+esc(o.flete):''}</p>
+  return `<h3>Problema reportado</h3><p class="modal-sub">${esc(l.desc)} · Orden N° ${esc(reclamoNroDe(o))}${o.cliente?' · '+esc(o.cliente):''}${o.flete?' · Flete: '+esc(o.flete):''}</p>
   <div class="modal-saldo" style="display:block;text-align:left;background:#fdf3f2"><div>${esc(l.probNota||'(sin nota)')}</div>${l.probFoto?`<img src="${l.probFoto}" style="max-width:100%;border-radius:8px;margin-top:8px">`:''}</div>
   <p class="muted" style="margin-top:10px">${l.probTomadoPor?'Tomado por: <b>'+esc(l.probTomadoPor)+'</b>':'Todavía nadie lo tomó.'}</p>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button>${!l.probTomadoPor?`<button class="btn btn-ghost" onclick="tomarProblema(${m.oid},${m.li})">Tomar el problema</button>`:''}<button class="btn btn-primary" onclick="resolverProblemaModal(${m.oid},${m.li})">Marcar resuelto</button></div>`}
@@ -2924,7 +2961,7 @@ function cuerpoCobro(m){const o=ordenes.find(x=>x.id===m.oid);const diff=m.cobra
   const diffTxt=diff===0?'✓ Cierra exacto':(diff<0?'Falta '+money(-diff):'Cobró '+money(diff)+' de más');
   const bhEsperado=costosPagados(o);const bhExtra=m.bh-bhEsperado;
   const necesitaMotivo=(diff!==0)||(bhExtra!==0);
-  return `<h3>${m.modo==='retiro'?'Confirmar retiro y cobro':'Recibir del chofer'}</h3><p class="modal-sub">Orden N° ${esc(o.boleta)} · Chofer: ${esc(o.flete||'—')}${m.modo==='cerrar'&&o.cobrado!=null?' · Ya habías cargado estos valores, revisalos':''}</p>
+  return `<h3>${m.modo==='retiro'?'Confirmar retiro y cobro':'Recibir del chofer'}</h3><p class="modal-sub">Orden N° ${esc(reclamoNroDe(o))} · Chofer: ${esc(o.flete||'—')}${m.modo==='cerrar'&&o.cobrado!=null?' · Ya habías cargado estos valores, revisalos':''}</p>
   <div class="modal-saldo"><span>Tenía que cobrar</span><b>${money(m.saldo)}</b></div>
   <label>¿Cuánto cobró realmente?</label><input type="text" inputmode="numeric" id="mz_cobrado" value="${moneyFmt(m.cobrado)}" oninput="onCobradoInput()">
   <div id="mz_diff" class="modal-diff ${diffCls}">${diffTxt}</div>
@@ -2952,21 +2989,21 @@ function imprimirExpreso(o){
   const rows=(o.lineas||[]).map((l,i)=>`<div style="display:grid;grid-template-columns:34px 56px 1fr;grid-column:1/-1"><div style="padding:8px;border-bottom:1px solid #eef0f2">${i+1}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${l.cant}</div><div style="padding:8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</div></div>`).join('');
   const muebTable=`<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:6px">DETALLE DE MERCADERÍA</div><div style="display:grid;grid-template-columns:34px 56px 1fr;font-size:12.5px"><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">#</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">CANT</div><div style="padding:6px 8px;border-bottom:1.5px solid #d7dbe0;color:#5b6472;font-size:10px;font-weight:700">MUEBLE</div>${rows}</div></div>`;
   const bultosVal=`<div style="margin-top:10px;display:flex;gap:28px;font-size:13.5px"><div><span style="color:#5b6472">Bultos:</span> <b>${o.bultos||1}</b></div><div><span style="color:#5b6472">Valor declarado:</span> <b>${m2(o.valorDeclarado)}</b></div></div>`;
-  const head=(titulo,sub)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px"><div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:10px;color:#5b6472;margin-top:3px">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div><div style="font-size:10px;color:#5b6472;margin-top:2px;font-weight:600">DC Amoblamientos SRL - CUIT 30-71222702-4</div></div><div style="text-align:right"><div style="font-size:11px;font-weight:600;color:#5b6472;letter-spacing:1px">${titulo}</div><div style="font-size:24px;font-weight:800;color:#0f766e">Nº ${esc(o.boleta)}</div><div style="font-size:12px;color:#5b6472">${fechaLarga(o.fecha)}${sub?' · '+sub:''}</div></div></div>`;
+  const head=(titulo,sub)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px"><div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:10px;color:#5b6472;margin-top:3px">Av. Belgrano 2020 · Av. Belgrano 2299 · CABA · WhatsApp +54 11 3359-5571</div><div style="font-size:10px;color:#5b6472;margin-top:2px;font-weight:600">DC Amoblamientos SRL - CUIT 30-71222702-4</div></div><div style="text-align:right"><div style="font-size:11px;font-weight:600;color:#5b6472;letter-spacing:1px">${titulo}</div><div style="font-size:24px;font-weight:800;color:#0f766e">Nº ${esc(reclamoNroDe(o))}</div><div style="font-size:12px;color:#5b6472">${fechaLarga(o.fecha)}${sub?' · '+sub:''}</div></div></div>`;
   const firma=(a,b)=>`<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="text-align:center"><div style="height:34px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${a}</div></div><div style="text-align:center"><div style="height:34px"></div><div style="border-top:1px solid #14181f;padding-top:5px;font-size:10px;color:#5b6472">${b}</div></div></div>`;
   const half=(inner)=>`<div class="sheet" style="width:190mm;min-height:128mm;background:#fff;padding:7mm 10mm;box-shadow:0 4px 16px rgba(0,0,0,.1);color:#14181f;border:1.5px solid #14181f">${inner}</div>`;const pg=(a,b)=>`<div class="pgbox" style="page-break-after:always;display:flex;flex-direction:column;align-items:center;gap:4mm">${a}${b}</div>`;
   const transDest=o.expresoModo==='retira'?('Retira de local '+(o.retiroLocal||'')):(o.transDom||'—');
   const r1=half(head('REMITO DE DESPACHO A TRANSPORTE','')+`<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">TRANSPORTE</div><div style="font-size:14px;line-height:1.7"><div><span style="color:#5b6472">Transporte:</span> <b>${esc(o.transNombre||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.transTel||'—')}</b></div><div><span style="color:#5b6472">${o.expresoModo==='retira'?'Retira de:':'Domicilio:'}</span> <b>${esc(transDest)}</b></div></div></div>`+muebTable+bultosVal+firma('FIRMA DEL TRANSPORTE','ACLARACIÓN')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Comprobante de despacho — no válido como factura</div>`);
   const clienteBlock=`<div style="margin-top:14px"><div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#0f766e;margin-bottom:8px">CLIENTE DESTINATARIO</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px"><div><span style="color:#5b6472">Cliente:</span> <b>${esc(o.cliente||'—')}</b></div><div><span style="color:#5b6472">Teléfono:</span> <b>${esc(o.tel1||'—')}</b></div><div><span style="color:#5b6472">Provincia:</span> <b>${esc(o.provincia||'—')}</b></div><div><span style="color:#5b6472">Localidad:</span> <b>${esc(o.localidad||'—')}</b></div><div style="grid-column:1/-1"><span style="color:#5b6472">Domicilio:</span> <b>${esc(o.direccion||'—')}</b></div><div><span style="color:#5b6472">DNI / CUIT:</span> <b>${esc(o.dniCuit||'—')}</b></div></div></div>`;
   const r2=(n)=>half(head('GUÍA AL CLIENTE','Copia '+n+'/3')+clienteBlock+muebTable+bultosVal+firma('FIRMA DEL CLIENTE','ACLARACIÓN / DNI')+`<div style="margin-top:10px;font-size:9px;color:#9aa2ad;text-align:center">Documento no válido como factura</div>`);
-  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remitos y rótulos · Expreso ${esc(o.boleta)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}.rot{border-width:2px}
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remitos y rótulos · Expreso ${esc(reclamoNroDe(o))}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:10mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}.rot{border-width:2px}
   /* El contenedor flex con padding y gap empujaba el contenido fuera de la hoja y metía
      páginas sobrantes. En papel va en bloque, sin espaciados de pantalla. */
   .wrap{display:block!important;padding:0!important;gap:0!important}
   .pgbox{align-items:center}
   /* Par que no entra en una hoja: se separa en dos, una hoja cada uno. Preferimos
      dejar espacio en blanco antes que achicar la letra o cortar el remito. */
-  .pgbox.split>.sheet:first-child{page-break-after:always}}${ROTULOS_CSS}</style></head><body><div class="wrap" style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="no-print" style="width:190mm;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Expreso ${esc(o.boleta)} — 4 remitos (despacho + 3 copias del cliente) y ${nBultos} rótulo${nBultos===1?'':'s'} para el embalaje</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>${pg(r1,r2(1))}${pg(r2(2),r2(3))}${rot}</div><script>${ROTULOS_JS}
+  .pgbox.split>.sheet:first-child{page-break-after:always}}${ROTULOS_CSS}</style></head><body><div class="wrap" style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="no-print" style="width:190mm;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Expreso ${esc(reclamoNroDe(o))} — 4 remitos (despacho + 3 copias del cliente) y ${nBultos} rótulo${nBultos===1?'':'s'} para el embalaje</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>${pg(r1,r2(1))}${pg(r2(2),r2(3))}${rot}</div><script>${ROTULOS_JS}
   /* Los dos remitos por hoja tienen que entrar en los 277mm útiles de un A4 con margen
      de 10mm. Con una orden de muchos muebles la tabla crece y no entran: en ese caso
      NO se achica la letra — se manda uno por hoja. Regla de Brian, 31/8/2026: antes
@@ -3031,7 +3068,7 @@ function rotulosHTML(o){
       <div class="rt-bulto">BULTO ${i}<span class="rt-de">/${n}</span></div>
     </div>
     <div class="rt-body">
-      ${linea('ORDEN',o.boleta)}
+      ${linea('ORDEN',reclamoNroDe(o))}
       ${linea('NOMBRE',o.cliente)}
       ${linea('CEL',o.tel1||o.tel2)}
       ${linea('DNI',o.dniCuit)}
@@ -3061,7 +3098,7 @@ function imprimir(o){if(o.tipo==='Expreso')return imprimirExpreso(o);
   const tel=esc(o.tel1||'—')+(o.tel2?' / '+esc(o.tel2):'');
   const loc=esc(o.localidad||'')+(o.zona?' ('+esc(zonaLimpia(o.zona))+')':'');
   const rows=(o.lineas||[]).map((l,i)=>`<div style="display:grid; grid-template-columns:34px 56px 1fr; grid-column:1 / -1;"><div style="padding:8px; border-bottom:1px solid #eef0f2;">${i+1}</div><div style="padding:8px; border-bottom:1px solid #eef0f2;">${l.cant}</div><div style="padding:8px; border-bottom:1px solid #eef0f2;">${esc(l.desc)}</div></div>`).join('');
-  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito ${esc(o.boleta)}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:12mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important;margin:0!important}}</style></head><body>
+  const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito ${esc(reclamoNroDe(o))}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif}@page{size:A4;margin:12mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important;margin:0!important}}</style></head><body>
   <div style="min-height:100vh; padding:24px 16px; display:flex; flex-direction:column; align-items:center; gap:16px;">
     <div class="no-print" style="width:190mm; display:flex; justify-content:space-between; align-items:center; gap:12px;"><div style="font-size:13px; color:#5b6472;">Vista previa del remito — se imprime en A4</div><button onclick="window.print()" style="border:none; background:#0f766e; color:#fff; font-family:'Archivo',sans-serif; font-weight:700; font-size:14px; padding:10px 20px; border-radius:8px; cursor:pointer;">Imprimir</button></div>
     <div class="sheet" style="width:190mm; min-height:277mm; background:#fff; padding:11mm 11mm 9mm; box-shadow:0 8px 30px rgba(0,0,0,0.12); color:#14181f; display:flex; flex-direction:column; border:1.5px solid #14181f;">
@@ -3124,7 +3161,7 @@ function cdBloques(iso,prefix){
   if(!items.length)return '<div class="empty" style="padding:6px 0 2px">No hay muebles con ese filtro.</div>';
   const claveOrden=it=>{
     if(cdGroup==='flete')return it.o.flete?'0_'+it.o.flete:'1_zzz';
-    if(cdGroup==='boleta')return it.o.boleta;
+    if(cdGroup==='boleta')return reclamoNroDe(it.o);
     if(cdGroup==='tipo')return it.o.tipo==='Movimiento Interno'?'Mov. interno':it.o.tipo;
     if(cdGroup==='local'){const p=LOCALES.indexOf(it.l.local);return String(p<0?999:p).padStart(3,'0')+'_'+it.l.desc}
     return it.l.desc};
@@ -3137,7 +3174,7 @@ function cdBloques(iso,prefix){
     else{estadoCell=`<button class="sepbtn cdmini" onclick="sepCycle(${o.id},${li})">Separar</button> <button class="pbtn" onclick="sepProblema(${o.id},${li})" title="Marcar problema">!</button>`}
     if(o.tipo==='Expreso')estadoCell+=l.embalado?` <button class="sepbtn ok cdmini" onclick="sepEmbalar(${o.id},${li})">✓ Emb.</button>`:` <button class="sepbtn emb cdmini" onclick="sepEmbalar(${o.id},${li})">Embalar</button>`;
     if(o.habilitada===false)estadoCell+=' <span class="condtag" style="display:inline">Condicional</span>';
-    filas+=`<tr class="${s==='problema'?'rprob':''}"><td style="text-align:center">${l.cant}</td><td>${esc(l.desc)}</td><td class="muted">#${esc(o.boleta)}</td><td>${esc(o.flete||'Sin asignar')}</td><td><strong>${esc(l.local)}</strong></td><td>${estadoCell}</td></tr>`});
+    filas+=`<tr class="${s==='problema'?'rprob':''}"><td style="text-align:center">${l.cant}</td><td>${esc(l.desc)}</td><td class="muted">#${esc(reclamoNroDe(o))}</td><td>${esc(o.flete||'Sin asignar')}</td><td><strong>${esc(l.local)}</strong></td><td>${estadoCell}</td></tr>`});
   return `<div class="table-wrap"><table class="cdflat"><thead><tr><th>Cant</th><th>Mueble</th><th>N° orden</th><th>Flete</th><th>Sale de</th><th>Estado</th></tr></thead><tbody>${filas}</tbody></table></div>`}
 function cdControles(){return `<div class="ordfilters" style="margin-top:14px"><div class="macrotog"><button class="${cdGroup==='flete'?'on':''}" onclick="cdGroup='flete';vCDist()">Ordenar por flete</button><button class="${cdGroup==='mueble'?'on':''}" onclick="cdGroup='mueble';vCDist()">Ordenar por mueble</button><button class="${cdGroup==='boleta'?'on':''}" onclick="cdGroup='boleta';vCDist()">Ordenar por boleta</button><button class="${cdGroup==='tipo'?'on':''}" onclick="cdGroup='tipo';vCDist()">Ordenar por tipo</button><button class="${cdGroup==='local'?'on':''}" onclick="cdGroup='local';vCDist()">Ordenar por local de origen</button></div>${cdGroup==='local'?'<p class="muted" style="margin-top:6px;font-size:12.5px">La prioridad es el orden de Configuración → Locales de origen. Para que Zavaleta salga primero, andá a Configuración y movelo al principio de la lista con las flechas.</p>':''}</div>`}
 function cdStatCards(st){const sel=(f,c)=>cdFil===f?`box-shadow:inset 0 0 0 2px ${c};cursor:pointer`:'cursor:pointer';
@@ -3189,7 +3226,7 @@ function imprimirCDist(semana){let body='';
       let diaBody=`<div class="diapage"><h2 style="color:#16324f;border-bottom:2px solid #16324f;padding-bottom:4px;margin-top:0">${label} ${+pp[2]}/${+pp[1]}</h2>`;
       choferKeys.forEach(k=>{
         const arr=groups[k];
-        const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(o.boleta)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');
+        const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(reclamoNroDe(o))}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');
         const totMuebles=arr.reduce((s,o)=>s+sum(o.lineas.map(l=>l.cant)),0);
         diaBody+=`<h3 style="margin:14px 0 4px">${esc(k)} <span style="font-weight:400;color:#5b6472;font-size:13px">· ${totMuebles} mueble${totMuebles===1?'':'s'}</span></h3><table><tr><th>Cant</th><th>Mueble</th><th>N° orden</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`;
       });
@@ -3198,7 +3235,7 @@ function imprimirCDist(semana){let body='';
     });
     if(!body)body='<p style="color:#5b6472">No hay muebles para separar en la semana con esa selección.</p>';
   }
-  else{const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado'&&!o.archivada);const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});body=`<h2>Día ${fmt(cdistDay)}</h2>`+Object.keys(groups).map(k=>{const arr=groups[k];const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${esc(o.boleta)}</td><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');return `<h3>${esc(k)}</h3><table><tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`}).join('')}
+  else{const dayO=ordenes.filter(o=>o.fecha===cdistDay&&o.estado!=='Cancelado'&&!o.archivada);const groups={};dayO.forEach(o=>{const k=o.flete||'Sin asignar';(groups[k]=groups[k]||[]).push(o)});body=`<h2>Día ${fmt(cdistDay)}</h2>`+Object.keys(groups).map(k=>{const arr=groups[k];const rows=arr.flatMap(o=>o.lineas.map(l=>`<tr><td>${esc(reclamoNroDe(o))}</td><td>${l.cant}</td><td>${esc(l.desc)}</td><td>${esc(l.local)}</td><td>${l.sep==='separado'?'Separado':(l.sep==='problema'?'PROBLEMA':'')}</td></tr>`)).join('');return `<h3>${esc(k)}</h3><table><tr><th>Orden</th><th>Cant</th><th>Mueble</th><th>Sale de</th><th>Estado</th></tr>${rows}</table>`}).join('')}
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Centro de Distribución</title><style>body{font-family:Arial;max-width:820px;margin:20px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 4px}h3{margin:14px 0 4px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}td,th{border:1px solid #d9e0e8;padding:6px 8px;text-align:left}@media print{.np{display:none}.diapage{page-break-after:always}.diapage:last-child{page-break-after:auto}}</style></head><body><h1>BELGRANO HOME · Centro de Distribución</h1>${body}<button class="np" onclick="window.print()" style="padding:8px 14px;background:#16324f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">Imprimir</button></body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close()}
 
@@ -3292,7 +3329,7 @@ function firmarBoleta(id,res){if(!puedeCerrar()){showToast('Solo Jony (o el admi
   if(res==='Recibí OK'){o.rendido=true;o.rendResult=res;setEstado(o,'Cerrado',{accion:'Firmar rendición · Recibí OK'});registrarAuditoria('Firmar rendición (Recibí OK)',o);vRendicion();return}
   modalActivo={tipo:'firmarprob',oid:id,res,motivo:''};renderModal()}
 function cuerpoFirmarProb(m){const o=ordenes.find(x=>x.id===m.oid);
-  return `<h3>Marcar "${esc(m.res)}"</h3><p class="modal-sub">Boleta ${esc(o.boleta)} · ${esc(grupoRend(o))}</p>
+  return `<h3>Marcar "${esc(m.res)}"</h3><p class="modal-sub">Boleta ${esc(reclamoNroDe(o))} · ${esc(grupoRend(o))}</p>
   <label>¿Qué pasó?</label><textarea id="mz_motivoprob" class="${m.motivoError&&!(m.motivo||'').trim()?'field-error':''}" oninput="modalActivo.motivo=this.value;this.classList.remove('field-error');const em=document.getElementById('mz_motivoprob_err');if(em)em.style.display='none'" placeholder="Contá qué encontraste al contar la plata">${esc(m.motivo)}</textarea><div id="mz_motivoprob_err" class="field-error-msg" style="${m.motivoError&&!(m.motivo||'').trim()?'':'display:none'}">Este campo es obligatorio — contá qué pasó.</div>
   <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Volver</button><button class="btn btn-danger" onclick="confirmarFirmarProb()">Marcar ${esc(m.res)}</button></div>`}
 function confirmarFirmarProb(){const m=modalActivo;const o=ordenes.find(x=>x.id===m.oid);
@@ -3382,16 +3419,16 @@ function filaRend(o){const yaRecibido=recibido(o);
   else{const real=o.cobrado!=null?o.cobrado:esperado;const diff=real-esperado;
     if(diff===0){cobTxt=`<b>${money(real)}</b>`}
     else{const motivo=o.cobradoDiffMotivo||'Sin motivo cargado';const cobKey='cob_'+o.id;
-      cobTxt=`<b class="rd-diff">${money(real)}</b> <button class="btn btn-ghost icon-btn-xs motivo-trigger" title="Ver motivo" onclick="toggleMotivoPop('${cobKey}',event)">⚠</button>${motivoPopOpen===cobKey&&motivoPopPos?`<div class="mueble-pop" style="position:fixed;top:${motivoPopPos.top}px;left:${motivoPopPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Diferencia de cobro · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal"><b>Tenía que cobrar:</b> ${money(esperado)}</div><div class="mp-row" style="white-space:normal"><b>${diff<0?'Faltó':'Sobró'}:</b> ${money(Math.abs(diff))}</div><div class="mp-row" style="white-space:normal"><b>Motivo:</b> ${esc(motivo)}</div></div>`:''}`}}
+      cobTxt=`<b class="rd-diff">${money(real)}</b> <button class="btn btn-ghost icon-btn-xs motivo-trigger" title="Ver motivo" onclick="toggleMotivoPop('${cobKey}',event)">⚠</button>${motivoPopOpen===cobKey&&motivoPopPos?`<div class="mueble-pop" style="position:fixed;top:${motivoPopPos.top}px;left:${motivoPopPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Diferencia de cobro · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal"><b>Tenía que cobrar:</b> ${money(esperado)}</div><div class="mp-row" style="white-space:normal"><b>${diff<0?'Faltó':'Sobró'}:</b> ${money(Math.abs(diff))}</div><div class="mp-row" style="white-space:normal"><b>Motivo:</b> ${esc(motivo)}</div></div>`:''}`}}
   const adicKey='adic_'+o.id;
-  const adicTxt=adic?`${money(adic)} <button class="btn btn-ghost icon-btn-xs motivo-trigger" title="Ver motivo" onclick="toggleMotivoPop('${adicKey}',event)">ⓘ</button>${motivoPopOpen===adicKey&&motivoPopPos?`<div class="mueble-pop" style="position:fixed;top:${motivoPopPos.top}px;left:${motivoPopPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Motivo del adicional · Orden ${esc(o.boleta)}</div><div class="mp-row" style="white-space:normal">${esc(o.bhPagoMotivo||'Sin motivo cargado')}</div></div>`:''}`:'—';
+  const adicTxt=adic?`${money(adic)} <button class="btn btn-ghost icon-btn-xs motivo-trigger" title="Ver motivo" onclick="toggleMotivoPop('${adicKey}',event)">ⓘ</button>${motivoPopOpen===adicKey&&motivoPopPos?`<div class="mueble-pop" style="position:fixed;top:${motivoPopPos.top}px;left:${motivoPopPos.left}px" onclick="event.stopPropagation()"><div class="mp-title">Motivo del adicional · Orden ${esc(reclamoNroDe(o))}</div><div class="mp-row" style="white-space:normal">${esc(o.bhPagoMotivo||'Sin motivo cargado')}</div></div>`:''}`:'—';
   let accion;
   if(o.rendido)accion=`<span class="badge ${rendResClass(o.rendResult)}">${esc(o.rendResult)}</span>`;
   else if(yaRecibido)accion=puedeCerrar()?`<div class="rowacc"><button class="btn btn-ok btn-sm" onclick="firmarBoleta(${o.id},'Recibí OK')">Recibí OK</button><button class="btn btn-ghost icon-btn-xs" title="Reportar problema" onclick="toggleProbBoleta(${o.id},event)">⋮</button>${probBoletaOpen===o.id?probMenuBoleta(o):''}</div>`:'<span class="muted">Pendiente de firma de Jony</span>';
   else if(o.estado==='Entregada')accion=puedeLiquidar()?`<button class="btn btn-primary btn-sm" onclick="cerrarOrden(${o.id})">Recibir del chofer</button>`:'<span class="muted">Falta que Lucas reciba al chofer</span>';
   else if(o.estado==='En reclamo')accion='<span class="muted">⚠ Resolver en Órdenes</span>';
   else accion='<span class="muted">Todavía en ruta</span>';
-  return `<tr class="${o.estado==='En reclamo'?'rprob':''}"><td>${esc(o.boleta)} <span class="muted" style="font-size:11.5px">${fmtDiaSem(o.fecha)}</span><br><span class="muted">${esc(o.cliente||'')}</span></td><td>${esc(grupoRend(o))}</td><td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></td><td>${cobTxt}</td><td>${pag?money(pag):'—'}</td><td>${adicTxt}</td><td><b>${money(neto)}</b></td><td style="text-align:right;position:relative">${accion}</td></tr>`}
+  return `<tr class="${o.estado==='En reclamo'?'rprob':''}"><td>${esc(reclamoNroDe(o))} <span class="muted" style="font-size:11.5px">${fmtDiaSem(o.fecha)}</span><br><span class="muted">${esc(o.cliente||'')}</span></td><td>${esc(grupoRend(o))}</td><td><span class="badge ${estClassVista(o)}">${esc(estadoVista(o))}</span></td><td>${cobTxt}</td><td>${pag?money(pag):'—'}</td><td>${adicTxt}</td><td><b>${money(neto)}</b></td><td style="text-align:right;position:relative">${accion}</td></tr>`}
 /* Firma en lote del arrastre. Trabaja sobre listaPendFirma() y no sobre rendDay: por eso
    cruza días. Respeta el chip de chofer si hay uno elegido — esa es la ÚNICA forma de
    separar por chofer acá; la lista no se agrupa sola. */
@@ -3445,7 +3482,7 @@ function imprimirRendicionDia(){const src=rendFil==='pendfirma'?listaPendFirma()
   const m2=n=>'$'+Number(n||0).toLocaleString('es-AR');let sesp=0,sreal=0,spag=0,sadic=0;
   const rows=src.map(o=>{const esperado=cobroBH(o);const real=cobroRealOrden(o);const pag=lePagamosBase(o);const adic=adicionalPagado(o);const diff=recibido(o)?real-esperado:0;sesp+=esperado;sreal+=real;spag+=pag;sadic+=adic;
     const motivos=[diff!==0?'Cobro: '+(diff<0?'faltó ':'sobró ')+m2(Math.abs(diff))+(o.cobradoDiffMotivo?' — '+esc(o.cobradoDiffMotivo):''):'',adic?'Adicional: '+m2(adic)+(o.bhPagoMotivo?' — '+esc(o.bhPagoMotivo):''):''].filter(Boolean).join(' · ');
-    return `<tr><td>${esc(o.boleta)}</td><td>${esc(o.cliente||'')}</td><td>${esc(grupoRend(o))}</td><td>${esc(o.estado)}</td><td style="text-align:right">${m2(esperado)}</td><td style="text-align:right">${m2(real)}</td><td style="text-align:right">${m2(pag)}</td><td style="text-align:right">${adic?m2(adic):'—'}</td><td style="text-align:right"><b>${m2(real-pag-adic)}</b></td><td style="font-size:11px;color:#8a3a00">${motivos}</td></tr>`}).join('');
+    return `<tr><td>${esc(reclamoNroDe(o))}</td><td>${esc(o.cliente||'')}</td><td>${esc(grupoRend(o))}</td><td>${esc(o.estado)}</td><td style="text-align:right">${m2(esperado)}</td><td style="text-align:right">${m2(real)}</td><td style="text-align:right">${m2(pag)}</td><td style="text-align:right">${adic?m2(adic):'—'}</td><td style="text-align:right"><b>${m2(real-pag-adic)}</b></td><td style="font-size:11px;color:#8a3a00">${motivos}</td></tr>`}).join('');
   const neto=sreal-spag-sadic;
   const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rendición ${fmt(rendDay)}</title><style>body{font-family:Arial;max-width:900px;margin:22px auto;padding:0 20px;color:#0f1a2a}h1{color:#16324f;margin:0 0 2px;font-size:20px}.sub{color:#5b6675;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px}th,td{border-bottom:1px solid #d9e0e8;padding:7px 9px;text-align:left}th{background:#eef1f5;color:#16324f;font-size:11px;text-transform:uppercase}tfoot td{font-weight:700;border-top:2px solid #16324f}.netos{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:14px;margin:10px 0 18px}.netobig{grid-column:1/-1;background:#16324f;color:#fff;padding:12px 16px;border-radius:8px;display:flex;justify-content:space-between;font-size:18px;font-weight:800}@media print{.np{display:none}}</style></head><body>
   <h1>BELGRANO HOME · Rendición</h1><div class="sub">${rendFil==='pendfirma'?'Pendientes de firmar · todos los días':fechaLarga(rendDay)}${rendChoferFil?' · '+esc(rendChoferFil):''} · ${src.length} viaje(s)</div>
@@ -3518,7 +3555,7 @@ function listaReclamos(){
   const t=reclQ.trim().toLowerCase();
   return ordenes.filter(o=>o.esReclamo&&!o.archivada)
     .filter(o=>reclVista==='todos'?true:(o.estado!=='Cerrado'&&o.estado!=='Cancelado'))
-    .filter(o=>!t||[o.boleta,o.cliente,o.tel1,o.direccion,o.localidad,o.quePaso].map(x=>String(x||'').toLowerCase()).some(x=>x.includes(t)))
+    .filter(o=>!t||[o.boleta,reclamoNroDe(o),o.cliente,o.tel1,o.direccion,o.localidad,o.quePaso].map(x=>String(x||'').toLowerCase()).some(x=>x.includes(t)))
     .sort((a,b)=>{
       /* Primero los que están hace más tiempo sin resolverse: son los que enojan al cliente. */
       const pa=sinProgramar(a)?0:1, pb=sinProgramar(b)?0:1;
@@ -3691,7 +3728,7 @@ function tablaRetiroDia(list){
   const filas=list.map((o,idx)=>{const mu=mueblesLinea(o);
     return `<tr>
       <td style="font-weight:700">${idx+1}</td>
-      <td class="rf-cli">${esc(o.cliente||'(sin nombre)')}<br><span class="muted">Orden ${esc(o.boleta||'—')}</span></td>
+      <td class="rf-cli">${esc(o.cliente||'(sin nombre)')}<br><span class="muted">Orden ${esc(o.boleta?reclamoNroDe(o):'—')}</span></td>
       <td>${esc(retLoc(o))}</td>
       <td class="rf-hor">${esc(o.horario||'')}</td>
       <td class="rf-mue">${mu?esc(mu):'<span class="muted">— sin muebles cargados</span>'}</td>
@@ -3818,15 +3855,21 @@ function imprimirRetiroDia(iso){
   if(!list.length && !visitas.length){showToast('No hay retiros ni visitas para imprimir ese día.','info');return}
   const bloques=list.map((o,idx)=>{
     const lineas=(o.lineas||[]).filter(l=>l.desc);
-    const rows=lineas.length?lineas.map(l=>`<tr><td style="width:56px;text-align:center;font-weight:800;padding:7px 8px;border-bottom:1px solid #eef0f2">${l.cant}</td><td style="padding:7px 8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</td></tr>`).join(''):`<tr><td></td><td style="padding:7px 8px;color:#9aa2ad">— sin muebles cargados —</td></tr>`;
+    const rows=lineas.length?lineas.map(l=>`<tr><td style="width:96px;padding:6px 8px;border-bottom:1px solid #eef0f2"><div style="width:52px;height:30px;border:1.5px solid #14181f;border-radius:4px;margin:0 auto"></div></td><td style="padding:7px 8px;border-bottom:1px solid #eef0f2">${esc(l.desc)}</td></tr>`).join(''):`<tr><td></td><td style="padding:7px 8px;color:#9aa2ad">— sin muebles cargados —</td></tr>`;
     return `<div style="margin-top:14px;border:1.5px solid #d7dbe0;border-radius:8px;overflow:hidden;page-break-inside:avoid">
-      <div style="background:#f4f6f8;padding:8px 12px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #d7dbe0;gap:12px">
-        <div style="font-weight:800;font-size:15px;display:flex;align-items:center;gap:10px"><span style="width:19px;height:19px;border:2px solid #14181f;border-radius:3px;display:inline-block;flex:0 0 auto"></span>${idx+1}. ${esc(o.cliente||'(sin nombre)')}</div>
-        <div style="font-size:11.5px;color:#5b6472">Orden ${esc(o.boleta||'—')} · Retira de ${esc(retLoc(o))} · ${esc(o.horario||'')} · ${piezasDe(o)} pieza${piezasDe(o)===1?'':'s'}</div>
+      <div style="background:#f4f6f8;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #d7dbe0;gap:12px">
+        <div>
+          <div style="font-weight:800;font-size:15px;display:flex;align-items:center;gap:10px"><span style="width:19px;height:19px;border:2px solid #14181f;border-radius:3px;display:inline-block;flex:0 0 auto"></span>${idx+1}. ${esc(o.cliente||'(sin nombre)')}</div>
+          <div style="font-size:11.5px;color:#5b6472;margin:3px 0 0 29px">Retira de ${esc(retLoc(o))}${o.horario?' · '+esc(o.horario):''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto"><span style="font-size:10.5px;font-weight:800;letter-spacing:.5px;color:#14181f;text-align:right;line-height:1.15">N° DE<br>ORDEN</span><div style="width:52mm;height:13mm;border:2px solid #14181f;border-radius:4px;background:#fff"></div></div>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13.5px"><thead><tr style="color:#5b6472;font-size:10px;letter-spacing:.5px"><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #eef0f2">CANT</th><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #eef0f2">MUEBLE</th></tr></thead><tbody>${rows}</tbody></table>
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px"><thead><tr style="color:#5b6472;font-size:10px;letter-spacing:.5px"><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #eef0f2">CANT. CONTADA</th><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #eef0f2">MUEBLE</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`}).join('');
-  const piezas=list.reduce((a,o)=>a+piezasDe(o),0);
+  /* 21/9/2026 — control a ciegas: la planilla NO muestra cantidades ni N° de orden.
+     Seguridad cuenta y anota la cantidad de cada mueble, y anota el N° de orden que le
+     dice el cliente al retirar. Si se imprimieran, podría copiarlos en vez de controlar.
+     Lucas compara después contra la pantalla, donde esos datos siguen a la vista. */
   /* Dos secciones para la gente, aparte de los muebles: las visitas que Lucas ya
      cargó, y renglones en blanco para que Seguridad anote al que no estaba previsto.
      Mismas columnas en las dos, así se leen como una sola lista. */
@@ -3849,13 +3892,13 @@ function imprimirRetiroDia(iso){
     Array.from({length:5},()=>`<tr>${tilde}<td style="padding:15px 8px;border-bottom:1px solid #eef0f2"></td><td style="border-bottom:1px solid #eef0f2"></td><td style="border-bottom:1px solid #eef0f2"></td></tr>`).join(''));
   const H=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Verificación retiros ${ddmm(iso)}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{box-sizing:border-box}body{margin:0;background:#e9ebee;font-family:'Archivo',Arial,sans-serif;color:#14181f}@page{size:A4;margin:11mm}@media print{body{background:#fff}.no-print{display:none!important}.sheet{box-shadow:none!important}}</style></head><body>
   <div style="padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:14px">
-    <div class="no-print" style="width:190mm;max-width:100%;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Planilla de verificación — Seguridad tilda mueble por mueble</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
+    <div class="no-print" style="width:190mm;max-width:100%;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;color:#5b6472">Planilla de verificación — Seguridad anota a mano N° de orden y cantidades</div><button onclick="window.print()" style="border:none;background:#0f766e;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;padding:10px 20px;border-radius:8px;cursor:pointer">Imprimir</button></div>
     <div class="sheet" style="width:190mm;max-width:100%;background:#fff;padding:11mm;box-shadow:0 8px 30px rgba(0,0,0,.12);border:1.5px solid #14181f">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #14181f;padding-bottom:10px">
         <div><div style="font-size:22px;font-weight:800">BELGRANO HOME</div><div style="font-size:11px;color:#5b6472;margin-top:2px;letter-spacing:1px;font-weight:600">VERIFICACIÓN DE RETIROS · SEGURIDAD</div></div>
-        <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:#0f766e">${fechaLarga(iso)}</div><div style="font-size:13px;color:#5b6472">${[list.length?`${list.length} retiro${list.length===1?'':'s'} · ${piezas} pieza${piezas===1?'':'s'}`:'', visitas.length?`${visitas.length} visita${visitas.length===1?'':'s'}`:''].filter(Boolean).join(' · ')}</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:#0f766e">${fechaLarga(iso)}</div><div style="font-size:13px;color:#5b6472">${[list.length?`${list.length} retiro${list.length===1?'':'s'}`:'', visitas.length?`${visitas.length} visita${visitas.length===1?'':'s'}`:''].filter(Boolean).join(' · ')}</div></div>
       </div>
-      <div style="margin-top:8px;font-size:12px;color:#5b6472">${list.length?'Verificá que estén todas las piezas del retiro y recién ahí tildá el retiro. Un retiro solo se entrega completo.':'Hoy no salen muebles por retiro. Tildá a cada persona a medida que entra.'}</div>
+      <div style="margin-top:8px;font-size:12px;color:#5b6472">${list.length?'Pedile al cliente el número de orden y anotalo en el recuadro. Contá cada mueble y anotá la cantidad. Recién ahí tildá el retiro.':'Hoy no salen muebles por retiro. Tildá a cada persona a medida que entra.'}</div>
       ${list.length?bloques:''}
       ${secVisitas}
       ${secAdicionales}
@@ -3990,6 +4033,30 @@ document.addEventListener('keydown',function(e){
   const i=focusables.indexOf(el);
   if(i>-1&&i<focusables.length-1){focusables[i+1].focus();if(focusables[i+1].select)focusables[i+1].select()}
   else{const nextBtn=document.querySelector('.wiz-nav .btn-primary,.wiz-nav .btn-ok');if(nextBtn)nextBtn.click()}
+});
+/* FIX 21/9/2026 — ganchos de guardado.
+   (a) Cada pantalla, al terminar de dibujarse, pide guardar: así toda acción que refresca
+       solo su vista (hay 17 en Rendición y muchas en Órdenes) queda cubierta sin tocarlas
+       de a una. También el modal, que cierra acciones como "Marcar Falta/Sobra".
+   (b) Red de seguridad: después de cualquier clic o cambio de un campo.
+   (c) Al irse de la página (CRM, recargar, cerrar) con algo sin subir: se manda ya y el
+       navegador avisa "hay cambios sin guardar". En el celular, al pasar a otra app. */
+['vTablero','vVendedorLog','vCargar','vOrdenes','vCDist','vRutaFlete','vRendicion','vRuta','vConfig','vStats','vAuditoria','vReclamos','vArreglos','renderModal'].forEach(n=>{
+  const f=window[n]; if(typeof f!=='function') return;
+  window[n]=function(){ const r=f.apply(this,arguments); _sbPedirDeteccion(); return r; };
+});
+document.addEventListener('click',_sbPedirDeteccion,true);
+document.addEventListener('change',_sbPedirDeteccion,true);
+window.addEventListener('beforeunload',e=>{
+  _sbDetectarCambios();
+  if(!_sbHayPendiente()) return;
+  _sbFlush(true);
+  e.preventDefault(); e.returnValue=''; return '';
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='hidden') return;
+  _sbDetectarCambios();
+  if(_sbCola.size) _sbFlush(true);
 });
 iniciarConLogin();
 </script>
