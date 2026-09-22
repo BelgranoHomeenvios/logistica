@@ -20,6 +20,8 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .mod-switch-item:hover{background:rgba(255,255,255,.16);color:#fff}
 .mod-switch-active{background:rgba(255,255,255,.22);color:#fff}
 @media(max-width:560px){.mod-switch{margin-left:8px;gap:4px}.mod-switch-item{padding:4px 9px;font-size:11.5px}}
+/* 22/9/2026 — con el 3er módulo (Adicionales) el encabezado no entraba en el celular: se ocultan el título y el nombre (quedan logo, módulos, inicial y Salir) */
+@media(max-width:560px){.app-header .title{display:none}.app-header .user span{display:none}.app-header .user{gap:8px}.app-header .brand{gap:8px}}
 .app-header .logo{width:30px;height:30px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
 .app-header .title{font-weight:700;font-size:15px;letter-spacing:-.01em}
 .app-header .user{display:flex;align-items:center;gap:12px}
@@ -488,9 +490,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v21.09-15:10</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v22.09-12:15</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v21.09-15:10</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v22.09-12:15</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -1502,7 +1504,7 @@ function render(){
   _refrescoPendiente=false;
   _sbDetectarCambios();
   const who=whoLabel();
-  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>`;
+  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/adicionales.html">Adicionales</a></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>`;
   ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria,reclamos:vReclamos,arreglos:vArreglos}[tab])();
 }
 
