@@ -27,6 +27,7 @@ body{margin:0;font-family:'Public Sans',-apple-system,BlinkMacSystemFont,'Segoe 
 .app-header .user{display:flex;align-items:center;gap:12px}
 .btn-logout{background:rgba(255,255,255,.15);color:#fff;border:none;font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer}
 .btn-logout:hover{background:rgba(255,255,255,.28)}
+.rs-chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;border:1px solid}.rs-esp{color:#b45309;background:#fff7ed;border-color:#fed7aa}.rs-ok{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}.rs-no{color:#b42318;background:#fdecea;border-color:#f5c2bd}.rs-link{color:#1d4ed8;font-weight:700;text-decoration:none}.rs-link:hover{text-decoration:underline}
 #loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#eef1f5;padding:20px}
 .login-card{background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(15,26,42,.12);padding:36px 34px;width:100%;max-width:380px;text-align:center}
 .login-logo{width:52px;height:52px;background:var(--navy);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin:0 auto 16px}
@@ -490,9 +491,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v22.09-12:15</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v03.10-11:55</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v22.09-12:15</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v03.10-11:55</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -1446,9 +1447,9 @@ ordenes.forEach(o=>{if(o.costo_flete_estado===undefined)o.costo_flete_estado='co
 {const demo=ordenes.find(o=>o.boleta==='1003');if(demo)demo.costo_flete_estado='pagado'}
 
 let role='logistica', tab='tablero', fleteActual='Juan Fredes', vendedorActual='Nati', editId=null;
-const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['arreglos','Arreglos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas']];
+const TABS_LOG=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['arreglos','Arreglos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['resenas','Reseñas']];
 const TABS_SOPORTE=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['arreglos','Arreglos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete']];
-const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['arreglos','Arreglos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['auditoria','Auditoría'],['config','Configuración']];
+const TABS_DIR=[['tablero','Tablero'],['ordenes','Órdenes'],['reclamos','Reclamos'],['arreglos','Arreglos'],['cdist','C. Distribución'],['rutaflete','Ruta del flete'],['rendicion','Rendición'],['stats','Estadísticas'],['resenas','Reseñas'],['auditoria','Auditoría'],['config','Configuración']];
 const TABS={logistica:TABS_LOG,soporte:TABS_SOPORTE,admin:TABS_DIR,direccion:TABS_DIR,deposito:[['cdist','C. Distribución']],flete:[['ruta','Mi ruta']],vendedor:[['vlog','Logística']],jony:TABS_DIR};
 const root=document.getElementById('root');const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -1465,7 +1466,7 @@ function refrescarPersonaSel(){const s=document.getElementById('personaSel');if(
     const sel=role==='flete'?fleteActual:vendedorActual;
     s.innerHTML=lista.map(n=>`<option ${n===sel?'selected':''}>${esc(n)}</option>`).join('');s.style.display=''}
   else s.style.display='none'}
-function setTab(t){tab=t;if(t!=='cargar')editId=null;render()}
+function setTab(t){if(t==='resenas'&&!veResenas())t=(TABS[role][0]||['tablero'])[0];tab=t;if(t!=='cargar')editId=null;render()}
 
 /* ============ RENDER / NAV ============ */
 let toastMsg=null,toastTipo='info';
@@ -1504,11 +1505,163 @@ function render(){
   _refrescoPendiente=false;
   _sbDetectarCambios();
   const who=whoLabel();
-  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/adicionales.html">Adicionales</a></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${TABS[role].map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>`;
-  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria,reclamos:vReclamos,arreglos:vArreglos}[tab])();
+  root.innerHTML=`<header class="app-header"><div class="brand"><div class="logo">BH</div><div class="title">Belgrano Soft</div><nav class="mod-switch"><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/">CRM</a><span class="mod-switch-item mod-switch-active">Logística</span><a class="mod-switch-item" href="https://belgranohomeenvios.github.io/behome/crm/adicionales.html">Adicionales</a></nav></div><div class="user"><span>${usuarioActual?esc(usuarioActual.nombre):who}${role==='flete'?' · flete':''}</span><div class="avatar">${(usuarioActual?usuarioActual.nombre:who)[0]}</div>${usuarioActual?'<button class="btn-logout" title="Cerrar sesión" onclick="cerrarSesion()">Salir</button>':''}</div></header><nav class="tabs" id="tabs">${tabsVisibles().map(t=>`<a class="${tab===t[0]?'active':''}" onclick="setTab('${t[0]}')">${t[1]}</a>`).join('')}</nav><main class="container" id="view"></main>`;
+  ({tablero:vTablero,vlog:vVendedorLog,cargar:vCargar,ordenes:vOrdenes,cdist:vCDist,rutaflete:vRutaFlete,rendicion:vRendicion,ruta:vRuta,config:vConfig,stats:vStats,auditoria:vAuditoria,reclamos:vReclamos,arreglos:vArreglos,resenas:vResenas}[tab]||vTablero)();
 }
 
 
+
+/* ============ RESEÑAS ============
+   Brian, 3/10/2026: "una parte adicional sólo para Lucas, y para que pueda verla Jony y
+   yo… cargar una reseña copiando un url de Google, que la guarde Lucas y después yo
+   tenga que validarla". A Lucas no le pagan por reseña: no hay montos, ni mes, ni
+   aviso en el Tablero. Se carga el link, la fecha y —si lo tiene— el N° de venta.
+   Tabla propia `resenas` en Supabase: el id lo pone la base (no el navegador) y el link
+   es único, así que la misma reseña no entra dos veces. Quién ve y quién valida lo
+   deciden las reglas de la base; la pantalla sólo evita mostrar un botón que la base
+   va a rechazar. Valida sólo el rol admin (Brian). */
+let resenas=[], resenasCargando=false, resenasError='';
+function esDirResenas(){return ['admin','direccion','jony'].includes(rolReal)||esDireccion()}
+/* Lucas comparte el rol "logistica" con otras personas: la solapa es de él, por eso
+   se mira la persona y no el rol. */
+function veResenas(){
+  if(esDirResenas())return true;
+  const n=(usuarioActual&&usuarioActual.nombre||'').trim().toLowerCase();
+  return role==='logistica'&&n==='lucas';
+}
+function puedeValidarResenas(){return rolReal==='admin'}
+function tabsVisibles(){return (TABS[role]||[]).filter(t=>t[0]!=='resenas'||veResenas())}
+
+async function sbCargarResenas(){
+  if(!sb)return;
+  resenasCargando=true;
+  const {data,error}=await sb.from('resenas').select('*').order('cargado_en',{ascending:false});
+  resenasCargando=false;
+  if(error){console.error('resenas',error);resenasError='No se pudieron leer las reseñas: '+error.message;return}
+  resenasError='';resenas=data||[];
+}
+/* Las que esperan, arriba: es lo único que alguien tiene que hacer. */
+function resenasOrdenadas(){
+  const ord={cargada:0,rechazada:1,validada:2};
+  return [...resenas].sort((a,b)=>((ord[a.estado]??9)-(ord[b.estado]??9))||String(b.cargado_en||'').localeCompare(String(a.cargado_en||'')));
+}
+/* Del link se muestra de dónde es, no la dirección entera. */
+function resenaDonde(url){
+  let h='';try{h=new URL(url).hostname.replace(/^www\./,'')}catch(e){return 'abrir'}
+  if(h.includes('maps')||h.includes('goo.gl'))return 'Google Maps';
+  if(h.includes('google'))return 'Google';
+  return h;
+}
+
+async function vResenas(){
+  if(!veResenas()){setTab('tablero');return}
+  if(!resenas.length&&!resenasCargando&&!resenasError){
+    $('view').innerHTML='<div class="card"><p class="muted">Cargando reseñas…</p></div>';
+    await sbCargarResenas();
+    if(tab!=='resenas')return;
+  }
+  const valida=puedeValidarResenas();
+  const list=resenasOrdenadas();
+  const esperan=list.filter(r=>r.estado==='cargada').length;
+  const yo=(usuarioActual&&usuarioActual.email||'').toLowerCase();
+  const deOtros=list.some(r=>(r.cargado_por_email||'')!==yo);
+  const LBL={cargada:'Esperando validación',validada:'Validada',rechazada:'Rechazada'};
+  const CLS={cargada:'rs-esp',validada:'rs-ok',rechazada:'rs-no'};
+  const filas=list.map(r=>`<tr>
+      <td>${r.fecha?esc(ddmm(r.fecha)):'—'}</td>
+      ${deOtros?`<td>${esc(r.cargado_por_nombre||r.cargado_por_email||'—')}</td>`:''}
+      <td><a href="${esc(r.link)}" target="_blank" rel="noopener" class="rs-link" title="${esc(r.link)}">${esc(resenaDonde(r.link))} ›</a></td>
+      <td>${r.numero_venta?esc(r.numero_venta):'<span class="muted">—</span>'}</td>
+      <td><span class="rs-chip ${CLS[r.estado]||'rs-esp'}">${esc(LBL[r.estado]||r.estado)}</span>${r.motivo?`<div class="muted" style="font-size:12px;margin-top:4px">${esc(r.motivo)}</div>`:''}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${valida&&r.estado!=='validada'?`<button class="btn btn-primary btn-sm" onclick="validarResena(${+r.id})">Validar</button>`:''}
+        ${valida&&r.estado!=='rechazada'?` <button class="btn btn-ghost btn-sm" onclick="abrirRechazoResena(${+r.id})">Rechazar</button>`:''}
+        ${r.estado==='cargada'&&(valida||(r.cargado_por_email||'')===yo)?` <button class="btn btn-ghost btn-sm" onclick="borrarResena(${+r.id})" title="Borrar">✕</button>`:''}
+      </td></tr>`).join('');
+  $('view').innerHTML=`<div class="card">
+    <div class="section-title"><h2>Reseñas</h2>
+      <div class="row-actions"><button class="btn btn-primary" onclick="abrirModalResena()">+ Cargar una reseña</button></div></div>
+    <p class="muted" style="margin-top:0">${valida?'Entrá a cada link y confirmá que la reseña existe antes de validarla.':'Pegá el link de Google de cada reseña. Brian la abre y la valida.'}${esperan?` <b style="color:#b45309">${esperan} esperando validación.</b>`:''}</p>
+    ${resenasError?`<div class="field-error-msg" style="display:block">${esc(resenasError)}</div>`:''}
+    ${list.length?`<div class="table-wrap"><table class="cdflat"><thead><tr><th>Fecha</th>${deOtros?'<th>Cargó</th>':''}<th>Reseña</th><th>N° de venta</th><th>Estado</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>`
+      :'<p class="muted">Todavía no hay reseñas cargadas.</p>'}
+  </div>`;
+}
+
+function abrirModalResena(){
+  modalActivo={tipo:'resena',link:'',fecha:hoyISO(),venta:'',err:'',guardando:false};
+  renderModal();setTimeout(()=>{const i=$('rs_link');if(i)i.focus()},60);
+}
+function cuerpoResena(m){
+  return `<h3>Cargar una reseña</h3>
+  <p class="modal-sub">Pegá el link de la reseña de Google. Brian la abre para validarla.</p>
+  <div class="field-lbl">LINK DE LA RESEÑA</div>
+  <input id="rs_link" type="url" class="arr-inp" placeholder="https://…" value="${esc(m.link)}" oninput="modalActivo.link=this.value">
+  <div class="field-lbl">CUÁNDO SE HIZO</div>
+  <input id="rs_fecha" type="date" class="arr-inp" value="${esc(m.fecha)}" oninput="modalActivo.fecha=this.value">
+  <div class="field-lbl">N° DE VENTA <span class="muted" style="font-weight:400">(opcional)</span></div>
+  <input id="rs_venta" class="arr-inp" placeholder="Ej: 4534" value="${esc(m.venta)}" oninput="modalActivo.venta=this.value">
+  ${m.err?`<div class="field-error-msg" style="display:block">${esc(m.err)}</div>`:''}
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn btn-primary" ${m.guardando?'disabled':''} onclick="guardarResena()">${m.guardando?'Guardando…':'Guardar'}</button></div>`;
+}
+async function guardarResena(){
+  const m=modalActivo;if(!m||m.guardando)return;
+  const link=(($('rs_link')||{}).value||m.link||'').trim();
+  const fecha=(($('rs_fecha')||{}).value||m.fecha||'').trim();
+  const venta=(($('rs_venta')||{}).value||m.venta||'').trim();
+  m.link=link;m.fecha=fecha;m.venta=venta;
+  /* Sin link no hay nada que validar, y tiene que poder abrirse. */
+  if(!link){m.err='Pegá el link de la reseña.';renderModal();return}
+  if(!/^https?:\/\/\S+$/i.test(link)){m.err='Tiene que ser un link que se pueda abrir (que empiece con https://).';renderModal();return}
+  if(!fecha){m.err='Poné la fecha en que se hizo la reseña.';renderModal();return}
+  if(resenas.some(r=>String(r.link||'').trim().toLowerCase()===link.toLowerCase())){m.err='Esa reseña ya está cargada.';renderModal();return}
+  m.guardando=true;m.err='';renderModal();
+  const {error}=await sb.from('resenas').insert({link,fecha,numero_venta:venta||null,cargado_por_nombre:whoLabel()});
+  if(error){
+    m.guardando=false;
+    m.err=error.code==='23505'?'Esa reseña ya está cargada.':'No se pudo guardar: '+error.message;
+    renderModal();return;
+  }
+  registrarAuditoria('Reseña cargada',null,link+(venta?' · venta '+venta:''));
+  cerrarModal();showToast('Reseña cargada. Queda esperando validación.','success');
+  await sbCargarResenas();if(tab==='resenas')vResenas();
+}
+async function revisarResena(id,estado,motivo){
+  if(!puedeValidarResenas()){showToast('Solo Brian valida las reseñas.','error');return false}
+  const r=resenas.find(x=>+x.id===+id);
+  const {data,error}=await sb.from('resenas').update({estado,motivo:motivo||null,
+    revisado_por_email:(usuarioActual&&usuarioActual.email)||null,revisado_en:new Date().toISOString()}).eq('id',id).select('id');
+  if(error||!data||!data.length){showToast('No se pudo guardar: '+(error?error.message:'la base no lo permitió'),'error');return false}
+  registrarAuditoria(estado==='validada'?'Reseña validada':'Reseña rechazada',null,(r?r.link:'#'+id)+(motivo?' · '+motivo:''));
+  showToast(estado==='validada'?'Reseña validada.':'Reseña rechazada.','success');
+  await sbCargarResenas();if(tab==='resenas')vResenas();
+  return true;
+}
+function validarResena(id){revisarResena(id,'validada','')}
+function abrirRechazoResena(id){modalActivo={tipo:'rechazoResena',id,motivo:'',err:''};renderModal();setTimeout(()=>{const i=$('rs_mot');if(i)i.focus()},60)}
+function cuerpoRechazoResena(m){
+  return `<h3>Rechazar la reseña</h3>
+  <p class="modal-sub">Lucas va a ver el motivo. Sin eso no sabe qué pasó.</p>
+  <textarea id="rs_mot" class="arr-inp" style="min-height:70px" oninput="modalActivo.motivo=this.value">${esc(m.motivo)}</textarea>
+  ${m.err?`<div class="field-error-msg" style="display:block">${esc(m.err)}</div>`:''}
+  <div class="modal-actions"><button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarRechazoResena()">Rechazar</button></div>`;
+}
+async function confirmarRechazoResena(){
+  const m=modalActivo;const mot=(($('rs_mot')||{}).value||m.motivo||'').trim();
+  if(!mot){m.err='Falta el motivo.';renderModal();return}
+  if(await revisarResena(m.id,'rechazada',mot))cerrarModal();
+}
+async function borrarResena(id){
+  if(!confirm('¿Borrar esta reseña?'))return;
+  const r=resenas.find(x=>+x.id===+id);
+  const {data,error}=await sb.from('resenas').delete().eq('id',id).select('id');
+  if(error||!data||!data.length){showToast('No se pudo borrar'+(error?': '+error.message:': ya fue revisada'),'error');return}
+  registrarAuditoria('Reseña borrada',null,r?r.link:'#'+id);
+  showToast('Reseña borrada.','success');
+  await sbCargarResenas();if(tab==='resenas')vResenas();
+}
 
 /* ============ ARREGLOS ============
    La fecha de salida y el flete NO se copian: se leen de la orden cada vez que se
@@ -2770,7 +2923,7 @@ let modalActivo=null;
 function cerrarModal(){modalActivo=null;renderModal()}
 function renderModal(){const el=$('modalRoot');if(!el)return;if(!modalActivo){el.innerHTML='';return}
   el.innerHTML=`<div class="modal-overlay" onclick="cerrarModal()"><div class="modal-card" onclick="event.stopPropagation()">${cuerpoModal()}</div></div>`}
-function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='firmarlotepend')return cuerpoFirmarLotePend(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='autoriz')return cuerpoAutoriz(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='yaExiste')return cuerpoYaExiste(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);if(m.tipo==='visitas')return cuerpoVisitas(m);if(m.tipo==='arreglo')return cuerpoArreglo(m);return''}
+function cuerpoModal(){const m=modalActivo;if(m.tipo==='cancelar')return cuerpoCancelar(m);if(m.tipo==='reprogramar')return cuerpoReprogramar(m);if(m.tipo==='cobro')return cuerpoCobro(m);if(m.tipo==='estado')return cuerpoEstado(m);if(m.tipo==='estadohist')return cuerpoEstadoHist(m);if(m.tipo==='problema')return cuerpoProblema(m);if(m.tipo==='verproblema')return cuerpoVerProblema(m);if(m.tipo==='entregar')return cuerpoEntregar(m);if(m.tipo==='reasignar')return cuerpoReasignar(m);if(m.tipo==='firmarprob')return cuerpoFirmarProb(m);if(m.tipo==='reabrirlote')return cuerpoReabrirLote(m);if(m.tipo==='firmarlotepend')return cuerpoFirmarLotePend(m);if(m.tipo==='imprimirSemana')return cuerpoImprimirSemana(m);if(m.tipo==='eliminar')return cuerpoEliminar(m);if(m.tipo==='solicitarElim')return cuerpoSolicitarElim(m);if(m.tipo==='refuerzo')return cuerpoRefuerzo(m);if(m.tipo==='confirmarRefuerzo')return cuerpoConfirmRefuerzo(m);if(m.tipo==='autoriz')return cuerpoAutoriz(m);if(m.tipo==='buscarRefuerzo')return cuerpoBuscarRefuerzo(m);if(m.tipo==='yaExiste')return cuerpoYaExiste(m);if(m.tipo==='recibir')return cuerpoRecibir(m);if(m.tipo==='buscarReclamo')return cuerpoBuscarReclamo(m);if(m.tipo==='confirmreclamo')return cuerpoConfirmReclamo(m);if(m.tipo==='visitas')return cuerpoVisitas(m);if(m.tipo==='arreglo')return cuerpoArreglo(m);if(m.tipo==='resena')return cuerpoResena(m);if(m.tipo==='rechazoResena')return cuerpoRechazoResena(m);return''}
 /* ===== Refuerzo de seña =====
    El cliente vino a reforzar y pagó en el local; el vendedor lo carga en la orden para
    que Lucas (logística) lo vea en "Cargadas por vendedores" y lo confirme. Es un campo
