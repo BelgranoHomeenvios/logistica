@@ -491,9 +491,9 @@ tr.rprob{background:#fef4f4}
 <div class="demobar" style="display:none">Modo admin · ver la app como:
 <select id="roleSel" onchange="setRole(this.value)"><option value="admin">Admin (vos)</option><option value="direccion">Dirección (Jony / Daniel)</option><option value="logistica">Logística (Lucas)</option><option value="soporte">Soporte (Iara / Cintia)</option><option value="deposito">Depósito (Sebas)</option><option value="flete">Flete (chofer)</option><option value="vendedor">Vendedor</option></select>
 <select id="personaSel" onchange="setPersona(this.value)" style="display:none;margin-left:8px"></select>
-<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v03.10-11:55</b> · Sesión: <b id="demoUser">—</b></span></div>
+<span style="margin-left:auto;color:#b3bcc8;font-weight:400">Versión <b style="color:#fff">v03.10-12:00</b> · Sesión: <b id="demoUser">—</b></span></div>
 <div id="root"></div>
-<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v03.10-11:55</div>
+<div style="text-align:center;color:#b3bcc8;font-size:11px;padding:10px 0 22px">Belgrano Home · Logística · v03.10-12:00</div>
 <div id="modalRoot"></div>
 <div id="mapaRoot"></div>
 
@@ -1576,7 +1576,7 @@ async function vResenas(){
       <td style="text-align:right;white-space:nowrap">
         ${valida&&r.estado!=='validada'?`<button class="btn btn-primary btn-sm" onclick="validarResena(${+r.id})">Validar</button>`:''}
         ${valida&&r.estado!=='rechazada'?` <button class="btn btn-ghost btn-sm" onclick="abrirRechazoResena(${+r.id})">Rechazar</button>`:''}
-        ${r.estado==='cargada'&&(valida||(r.cargado_por_email||'')===yo)?` <button class="btn btn-ghost btn-sm" onclick="borrarResena(${+r.id})" title="Borrar">✕</button>`:''}
+        ${(valida||(r.estado==='cargada'&&(r.cargado_por_email||'')===yo))?` <button class="btn btn-ghost btn-sm" onclick="borrarResena(${+r.id})" title="Borrar">✕</button>`:''}
       </td></tr>`).join('');
   $('view').innerHTML=`<div class="card">
     <div class="section-title"><h2>Reseñas</h2>
